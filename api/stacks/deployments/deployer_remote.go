@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -184,6 +185,9 @@ func (d *stackDeployer) remoteStack(ctx context.Context, stack *portainer.Stack,
 		// Relative bind mounts can depend on user-managed files that are not tracked by Git.
 		opts.keepFiles = true
 		opts.flat = true
+		if err := applyRelativePathStackConfig(stack, &opts); err != nil {
+			return err
+		}
 	}
 
 	cli, err := d.createDockerClient(ctx, endpoint)
@@ -210,7 +214,10 @@ func (d *stackDeployer) remoteStack(ctx context.Context, stack *portainer.Stack,
 	targetSocketBindHost := getTargetSocketBindHost(info.OSType, endpoint.ContainerEngine)
 	targetSocketBindContainer := getTargetSocketBindContainer(info.OSType)
 
-	composeDestination := remoteComposeDestination(stack)
+	composeDestination := opts.composeDestination
+	if composeDestination == "" {
+		composeDestination = remoteComposeDestination(stack, "")
+	}
 
 	opts.composeDestination = composeDestination
 
@@ -353,12 +360,47 @@ func getUnpackerImage() string {
 	return image
 }
 
-func remoteComposeDestination(stack *portainer.Stack) string {
+func applyRelativePathStackConfig(stack *portainer.Stack, opts *unpackerCmdBuilderOptions) error {
+	if strings.TrimSpace(stack.ProjectPath) == "" {
+		return nil
+	}
+
+	config, found, err := stackutils.LoadPortainerStackConfigForFile(stack.ProjectPath, stack.EntryPoint)
+	if err != nil || !found {
+		return err
+	}
+
+	if config.ConfigDir != "" && config.ConfigDir != "." {
+		opts.sourceDir = config.ConfigDir
+	}
+
+	if config.Deploy.TargetName != "" {
+		opts.composeDestination = remoteComposeDestination(stack, config.Deploy.TargetName)
+	}
+
+	return nil
+}
+
+func remoteComposeDestination(stack *portainer.Stack, targetName string) string {
 	if stackutils.IsRelativePathStack(stack) {
-		return stack.FilesystemPath
+		return relativeStackDestination(stack.FilesystemPath, targetName)
 	}
 
 	return filesystem.JoinPaths(stack.ProjectPath, composePathPrefix)
+}
+
+func relativeStackDestination(filesystemPath string, targetName string) string {
+	destination := strings.TrimSpace(filesystemPath)
+	if strings.TrimSpace(targetName) == "" {
+		return destination
+	}
+
+	destination = filepath.Clean(destination)
+	if filepath.Base(destination) == targetName {
+		return destination
+	}
+
+	return filesystem.JoinPaths(destination, targetName)
 }
 
 func getTargetSocketBindHost(osType string, containerEngine string) string {

@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	PortainerStackConfigFile     = ".portainer.yml"
-	portainerStackConfigFileYAML = ".portainer.yaml"
+	PortainerStackConfigFile     = "portainer.yml"
+	portainerStackConfigFileYAML = "portainer.yaml"
 	portainerStackConfigVersion  = 1
 )
 

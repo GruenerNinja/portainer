@@ -35,6 +35,7 @@ type unpackerCmdBuilderOptions struct {
 	forceRecreate      bool
 	keepFiles          bool
 	flat               bool
+	sourceDir          string
 	composeDestination string
 	registries         []portainer.Registry
 	gitConfig          *gittypes.RepoConfig
@@ -74,6 +75,7 @@ func buildDeployCmd(stack *portainer.Stack, opts unpackerCmdBuilderOptions, regi
 	cmd = appendForceRecreateIfNeeded(cmd, opts.forceRecreate)
 	cmd = appendFlatIfNeeded(cmd, opts.flat)
 	cmd = appendKeepFilesIfNeeded(cmd, opts.keepFiles)
+	cmd = appendSourceDirIfNeeded(cmd, opts.sourceDir)
 
 	if opts.prune {
 		cmd = append(cmd, "-r")
@@ -114,6 +116,7 @@ func buildComposeStartCmd(stack *portainer.Stack, opts unpackerCmdBuilderOptions
 	cmd = appendSkipTLSVerifyIfNeeded(cmd, opts.gitConfig)
 	cmd = appendFlatIfNeeded(cmd, opts.flat)
 	cmd = append(cmd, "-k")
+	cmd = appendSourceDirIfNeeded(cmd, opts.sourceDir)
 	cmd = append(cmd, env...)
 	cmd = append(cmd, registries...)
 	cmd = append(cmd, opts.gitConfig.URL,
@@ -150,6 +153,7 @@ func buildSwarmDeployCmd(stack *portainer.Stack, opts unpackerCmdBuilderOptions,
 	cmd = appendForceRecreateIfNeeded(cmd, opts.forceRecreate)
 	cmd = appendFlatIfNeeded(cmd, opts.flat)
 	cmd = appendKeepFilesIfNeeded(cmd, opts.keepFiles)
+	cmd = appendSourceDirIfNeeded(cmd, opts.sourceDir)
 	if opts.pullImage {
 		cmd = append(cmd, "-f")
 	}
@@ -184,6 +188,7 @@ func buildSwarmStartCmd(stack *portainer.Stack, opts unpackerCmdBuilderOptions, 
 	cmd = appendSkipTLSVerifyIfNeeded(cmd, opts.gitConfig)
 	cmd = appendFlatIfNeeded(cmd, opts.flat)
 	cmd = append(cmd, "-k")
+	cmd = appendSourceDirIfNeeded(cmd, opts.sourceDir)
 	cmd = append(cmd, getEnv(stack.Env)...)
 	cmd = append(cmd, registries...)
 	cmd = append(cmd, opts.gitConfig.URL,
@@ -238,6 +243,14 @@ func appendKeepFilesIfNeeded(cmd []string, keepFiles bool) []string {
 func appendFlatIfNeeded(cmd []string, flat bool) []string {
 	if flat {
 		cmd = append(cmd, "--flat")
+	}
+
+	return cmd
+}
+
+func appendSourceDirIfNeeded(cmd []string, sourceDir string) []string {
+	if sourceDir != "" {
+		cmd = append(cmd, "--source-dir", sourceDir)
 	}
 
 	return cmd

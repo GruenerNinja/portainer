@@ -45,6 +45,30 @@ func TestBuildDeployCmdDoesNotUseFlatByDefault(t *testing.T) {
 	assert.NotContains(t, cmd, "--flat")
 }
 
+func TestBuildDeployCmdSourceDir(t *testing.T) {
+	t.Parallel()
+
+	opts := testKeepFilesOptions()
+	opts.sourceDir = "tmc-proxy"
+	stack := testRemoteStack()
+	stack.EntryPoint = "tmc-proxy/docker-compose.yml"
+
+	cmd := buildDeployCmd(stack, opts, nil, nil)
+
+	assert.Equal(t, []string{
+		"deploy",
+		"--flat",
+		"-k",
+		"--source-dir",
+		"tmc-proxy",
+		"https://github.com/example/stack",
+		"refs/heads/main",
+		"my-stack",
+		"/mnt/stacks",
+		"tmc-proxy/docker-compose.yml",
+	}, cmd)
+}
+
 func TestBuildUndeployCmdKeepFiles(t *testing.T) {
 	t.Parallel()
 
@@ -58,6 +82,30 @@ func TestBuildUndeployCmdKeepFiles(t *testing.T) {
 		"my-stack",
 		"/mnt/stacks",
 		"docker-compose.yml",
+	}, cmd)
+}
+
+func TestBuildComposeStartCmdSourceDir(t *testing.T) {
+	t.Parallel()
+
+	opts := testKeepFilesOptions()
+	opts.sourceDir = "tmc-proxy"
+	stack := testRemoteStack()
+	stack.EntryPoint = "tmc-proxy/docker-compose.yml"
+
+	cmd := buildComposeStartCmd(stack, opts, nil, nil)
+
+	assert.Equal(t, []string{
+		"deploy",
+		"--flat",
+		"-k",
+		"--source-dir",
+		"tmc-proxy",
+		"https://github.com/example/stack",
+		"refs/heads/main",
+		"my-stack",
+		"/mnt/stacks",
+		"tmc-proxy/docker-compose.yml",
 	}, cmd)
 }
 
@@ -78,6 +126,30 @@ func TestBuildSwarmDeployCmdKeepFiles(t *testing.T) {
 	}, cmd)
 }
 
+func TestBuildSwarmDeployCmdSourceDir(t *testing.T) {
+	t.Parallel()
+
+	opts := testKeepFilesOptions()
+	opts.sourceDir = "tmc-proxy"
+	stack := testRemoteStack()
+	stack.EntryPoint = "tmc-proxy/docker-compose.yml"
+
+	cmd := buildSwarmDeployCmd(stack, opts, nil, nil)
+
+	assert.Equal(t, []string{
+		"swarm-deploy",
+		"--flat",
+		"-k",
+		"--source-dir",
+		"tmc-proxy",
+		"https://github.com/example/stack",
+		"refs/heads/main",
+		"my-stack",
+		"/mnt/stacks",
+		"tmc-proxy/docker-compose.yml",
+	}, cmd)
+}
+
 func TestBuildSwarmUndeployCmdKeepFiles(t *testing.T) {
 	t.Parallel()
 
@@ -89,6 +161,32 @@ func TestBuildSwarmUndeployCmdKeepFiles(t *testing.T) {
 		"-k",
 		"my-stack",
 		"/mnt/stacks",
+	}, cmd)
+}
+
+func TestBuildSwarmStartCmdSourceDir(t *testing.T) {
+	t.Parallel()
+
+	opts := testKeepFilesOptions()
+	opts.sourceDir = "tmc-proxy"
+	stack := testRemoteStack()
+	stack.EntryPoint = "tmc-proxy/docker-compose.yml"
+
+	cmd := buildSwarmStartCmd(stack, opts, nil, nil)
+
+	assert.Equal(t, []string{
+		"swarm-deploy",
+		"-f",
+		"-r",
+		"--flat",
+		"-k",
+		"--source-dir",
+		"tmc-proxy",
+		"https://github.com/example/stack",
+		"refs/heads/main",
+		"my-stack",
+		"/mnt/stacks",
+		"tmc-proxy/docker-compose.yml",
 	}, cmd)
 }
 

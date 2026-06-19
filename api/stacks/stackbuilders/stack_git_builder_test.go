@@ -196,7 +196,7 @@ func TestGitMethodStackBuilder_PreparePersistsRelativePathSettings(t *testing.T)
 func TestGitMethodStackBuilder_PortainerConfigTargetNameResolvesUnderFilesystemPath(t *testing.T) {
 	t.Parallel()
 	builder := newGitMethodBuilderWithFiles(t, map[string]string{
-		".portainer.yml": "version: 1\ndeploy:\n  mode: flat\n  targetName: tmc-proxy\n",
+		"portainer.yml": "version: 1\ndeploy:\n  mode: flat\n  targetName: tmc-proxy\n",
 	})
 	builder.stack.ID = 6
 
@@ -216,10 +216,33 @@ func TestGitMethodStackBuilder_PortainerConfigTargetNameResolvesUnderFilesystemP
 	assert.Equal(t, "/data/compose/tmc-proxy", builder.stack.FilesystemPath)
 }
 
+func TestGitMethodStackBuilder_PortainerConfigTargetNameDoesNotAppendTwice(t *testing.T) {
+	t.Parallel()
+	builder := newGitMethodBuilderWithFiles(t, map[string]string{
+		"portainer.yml": "version: 1\ndeploy:\n  mode: flat\n  targetName: tmc-proxy\n",
+	})
+	builder.stack.ID = 10
+
+	payload := &StackPayload{
+		RepositoryConfigPayload: RepositoryConfigPayload{
+			URL:           "https://github.com/org/public-repo",
+			ReferenceName: "refs/heads/main",
+		},
+		SupportRelativePath: true,
+		FilesystemPath:      "/data/compose/tmc-proxy",
+	}
+
+	err := builder.prepare(context.Background(), payload, portainer.UserID(1))
+	require.NoError(t, err)
+
+	assert.True(t, builder.stack.SupportRelativePath)
+	assert.Equal(t, "/data/compose/tmc-proxy", builder.stack.FilesystemPath)
+}
+
 func TestGitMethodStackBuilder_PortainerConfigLoadsFromComposeFileDirectory(t *testing.T) {
 	t.Parallel()
 	builder := newGitMethodBuilderWithFiles(t, map[string]string{
-		"tmc-proxy/.portainer.yml": "version: 1\ndeploy:\n  mode: flat\n  targetName: tmc-proxy\ncompose:\n  files:\n    - docker-compose.yml\n",
+		"tmc-proxy/portainer.yml": "version: 1\ndeploy:\n  mode: flat\n  targetName: tmc-proxy\ncompose:\n  files:\n    - docker-compose.yml\n",
 	})
 	builder.stack.ID = 9
 
@@ -248,7 +271,7 @@ func TestGitMethodStackBuilder_PortainerConfigLoadsFromComposeFileDirectory(t *t
 func TestGitMethodStackBuilder_PortainerConfigComposeFilesOverridePayload(t *testing.T) {
 	t.Parallel()
 	builder := newGitMethodBuilderWithFiles(t, map[string]string{
-		".portainer.yml": "version: 1\ncompose:\n  files:\n    - compose.yml\n    - compose.prod.yml\n",
+		"portainer.yml": "version: 1\ncompose:\n  files:\n    - compose.yml\n    - compose.prod.yml\n",
 	})
 	builder.stack.ID = 7
 	builder.stack.EntryPoint = "docker-compose.yml"
@@ -277,7 +300,7 @@ func TestGitMethodStackBuilder_PortainerConfigComposeFilesOverridePayload(t *tes
 func TestGitMethodStackBuilder_PortainerConfigDeployRequiresRelativePath(t *testing.T) {
 	t.Parallel()
 	builder := newGitMethodBuilderWithFiles(t, map[string]string{
-		".portainer.yml": "version: 1\ndeploy:\n  mode: flat\n  targetName: tmc-proxy\n",
+		"portainer.yml": "version: 1\ndeploy:\n  mode: flat\n  targetName: tmc-proxy\n",
 	})
 	builder.stack.ID = 8
 
@@ -291,7 +314,7 @@ func TestGitMethodStackBuilder_PortainerConfigDeployRequiresRelativePath(t *test
 	err := builder.prepare(context.Background(), payload, portainer.UserID(1))
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), ".portainer.yml deploy config requires relative path volumes")
+	assert.Contains(t, err.Error(), "portainer.yml deploy config requires relative path volumes")
 }
 
 // builderWorkflowSourceID returns the first SourceID referenced by the Workflow Artifact for this stack.

@@ -3,6 +3,7 @@ package stackbuilders
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -158,7 +159,7 @@ func (b *GitMethodStackBuilder) applyPortainerStackConfig(repoConfig *gittypes.R
 		}
 
 		if config.Deploy.TargetName != "" {
-			b.stack.FilesystemPath = filesystem.JoinPaths(strings.TrimSpace(b.stack.FilesystemPath), config.Deploy.TargetName)
+			b.stack.FilesystemPath = portainerTargetFilesystemPath(b.stack.FilesystemPath, config.Deploy.TargetName)
 		}
 	}
 
@@ -169,6 +170,20 @@ func (b *GitMethodStackBuilder) applyPortainerStackConfig(repoConfig *gittypes.R
 	}
 
 	return nil
+}
+
+func portainerTargetFilesystemPath(filesystemPath string, targetName string) string {
+	destination := strings.TrimSpace(filesystemPath)
+	if strings.TrimSpace(targetName) == "" {
+		return destination
+	}
+
+	destination = filepath.Clean(destination)
+	if filepath.Base(destination) == targetName {
+		return destination
+	}
+
+	return filesystem.JoinPaths(destination, targetName)
 }
 
 // postDeploy enables the auto-update scheduler job for the stack if configured,

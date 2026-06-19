@@ -24,6 +24,8 @@ type GitMethodStackBuilder struct {
 func (b *GitMethodStackBuilder) prepare(ctx context.Context, payload *StackPayload, userID portainer.UserID) error {
 	b.stack.AdditionalFiles = payload.AdditionalFiles
 	b.stack.AutoUpdate = payload.AutoUpdate
+	b.stack.SupportRelativePath = payload.SupportRelativePath
+	b.stack.FilesystemPath = payload.FilesystemPath
 
 	if err := b.initCreatedBy(userID); err != nil {
 		return err

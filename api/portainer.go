@@ -1268,6 +1268,12 @@ type (
 		DeploymentStartStatus StackStatus `json:"DeploymentStartStatus" example:"1"`
 		// Path on disk to the repository hosting the Stack file
 		ProjectPath string `example:"/data/compose/myStack_jpofkc0i9uo9wtx1zesuk649w"`
+		// SupportRelativePath indicates whether Git repository files should be cloned on the target environment
+		// so relative bind mounts can resolve against that cloned repository.
+		SupportRelativePath bool `json:"SupportRelativePath" example:"false"`
+		// FilesystemPath is the base path on the target environment where Git repository files are cloned
+		// when SupportRelativePath is enabled.
+		FilesystemPath string `json:"FilesystemPath,omitempty" example:"/mnt"`
 		// The date in unix time when stack was created
 		CreationDate int64 `example:"1587399600"`
 		// The username which created this stack

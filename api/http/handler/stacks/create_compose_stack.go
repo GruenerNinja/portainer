@@ -189,6 +189,10 @@ type composeStackFromGitRepositoryPayload struct {
 	ComposeFile string `example:"docker-compose.yml" default:"docker-compose.yml"`
 	// Applicable when deploying with multiple stack files
 	AdditionalFiles []string `example:"[nz.compose.yml, uat.compose.yml]"`
+	// Whether the stack supports relative path volumes by cloning Git files on the target environment
+	SupportRelativePath bool `example:"false"`
+	// Base path on the target environment used for relative path volume Git clones
+	FilesystemPath string `example:"/mnt"`
 	// Optional GitOps update configuration
 	AutoUpdate *portainer.AutoUpdateSettings
 	// A list of environment variables used during stack deployment
@@ -199,7 +203,7 @@ type composeStackFromGitRepositoryPayload struct {
 	TLSSkipVerify bool `example:"false"`
 }
 
-func createStackPayloadFromComposeGitPayload(name, repoUrl, repoReference, repoUsername, repoPassword string, repoAuthentication bool, composeFile string, additionalFiles []string, autoUpdate *portainer.AutoUpdateSettings, env []portainer.Pair, fromAppTemplate bool, repoSkipSSLVerify bool, sourceID portainer.SourceID) stackbuilders.StackPayload {
+func createStackPayloadFromComposeGitPayload(name, repoUrl, repoReference, repoUsername, repoPassword string, repoAuthentication bool, composeFile string, additionalFiles []string, supportRelativePath bool, filesystemPath string, autoUpdate *portainer.AutoUpdateSettings, env []portainer.Pair, fromAppTemplate bool, repoSkipSSLVerify bool, sourceID portainer.SourceID) stackbuilders.StackPayload {
 	return stackbuilders.StackPayload{
 		Name: name,
 		RepositoryConfigPayload: stackbuilders.RepositoryConfigPayload{
@@ -211,11 +215,13 @@ func createStackPayloadFromComposeGitPayload(name, repoUrl, repoReference, repoU
 			Password:       repoPassword,
 			TLSSkipVerify:  repoSkipSSLVerify,
 		},
-		ComposeFile:     composeFile,
-		AdditionalFiles: additionalFiles,
-		AutoUpdate:      autoUpdate,
-		Env:             env,
-		FromAppTemplate: fromAppTemplate,
+		ComposeFile:         composeFile,
+		AdditionalFiles:     additionalFiles,
+		SupportRelativePath: supportRelativePath,
+		FilesystemPath:      strings.TrimSpace(filesystemPath),
+		AutoUpdate:          autoUpdate,
+		Env:                 env,
+		FromAppTemplate:     fromAppTemplate,
 	}
 }
 
@@ -231,6 +237,10 @@ func (payload *composeStackFromGitRepositoryPayload) Validate(r *http.Request) e
 		if payload.RepositoryAuthentication && len(payload.RepositoryPassword) == 0 {
 			return errors.New("Invalid repository credentials. Password must be specified when authentication is enabled")
 		}
+	}
+
+	if payload.SupportRelativePath && strings.TrimSpace(payload.FilesystemPath) == "" {
+		return errors.New("Invalid filesystem path. Filesystem path must be specified when relative path volumes are enabled")
 	}
 
 	return update.ValidateAutoUpdateSettings(payload.AutoUpdate)
@@ -298,6 +308,8 @@ func (handler *Handler) createComposeStackFromGitRepository(w http.ResponseWrite
 		payload.RepositoryAuthentication,
 		payload.ComposeFile,
 		payload.AdditionalFiles,
+		payload.SupportRelativePath,
+		payload.FilesystemPath,
 		payload.AutoUpdate,
 		payload.Env,
 		payload.FromAppTemplate,

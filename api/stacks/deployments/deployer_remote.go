@@ -13,6 +13,7 @@ import (
 	"github.com/portainer/portainer/api/filesystem"
 	"github.com/portainer/portainer/api/gitops/workflows"
 	"github.com/portainer/portainer/api/logs"
+	"github.com/portainer/portainer/api/stacks/stackutils"
 	"github.com/portainer/portainer/pkg/librand"
 
 	"github.com/docker/docker/api/types"
@@ -179,6 +180,11 @@ func (d *stackDeployer) remoteStack(ctx context.Context, stack *portainer.Stack,
 		}
 	}
 
+	if stackutils.IsRelativePathStack(stack) {
+		// Relative bind mounts can depend on user-managed files that are not tracked by Git.
+		opts.keepFiles = true
+	}
+
 	cli, err := d.createDockerClient(ctx, endpoint)
 	if err != nil {
 		return errors.WithMessage(err, "unable to create docker client")
@@ -203,7 +209,7 @@ func (d *stackDeployer) remoteStack(ctx context.Context, stack *portainer.Stack,
 	targetSocketBindHost := getTargetSocketBindHost(info.OSType, endpoint.ContainerEngine)
 	targetSocketBindContainer := getTargetSocketBindContainer(info.OSType)
 
-	composeDestination := filesystem.JoinPaths(stack.ProjectPath, composePathPrefix)
+	composeDestination := remoteComposeDestination(stack)
 
 	opts.composeDestination = composeDestination
 
@@ -344,6 +350,14 @@ func getUnpackerImage() string {
 	}
 
 	return image
+}
+
+func remoteComposeDestination(stack *portainer.Stack) string {
+	if stackutils.IsRelativePathStack(stack) {
+		return filesystem.JoinPaths(stack.FilesystemPath, fmt.Sprintf("%d", stack.ID), composePathPrefix)
+	}
+
+	return filesystem.JoinPaths(stack.ProjectPath, composePathPrefix)
 }
 
 func getTargetSocketBindHost(osType string, containerEngine string) string {

@@ -29,3 +29,15 @@ func TestComposeGitPayload_ValidateWithoutSourceID_URLRequired(t *testing.T) {
 	err := payload.Validate(nil)
 	assert.Error(t, err)
 }
+
+func TestComposeGitPayload_ValidateRelativePathRequiresFilesystemPath(t *testing.T) {
+	t.Parallel()
+	payload := &composeStackFromGitRepositoryPayload{
+		Name:                "mystack",
+		SourceID:            portainer.SourceID(1),
+		SupportRelativePath: true,
+	}
+
+	err := payload.Validate(nil)
+	assert.ErrorContains(t, err, "filesystem path")
+}

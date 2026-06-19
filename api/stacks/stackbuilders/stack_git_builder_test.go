@@ -120,6 +120,27 @@ func TestGitMethodStackBuilder_WithoutSourceID_InlinePathStillWorks(t *testing.T
 	assert.Equal(t, "https://github.com/org/public-repo", allSources[0].Git.URL)
 }
 
+func TestGitMethodStackBuilder_PreparePersistsRelativePathSettings(t *testing.T) {
+	t.Parallel()
+	builder := newGitMethodBuilder(t, "feedcafe")
+	builder.stack.ID = 5
+
+	payload := &StackPayload{
+		RepositoryConfigPayload: RepositoryConfigPayload{
+			URL:           "https://github.com/org/public-repo",
+			ReferenceName: "refs/heads/main",
+		},
+		SupportRelativePath: true,
+		FilesystemPath:      "/mnt/stacks",
+	}
+
+	err := builder.prepare(context.Background(), payload, portainer.UserID(1))
+	require.NoError(t, err)
+
+	assert.True(t, builder.stack.SupportRelativePath)
+	assert.Equal(t, "/mnt/stacks", builder.stack.FilesystemPath)
+}
+
 // builderWorkflowSourceID returns the first SourceID referenced by the Workflow Artifact for this stack.
 func builderWorkflowSourceID(t *testing.T, builder *GitMethodStackBuilder) portainer.SourceID {
 	t.Helper()

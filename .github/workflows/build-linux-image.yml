@@ -1,0 +1,115 @@
+name: Build Linux image
+
+on:
+  push:
+    branches:
+      - develop
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version_tag:
+        description: Docker image version tag
+        required: true
+        default: "2.39.3.1"
+
+env:
+  IMAGE_NAME: themodcrafttmc/portainer
+  DEFAULT_VERSION_TAG: "2.39.3.1"
+
+jobs:
+  build-linux-image:
+    name: Build and push linux image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.26.2
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Resolve image tags
+        id: image
+        shell: bash
+        run: |
+          version_tag="${{ github.event.inputs.version_tag }}"
+          if [ -z "$version_tag" ]; then
+            version_tag="$DEFAULT_VERSION_TAG"
+          fi
+
+          {
+            echo "tags<<EOF"
+            echo "$IMAGE_NAME:latest"
+            echo "$IMAGE_NAME:$version_tag"
+            if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+              echo "$IMAGE_NAME:${GITHUB_REF_NAME#v}"
+            fi
+            echo "EOF"
+            echo "version_tag=$version_tag"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        run: make build-client ENV=production
+
+      - name: Build Storybook assets
+        run: make build-storybook
+
+      - name: Build Linux binaries
+        env:
+          BUILDNUMBER: ${{ github.run_number }}
+          CONTAINER_IMAGE_TAG: ${{ steps.image.outputs.version_tag }}
+          GIT_COMMIT_HASH: ${{ github.sha }}
+          SKIP_GO_GET: "true"
+        run: |
+          make build-server PLATFORM=linux ARCH=amd64
+          mv dist/portainer dist/portainer-amd64
+          make build-server PLATFORM=linux ARCH=arm64
+          mv dist/portainer dist/portainer-arm64
+
+      - name: Set build date
+        id: date
+        run: echo "created=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.image.outputs.tags }}
+          build-args: |
+            GIT_COMMIT=${{ github.sha }}
+            BUILD_DATE=${{ steps.date.outputs.created }}

@@ -43,9 +43,10 @@ func SanitizeLabel(value string) string {
 	return strings.Trim(onlyAllowedCharacterString, ".-_")
 }
 
-// IsRelativePathStack checks if the stack is a git stack or not
+// IsRelativePathStack checks if the stack should deploy Git files on the target environment.
 func IsRelativePathStack(stack *portainer.Stack) bool {
-	// Always return false in CE
-	// This function is only for code consistency with EE
-	return false
+	return stack != nil &&
+		stack.WorkflowID != 0 &&
+		stack.SupportRelativePath &&
+		strings.TrimSpace(stack.FilesystemPath) != ""
 }

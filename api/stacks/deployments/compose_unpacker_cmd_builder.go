@@ -33,6 +33,7 @@ type unpackerCmdBuilderOptions struct {
 	pullImage          bool
 	prune              bool
 	forceRecreate      bool
+	keepFiles          bool
 	composeDestination string
 	registries         []portainer.Registry
 	gitConfig          *gittypes.RepoConfig
@@ -70,6 +71,7 @@ func buildDeployCmd(stack *portainer.Stack, opts unpackerCmdBuilderOptions, regi
 	cmd = appendGitAuthIfNeeded(cmd, opts.gitConfig)
 	cmd = appendSkipTLSVerifyIfNeeded(cmd, opts.gitConfig)
 	cmd = appendForceRecreateIfNeeded(cmd, opts.forceRecreate)
+	cmd = appendKeepFilesIfNeeded(cmd, opts.keepFiles)
 
 	if opts.prune {
 		cmd = append(cmd, "-r")
@@ -92,6 +94,7 @@ func buildDeployCmd(stack *portainer.Stack, opts unpackerCmdBuilderOptions, regi
 func buildUndeployCmd(stack *portainer.Stack, opts unpackerCmdBuilderOptions, registries []string, env []string) []string {
 	cmd := []string{UnpackerCmdUndeploy}
 	cmd = appendGitAuthIfNeeded(cmd, opts.gitConfig)
+	cmd = appendKeepFilesIfNeeded(cmd, opts.keepFiles)
 	cmd = append(cmd, opts.gitConfig.URL,
 		stack.Name,
 		opts.composeDestination,
@@ -140,6 +143,7 @@ func buildSwarmDeployCmd(stack *portainer.Stack, opts unpackerCmdBuilderOptions,
 	cmd = appendGitAuthIfNeeded(cmd, opts.gitConfig)
 	cmd = appendSkipTLSVerifyIfNeeded(cmd, opts.gitConfig)
 	cmd = appendForceRecreateIfNeeded(cmd, opts.forceRecreate)
+	cmd = appendKeepFilesIfNeeded(cmd, opts.keepFiles)
 	if opts.pullImage {
 		cmd = append(cmd, "-f")
 	}
@@ -162,7 +166,9 @@ func buildSwarmDeployCmd(stack *portainer.Stack, opts unpackerCmdBuilderOptions,
 
 // swarm-undeploy [-k] <project-name> <destination>
 func buildSwarmUndeployCmd(stack *portainer.Stack, opts unpackerCmdBuilderOptions, registries []string, env []string) []string {
-	return []string{UnpackerCmdSwarmUndeploy, stack.Name, opts.composeDestination}
+	cmd := []string{UnpackerCmdSwarmUndeploy}
+	cmd = appendKeepFilesIfNeeded(cmd, opts.keepFiles)
+	return append(cmd, stack.Name, opts.composeDestination)
 }
 
 // swarm-deploy [-u username -p password] [-f] [-r] [-k] [--skip-tls-verify] [--env KEY1=VALUE1 --env KEY2=VALUE2] <git-repo-url> <project-name> <destination> <compose-file-path> [<more-file-paths>...]
@@ -205,6 +211,14 @@ func appendSkipTLSVerifyIfNeeded(cmd []string, gc *gittypes.RepoConfig) []string
 func appendForceRecreateIfNeeded(cmd []string, forceRecreate bool) []string {
 	if forceRecreate {
 		cmd = append(cmd, "--force-recreate")
+	}
+
+	return cmd
+}
+
+func appendKeepFilesIfNeeded(cmd []string, keepFiles bool) []string {
+	if keepFiles {
+		cmd = append(cmd, "-k")
 	}
 
 	return cmd

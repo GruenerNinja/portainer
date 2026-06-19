@@ -45,6 +45,12 @@ describe('GitSection', () => {
 
     expect(screen.getByText('Git repository')).toBeInTheDocument();
   });
+
+  it('should render relative path controls', () => {
+    renderComponent();
+
+    expect(screen.getByText('Enable relative path volumes')).toBeVisible();
+  });
 });
 
 function renderComponent({

@@ -31,6 +31,10 @@ type StackPayload struct {
 	ComposeFile string `example:"docker-compose.yml" default:"docker-compose.yml"`
 	// Applicable when deploying with multiple stack files
 	AdditionalFiles []string `example:"[nz.compose.yml, uat.compose.yml]"`
+	// Whether the stack supports relative path volumes by cloning Git files on the target environment
+	SupportRelativePath bool `example:"false"`
+	// Base path on the target environment used for relative path volume Git clones
+	FilesystemPath string `example:"/mnt"`
 	// Git repository configuration of a stack
 	RepositoryConfigPayload
 }

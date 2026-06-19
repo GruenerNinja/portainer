@@ -3,6 +3,7 @@ package stacks
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	portainer "github.com/portainer/portainer/api"
 	"github.com/portainer/portainer/api/git/update"
@@ -132,6 +133,10 @@ type swarmStackFromGitRepositoryPayload struct {
 	ComposeFile string `example:"docker-compose.yml" default:"docker-compose.yml"`
 	// Applicable when deploying with multiple stack files
 	AdditionalFiles []string `example:"[nz.compose.yml, uat.compose.yml]"`
+	// Whether the stack supports relative path volumes by cloning Git files on the target environment
+	SupportRelativePath bool `example:"false"`
+	// Base path on the target environment used for relative path volume Git clones
+	FilesystemPath string `example:"/mnt"`
 	// Optional GitOps update configuration
 	AutoUpdate *portainer.AutoUpdateSettings
 	// Deprecated: use SourceID instead. TLSSkipVerify skips SSL verification when cloning the Git repository.
@@ -155,10 +160,14 @@ func (payload *swarmStackFromGitRepositoryPayload) Validate(r *http.Request) err
 		}
 	}
 
+	if payload.SupportRelativePath && strings.TrimSpace(payload.FilesystemPath) == "" {
+		return errors.New("Invalid filesystem path. Filesystem path must be specified when relative path volumes are enabled")
+	}
+
 	return update.ValidateAutoUpdateSettings(payload.AutoUpdate)
 }
 
-func createStackPayloadFromSwarmGitPayload(name, swarmID, repoUrl, repoReference, repoUsername, repoPassword string, repoAuthentication bool, composeFile string, additionalFiles []string, autoUpdate *portainer.AutoUpdateSettings, env []portainer.Pair, fromAppTemplate bool, repoSkipSSLVerify bool, sourceID portainer.SourceID) stackbuilders.StackPayload {
+func createStackPayloadFromSwarmGitPayload(name, swarmID, repoUrl, repoReference, repoUsername, repoPassword string, repoAuthentication bool, composeFile string, additionalFiles []string, supportRelativePath bool, filesystemPath string, autoUpdate *portainer.AutoUpdateSettings, env []portainer.Pair, fromAppTemplate bool, repoSkipSSLVerify bool, sourceID portainer.SourceID) stackbuilders.StackPayload {
 	return stackbuilders.StackPayload{
 		Name:    name,
 		SwarmID: swarmID,
@@ -171,11 +180,13 @@ func createStackPayloadFromSwarmGitPayload(name, swarmID, repoUrl, repoReference
 			Password:       repoPassword,
 			TLSSkipVerify:  repoSkipSSLVerify,
 		},
-		ComposeFile:     composeFile,
-		AdditionalFiles: additionalFiles,
-		AutoUpdate:      autoUpdate,
-		Env:             env,
-		FromAppTemplate: fromAppTemplate,
+		ComposeFile:         composeFile,
+		AdditionalFiles:     additionalFiles,
+		SupportRelativePath: supportRelativePath,
+		FilesystemPath:      strings.TrimSpace(filesystemPath),
+		AutoUpdate:          autoUpdate,
+		Env:                 env,
+		FromAppTemplate:     fromAppTemplate,
 	}
 }
 
@@ -238,6 +249,8 @@ func (handler *Handler) createSwarmStackFromGitRepository(w http.ResponseWriter,
 		payload.RepositoryAuthentication,
 		payload.ComposeFile,
 		payload.AdditionalFiles,
+		payload.SupportRelativePath,
+		payload.FilesystemPath,
 		payload.AutoUpdate,
 		payload.Env,
 		payload.FromAppTemplate,

@@ -18,9 +18,10 @@ const (
 )
 
 type PortainerStackConfig struct {
-	Version int                         `yaml:"version"`
-	Deploy  PortainerStackDeployConfig  `yaml:"deploy"`
-	Compose PortainerStackComposeConfig `yaml:"compose"`
+	Version   int                         `yaml:"version"`
+	Deploy    PortainerStackDeployConfig  `yaml:"deploy"`
+	Compose   PortainerStackComposeConfig `yaml:"compose"`
+	ConfigDir string                      `yaml:"-"`
 }
 
 type PortainerStackDeployConfig struct {
@@ -33,7 +34,11 @@ type PortainerStackComposeConfig struct {
 }
 
 func LoadPortainerStackConfig(projectPath string) (*PortainerStackConfig, bool, error) {
-	configPath, found, err := findPortainerStackConfig(projectPath)
+	return LoadPortainerStackConfigForFile(projectPath, "")
+}
+
+func LoadPortainerStackConfigForFile(projectPath string, configFilePath string) (*PortainerStackConfig, bool, error) {
+	configPath, configDir, found, err := findPortainerStackConfig(projectPath, configFilePath)
 	if err != nil || !found {
 		return nil, found, err
 	}
@@ -43,7 +48,7 @@ func LoadPortainerStackConfig(projectPath string) (*PortainerStackConfig, bool, 
 		return nil, true, fmt.Errorf("failed to read %s: %w", filepath.Base(configPath), err)
 	}
 
-	var config PortainerStackConfig
+	config := PortainerStackConfig{ConfigDir: configDir}
 	decoder := yaml.NewDecoder(bytes.NewReader(content))
 	decoder.KnownFields(true)
 	if err := decoder.Decode(&config); err != nil {
@@ -53,6 +58,8 @@ func LoadPortainerStackConfig(projectPath string) (*PortainerStackConfig, bool, 
 	if err := config.Validate(); err != nil {
 		return nil, true, err
 	}
+
+	config.resolveComposeFilePaths()
 
 	return &config, true, nil
 }
@@ -86,30 +93,61 @@ func (config *PortainerStackConfig) Validate() error {
 	return nil
 }
 
+func (config *PortainerStackConfig) resolveComposeFilePaths() {
+	if config.ConfigDir == "" || config.ConfigDir == "." {
+		return
+	}
+
+	for i, file := range config.Compose.Files {
+		config.Compose.Files[i] = path.Join(config.ConfigDir, file)
+	}
+}
+
 func (config PortainerStackConfig) HasDeployConfig() bool {
 	return config.Deploy.Mode != "" || config.Deploy.TargetName != ""
 }
 
-func findPortainerStackConfig(projectPath string) (string, bool, error) {
+func findPortainerStackConfig(projectPath string, configFilePath string) (string, string, bool, error) {
 	var foundPath string
-	for _, name := range []string{PortainerStackConfigFile, portainerStackConfigFileYAML} {
-		configPath := filepath.Join(projectPath, name)
-		if _, err := os.Stat(configPath); err != nil {
-			if os.IsNotExist(err) {
-				continue
+	var foundConfigDir string
+
+	for _, configDir := range portainerStackConfigSearchDirs(configFilePath) {
+		for _, name := range []string{PortainerStackConfigFile, portainerStackConfigFileYAML} {
+			configPath := filepath.Join(projectPath, filepath.FromSlash(configDir), name)
+			if _, err := os.Stat(configPath); err != nil {
+				if os.IsNotExist(err) {
+					continue
+				}
+
+				return "", "", false, fmt.Errorf("failed to inspect %s: %w", name, err)
 			}
 
-			return "", false, fmt.Errorf("failed to inspect %s: %w", name, err)
-		}
+			if foundPath != "" {
+				return "", "", false, fmt.Errorf("only one Portainer stack config file is allowed")
+			}
 
-		if foundPath != "" {
-			return "", false, fmt.Errorf("only one Portainer stack config file is allowed")
+			foundPath = configPath
+			foundConfigDir = configDir
 		}
-
-		foundPath = configPath
 	}
 
-	return foundPath, foundPath != "", nil
+	return foundPath, foundConfigDir, foundPath != "", nil
+}
+
+func portainerStackConfigSearchDirs(configFilePath string) []string {
+	configDirs := []string{"."}
+
+	cleanedConfigFilePath, err := cleanPortainerComposeFilePath(configFilePath)
+	if err != nil {
+		return configDirs
+	}
+
+	configDir := path.Dir(cleanedConfigFilePath)
+	if configDir != "." {
+		configDirs = append(configDirs, configDir)
+	}
+
+	return configDirs
 }
 
 func validatePortainerTargetName(targetName string) error {

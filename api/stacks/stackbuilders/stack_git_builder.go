@@ -143,7 +143,7 @@ func (b *GitMethodStackBuilder) prepare(ctx context.Context, payload *StackPaylo
 }
 
 func (b *GitMethodStackBuilder) applyPortainerStackConfig(repoConfig *gittypes.RepoConfig) error {
-	config, found, err := stackutils.LoadPortainerStackConfig(b.stack.ProjectPath)
+	config, found, err := stackutils.LoadPortainerStackConfigForFile(b.stack.ProjectPath, repoConfig.ConfigFilePath)
 	if err != nil {
 		return err
 	}

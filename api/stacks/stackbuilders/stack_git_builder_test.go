@@ -216,6 +216,35 @@ func TestGitMethodStackBuilder_PortainerConfigTargetNameResolvesUnderFilesystemP
 	assert.Equal(t, "/data/compose/tmc-proxy", builder.stack.FilesystemPath)
 }
 
+func TestGitMethodStackBuilder_PortainerConfigLoadsFromComposeFileDirectory(t *testing.T) {
+	t.Parallel()
+	builder := newGitMethodBuilderWithFiles(t, map[string]string{
+		"tmc-proxy/.portainer.yml": "version: 1\ndeploy:\n  mode: flat\n  targetName: tmc-proxy\ncompose:\n  files:\n    - docker-compose.yml\n",
+	})
+	builder.stack.ID = 9
+
+	payload := &StackPayload{
+		RepositoryConfigPayload: RepositoryConfigPayload{
+			URL:           "https://github.com/org/public-repo",
+			ReferenceName: "refs/heads/main",
+		},
+		ComposeFile:         "tmc-proxy/docker-compose.yml",
+		SupportRelativePath: true,
+		FilesystemPath:      "/data/compose",
+	}
+
+	err := builder.prepare(context.Background(), payload, portainer.UserID(1))
+	require.NoError(t, err)
+
+	assert.Equal(t, "/data/compose/tmc-proxy", builder.stack.FilesystemPath)
+	assert.Equal(t, "tmc-proxy/docker-compose.yml", builder.stack.EntryPoint)
+
+	readSrc, artifact, err := workflows.GitSourceAndArtifactForStack(builder.dataStore, builder.stack.WorkflowID, builder.stack.ID)
+	require.NoError(t, err)
+	merged := workflows.MergeSourceAndFile(readSrc, artifact)
+	assert.Equal(t, "tmc-proxy/docker-compose.yml", merged.ConfigFilePath)
+}
+
 func TestGitMethodStackBuilder_PortainerConfigComposeFilesOverridePayload(t *testing.T) {
 	t.Parallel()
 	builder := newGitMethodBuilderWithFiles(t, map[string]string{

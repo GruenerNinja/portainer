@@ -45,6 +45,43 @@ func TestLoadPortainerStackConfigMissingFile(t *testing.T) {
 	assert.Nil(t, config)
 }
 
+func TestLoadPortainerStackConfigForFileLoadsConfigNextToComposeFile(t *testing.T) {
+	t.Parallel()
+
+	projectPath := t.TempDir()
+	writePortainerStackConfig(t, filepath.Join(projectPath, "tmc-proxy"), `
+version: 1
+deploy:
+  mode: flat
+  targetName: tmc-proxy
+compose:
+  files:
+    - docker-compose.yml
+    - compose.override.yml
+`)
+
+	config, found, err := LoadPortainerStackConfigForFile(projectPath, "tmc-proxy/docker-compose.yml")
+	require.NoError(t, err)
+	require.True(t, found)
+	require.NotNil(t, config)
+
+	assert.Equal(t, "tmc-proxy", config.ConfigDir)
+	assert.Equal(t, []string{"tmc-proxy/docker-compose.yml", "tmc-proxy/compose.override.yml"}, config.Compose.Files)
+}
+
+func TestLoadPortainerStackConfigForFileRejectsMultipleConfigs(t *testing.T) {
+	t.Parallel()
+
+	projectPath := t.TempDir()
+	writePortainerStackConfig(t, projectPath, "version: 1\n")
+	writePortainerStackConfig(t, filepath.Join(projectPath, "tmc-proxy"), "version: 1\n")
+
+	_, _, err := LoadPortainerStackConfigForFile(projectPath, "tmc-proxy/docker-compose.yml")
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "only one Portainer stack config file")
+}
+
 func TestLoadPortainerStackConfigRejectsUnsafeTargetName(t *testing.T) {
 	t.Parallel()
 
@@ -82,5 +119,6 @@ compose:
 func writePortainerStackConfig(t *testing.T, projectPath string, content string) {
 	t.Helper()
 
+	require.NoError(t, os.MkdirAll(projectPath, 0755))
 	require.NoError(t, os.WriteFile(filepath.Join(projectPath, PortainerStackConfigFile), []byte(content), 0644))
 }

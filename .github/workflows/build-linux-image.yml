@@ -11,12 +11,17 @@ on:
       version_tag:
         description: Docker image version tag
         required: true
+        default: "2.39.3.1.1"
+      compose_unpacker_tag:
+        description: Compose unpacker image version tag
+        required: true
         default: "2.39.3.1"
 
 env:
   IMAGE_NAME: themodcrafttmc/portainer
   COMPOSE_UNPACKER_IMAGE_NAME: themodcrafttmc/compose-unpacker
-  DEFAULT_VERSION_TAG: "2.39.3.1"
+  DEFAULT_VERSION_TAG: "2.39.3.1.1"
+  DEFAULT_COMPOSE_UNPACKER_TAG: "2.39.3.1"
 
 jobs:
   build-linux-image:
@@ -60,6 +65,10 @@ jobs:
           if [ -z "$version_tag" ]; then
             version_tag="$DEFAULT_VERSION_TAG"
           fi
+          compose_unpacker_tag="${{ github.event.inputs.compose_unpacker_tag }}"
+          if [ -z "$compose_unpacker_tag" ]; then
+            compose_unpacker_tag="$DEFAULT_COMPOSE_UNPACKER_TAG"
+          fi
 
           {
             echo "tags<<EOF"
@@ -70,6 +79,7 @@ jobs:
             fi
             echo "EOF"
             echo "version_tag=$version_tag"
+            echo "compose_unpacker_tag=$compose_unpacker_tag"
           } >> "$GITHUB_OUTPUT"
 
       - name: Install dependencies
@@ -114,4 +124,4 @@ jobs:
           build-args: |
             GIT_COMMIT=${{ github.sha }}
             BUILD_DATE=${{ steps.date.outputs.created }}
-            COMPOSE_UNPACKER_IMAGE=${{ env.COMPOSE_UNPACKER_IMAGE_NAME }}:${{ steps.image.outputs.version_tag }}
+            COMPOSE_UNPACKER_IMAGE=${{ env.COMPOSE_UNPACKER_IMAGE_NAME }}:${{ steps.image.outputs.compose_unpacker_tag }}

@@ -185,8 +185,12 @@ func (d *stackDeployer) remoteStack(ctx context.Context, stack *portainer.Stack,
 		// Relative bind mounts can depend on user-managed files that are not tracked by Git.
 		opts.keepFiles = true
 		opts.flat = true
-		if err := applyRelativePathStackConfig(stack, &opts); err != nil {
+		foundConfig, err := applyRelativePathStackConfig(stack, &opts)
+		if err != nil {
 			return err
+		}
+		if requiresPortainerStackConfig(operation) && !foundConfig {
+			return fmt.Errorf("%s is required before relative path volumes can pull Git content to the target environment", stackutils.PortainerStackConfigFile)
 		}
 	}
 
@@ -360,14 +364,14 @@ func getUnpackerImage() string {
 	return image
 }
 
-func applyRelativePathStackConfig(stack *portainer.Stack, opts *unpackerCmdBuilderOptions) error {
+func applyRelativePathStackConfig(stack *portainer.Stack, opts *unpackerCmdBuilderOptions) (bool, error) {
 	if strings.TrimSpace(stack.ProjectPath) == "" {
-		return nil
+		return false, nil
 	}
 
 	config, found, err := stackutils.LoadPortainerStackConfigForFile(stack.ProjectPath, stack.EntryPoint)
 	if err != nil || !found {
-		return err
+		return found, err
 	}
 
 	if config.ConfigDir != "" && config.ConfigDir != "." {
@@ -383,7 +387,16 @@ func applyRelativePathStackConfig(stack *portainer.Stack, opts *unpackerCmdBuild
 		opts.composeDestination = remoteComposeDestination(stack, config.Deploy.TargetName)
 	}
 
-	return nil
+	return true, nil
+}
+
+func requiresPortainerStackConfig(operation StackRemoteOperation) bool {
+	switch operation {
+	case OperationDeploy, OperationComposeStart, OperationSwarmDeploy, OperationSwarmStart:
+		return true
+	default:
+		return false
+	}
 }
 
 func remoteComposeDestination(stack *portainer.Stack, targetName string) string {

@@ -4,6 +4,8 @@ import { Form, useFormikContext } from 'formik';
 import { StackType } from '@/react/common/stacks/types';
 import { baseStackWebhookUrl } from '@/portainer/helpers/webhookHelper';
 import { GitForm } from '@/react/portainer/gitops/GitForm';
+import { RelativePathFieldset } from '@/react/portainer/gitops/RelativePathFieldset/RelativePathFieldset';
+import { getDefaultRelativePathModel } from '@/react/portainer/gitops/RelativePathFieldset/types';
 import { useIsStandalone } from '@/react/docker/proxy/queries/useInfo';
 import { useCurrentEnvironment } from '@/react/hooks/useCurrentEnvironment';
 import { getPlatformType } from '@/react/portainer/environments/utils';
@@ -109,6 +111,26 @@ export function InnerForm({
                 isDockerStandalone={isDockerStandalone}
                 isSourceSelectionVisible={!!gitSourceId}
               />
+
+              {isDocker && (
+                <RelativePathFieldset
+                  values={{
+                    ...getDefaultRelativePathModel(),
+                    SupportRelativePath: !!values.git.SupportRelativePath,
+                    FilesystemPath: values.git.FilesystemPath || '',
+                  }}
+                  gitModel={values.git}
+                  hideEdgeConfigs
+                  errors={{ FilesystemPath: errors.git?.FilesystemPath }}
+                  onChange={(value) => {
+                    setFieldValue(
+                      'git.SupportRelativePath',
+                      value.SupportRelativePath
+                    );
+                    setFieldValue('git.FilesystemPath', value.FilesystemPath);
+                  }}
+                />
+              )}
 
               <StackEnvironmentVariablesPanel
                 values={values.env}

@@ -41,6 +41,8 @@ export function useUpdateGitStack(stack: Stack) {
         env: values.env,
         prune: values.prune,
         SourceID: values.git.SourceId,
+        SupportRelativePath: values.git.SupportRelativePath,
+        FilesystemPath: values.git.FilesystemPath,
       });
 
       if (repullImageAndRedeploy === undefined) {

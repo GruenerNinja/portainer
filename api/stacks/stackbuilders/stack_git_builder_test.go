@@ -174,7 +174,9 @@ func TestGitMethodStackBuilder_WithoutSourceID_InlinePathStillWorks(t *testing.T
 
 func TestGitMethodStackBuilder_PreparePersistsRelativePathSettings(t *testing.T) {
 	t.Parallel()
-	builder := newGitMethodBuilder(t, "feedcafe")
+	builder := newGitMethodBuilderWithFiles(t, map[string]string{
+		"portainer.yml": "version: 1\n",
+	})
 	builder.stack.ID = 5
 
 	payload := &StackPayload{
@@ -191,6 +193,26 @@ func TestGitMethodStackBuilder_PreparePersistsRelativePathSettings(t *testing.T)
 
 	assert.True(t, builder.stack.SupportRelativePath)
 	assert.Equal(t, "/mnt/stacks", builder.stack.FilesystemPath)
+}
+
+func TestGitMethodStackBuilder_RelativePathRequiresPortainerConfig(t *testing.T) {
+	t.Parallel()
+	builder := newGitMethodBuilderWithFiles(t, map[string]string{})
+	builder.stack.ID = 11
+
+	payload := &StackPayload{
+		RepositoryConfigPayload: RepositoryConfigPayload{
+			URL:           "https://github.com/org/public-repo",
+			ReferenceName: "refs/heads/main",
+		},
+		SupportRelativePath: true,
+		FilesystemPath:      "/mnt/stacks",
+	}
+
+	err := builder.prepare(context.Background(), payload, portainer.UserID(1))
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "portainer.yml is required when relative path volumes are enabled")
 }
 
 func TestGitMethodStackBuilder_PortainerConfigTargetNameResolvesUnderFilesystemPath(t *testing.T) {

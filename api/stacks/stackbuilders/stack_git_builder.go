@@ -150,6 +150,10 @@ func (b *GitMethodStackBuilder) applyPortainerStackConfig(repoConfig *gittypes.R
 	}
 
 	if !found {
+		if b.stack.SupportRelativePath {
+			return fmt.Errorf("%s is required when relative path volumes are enabled", stackutils.PortainerStackConfigFile)
+		}
+
 		return nil
 	}
 

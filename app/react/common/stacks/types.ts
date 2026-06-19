@@ -117,4 +117,6 @@ export interface GitStackPayload {
   HelmChartPath?: string;
   HelmValuesFiles?: string[];
   Atomic?: boolean;
+  SupportRelativePath?: boolean;
+  FilesystemPath?: string;
 }

@@ -26,7 +26,7 @@ export function StackRelativePathFieldset({ isDockerStandalone }: Props) {
           onChange={(checked) =>
             setFieldValue('git.SupportRelativePath', checked)
           }
-          tooltip="Enabling this means you can specify relative path volumes in your Compose files, with Portainer pulling the content from your git repository to the environment the stack is deployed to."
+          tooltip="Enabling this means you can specify relative path volumes in your Compose files. Portainer requires portainer.yml or portainer.yaml before pulling Git content to the environment path."
           labelClass="col-sm-3 col-lg-2"
           data-cy="enable-relative-paths"
         />

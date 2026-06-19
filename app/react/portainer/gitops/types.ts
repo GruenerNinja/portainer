@@ -52,6 +52,8 @@ export interface GitFormModel extends GitAuthModel {
   AutoUpdate?: AutoUpdateModel;
   /** ID of an existing Source. When set, inline URL and credentials are ignored. */
   SourceId?: number;
+  SupportRelativePath?: boolean;
+  FilesystemPath?: string;
 }
 
 export function getDefaultModel(

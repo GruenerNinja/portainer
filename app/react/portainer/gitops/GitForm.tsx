@@ -218,6 +218,13 @@ export function buildGitValidationSchema(
     SourceId: isSourceSelection
       ? number().min(1, 'Source is required').required('Source is required')
       : number().optional().nullable(),
+    SupportRelativePath: boolean().default(false),
+    FilesystemPath: string()
+      .default('')
+      .when('SupportRelativePath', {
+        is: true,
+        then: string().required('Filesystem path is required'),
+      }),
   }).concat(
     gitAuthValidation(isEdit, isCreatedFromCustomTemplate)
   ) as SchemaOf<GitFormModel>;

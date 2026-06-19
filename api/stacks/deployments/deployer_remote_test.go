@@ -93,7 +93,9 @@ compose:
 	}
 	opts := unpackerCmdBuilderOptions{}
 
-	require.NoError(t, applyRelativePathStackConfig(stack, &opts))
+	found, err := applyRelativePathStackConfig(stack, &opts)
+	require.NoError(t, err)
+	assert.True(t, found)
 	assert.Equal(t, "tmc-proxy", opts.sourceDir)
 	assert.Equal(t, ".deployed", opts.deploymentDir)
 	assert.True(t, opts.cleanupDeploymentFiles)
@@ -101,8 +103,41 @@ compose:
 
 	stack.FilesystemPath = "/data/compose/tmc-proxy"
 	opts = unpackerCmdBuilderOptions{}
-	require.NoError(t, applyRelativePathStackConfig(stack, &opts))
+	found, err = applyRelativePathStackConfig(stack, &opts)
+	require.NoError(t, err)
+	assert.True(t, found)
 	assert.Equal(t, "/data/compose/tmc-proxy", opts.composeDestination)
+}
+
+func TestApplyRelativePathStackConfigReportsMissingConfig(t *testing.T) {
+	t.Parallel()
+
+	stack := &portainer.Stack{
+		ID:                  12,
+		ProjectPath:         t.TempDir(),
+		WorkflowID:          1,
+		SupportRelativePath: true,
+		FilesystemPath:      "/data/compose",
+		EntryPoint:          "docker-compose.yml",
+	}
+	opts := unpackerCmdBuilderOptions{}
+
+	found, err := applyRelativePathStackConfig(stack, &opts)
+	require.NoError(t, err)
+	assert.False(t, found)
+}
+
+func TestRequiresPortainerStackConfig(t *testing.T) {
+	t.Parallel()
+
+	assert.True(t, requiresPortainerStackConfig(OperationDeploy))
+	assert.True(t, requiresPortainerStackConfig(OperationComposeStart))
+	assert.True(t, requiresPortainerStackConfig(OperationSwarmDeploy))
+	assert.True(t, requiresPortainerStackConfig(OperationSwarmStart))
+	assert.False(t, requiresPortainerStackConfig(OperationUndeploy))
+	assert.False(t, requiresPortainerStackConfig(OperationComposeStop))
+	assert.False(t, requiresPortainerStackConfig(OperationSwarmUndeploy))
+	assert.False(t, requiresPortainerStackConfig(OperationSwarmStop))
 }
 
 func TestGetUnpackerImage(t *testing.T) {

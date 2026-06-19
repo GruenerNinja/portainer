@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"net/http"
+	"strings"
 	"time"
 
 	portainer "github.com/portainer/portainer/api"
@@ -28,6 +29,8 @@ type stackGitUpdatePayload struct {
 	Prune                   bool
 	ConfigFilePath          string
 	AdditionalFiles         []string
+	SupportRelativePath     *bool
+	FilesystemPath          *string
 	RepositoryReferenceName string
 	// SourceID references an existing Source for git credentials/URL.
 	// When set, the inline URL and authentication fields are ignored.
@@ -180,6 +183,15 @@ func (handler *Handler) stackUpdateGit(w http.ResponseWriter, r *http.Request) *
 	}
 	if payload.AdditionalFiles != nil {
 		stack.AdditionalFiles = payload.AdditionalFiles
+	}
+	if payload.SupportRelativePath != nil {
+		stack.SupportRelativePath = *payload.SupportRelativePath
+	}
+	if payload.FilesystemPath != nil {
+		stack.FilesystemPath = strings.TrimSpace(*payload.FilesystemPath)
+	}
+	if stack.SupportRelativePath && strings.TrimSpace(stack.FilesystemPath) == "" {
+		return httperror.BadRequest("Invalid request payload", errors.New("filesystem path is required when relative path volumes are enabled"))
 	}
 
 	stack.EntryPoint = cmp.Or(payload.ConfigFilePath, stack.EntryPoint)

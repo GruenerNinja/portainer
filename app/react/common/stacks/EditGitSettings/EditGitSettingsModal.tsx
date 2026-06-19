@@ -36,6 +36,8 @@ export function EditGitSettingsModal({ stack, onClose }: Props) {
       AdditionalFiles: stack.AdditionalFiles || [],
       SourceId: stack.GitSourceId,
       RepositoryURLValid: !!gitModel.RepositoryURL,
+      SupportRelativePath: stack.SupportRelativePath,
+      FilesystemPath: stack.FilesystemPath,
     },
     env: stack.Env || [],
     prune: stack.Option?.Prune || false,

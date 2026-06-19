@@ -58,7 +58,7 @@ export function RelativePathFieldset({
             data-cy="gitops-enable-relative-paths-switch"
             label="Enable relative path volumes"
             labelClass="col-sm-3 col-lg-2"
-            tooltip="Enabling this means you can specify relative path volumes in your Compose files, with Portainer pulling the content from your git repository to the environment the stack is deployed to."
+            tooltip="Enabling this means you can specify relative path volumes in your Compose files. Portainer requires portainer.yml or portainer.yaml before pulling Git content to the environment path."
             disabled={isEditing || relativePathForcedEnabled}
             checked={value.SupportRelativePath}
             onChange={(value) => {

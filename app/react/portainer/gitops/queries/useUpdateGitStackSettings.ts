@@ -28,6 +28,8 @@ export interface GitStackPayload {
   HelmValuesFiles?: string[];
   Atomic?: boolean;
   SourceID?: number;
+  SupportRelativePath?: boolean;
+  FilesystemPath?: string;
 }
 
 export async function updateGitStackSettings(

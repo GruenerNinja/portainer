@@ -15,6 +15,7 @@ on:
 
 env:
   IMAGE_NAME: themodcrafttmc/portainer
+  COMPOSE_UNPACKER_IMAGE_NAME: themodcrafttmc/compose-unpacker
   DEFAULT_VERSION_TAG: "2.39.3.1"
 
 jobs:
@@ -102,7 +103,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push image
+      - name: Build and push Portainer image
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -113,3 +114,4 @@ jobs:
           build-args: |
             GIT_COMMIT=${{ github.sha }}
             BUILD_DATE=${{ steps.date.outputs.created }}
+            COMPOSE_UNPACKER_IMAGE=${{ env.COMPOSE_UNPACKER_IMAGE_NAME }}:${{ steps.image.outputs.version_tag }}

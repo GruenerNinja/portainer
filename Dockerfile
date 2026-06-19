@@ -1,6 +1,8 @@
 FROM portainer/base:latest AS production
 
 ARG TARGETARCH
+ARG COMPOSE_UNPACKER_IMAGE=themodcrafttmc/compose-unpacker:2.39.3.1
+ENV COMPOSE_UNPACKER_IMAGE=${COMPOSE_UNPACKER_IMAGE}
 
 LABEL org.opencontainers.image.title="Portainer" \
   org.opencontainers.image.description="Docker container management made simple, with the world's most popular GUI-based container management platform." \

@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	defaultUnpackerImage       = "portainer/compose-unpacker:" + portainer.APIVersion
+	defaultUnpackerImage       = "themodcrafttmc/compose-unpacker:2.39.3.1"
 	composeUnpackerImageEnvVar = "COMPOSE_UNPACKER_IMAGE"
 	composePathPrefix          = "portainer-compose-unpacker"
 )

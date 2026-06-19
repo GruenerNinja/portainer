@@ -44,3 +44,13 @@ func TestRemoteComposeDestination(t *testing.T) {
 		})
 	}
 }
+
+func TestGetUnpackerImage(t *testing.T) {
+	t.Setenv(composeUnpackerImageEnvVar, "")
+
+	assert.Equal(t, defaultUnpackerImage, getUnpackerImage())
+
+	t.Setenv(composeUnpackerImageEnvVar, "example.com/custom/compose-unpacker:test")
+
+	assert.Equal(t, "example.com/custom/compose-unpacker:test", getUnpackerImage())
+}

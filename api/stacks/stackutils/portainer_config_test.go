@@ -18,6 +18,8 @@ version: 1
 deploy:
   mode: flat
   targetName: tmc-proxy
+  deploymentDir: ./.deployed
+  cleanupDeploymentFiles: true
 compose:
   files:
     - ./docker-compose.yml
@@ -32,6 +34,8 @@ compose:
 	assert.Equal(t, 1, config.Version)
 	assert.Equal(t, "flat", config.Deploy.Mode)
 	assert.Equal(t, "tmc-proxy", config.Deploy.TargetName)
+	assert.Equal(t, ".deployed", config.Deploy.DeploymentDir)
+	assert.True(t, config.Deploy.CleanupDeploymentFiles)
 	assert.Equal(t, []string{"docker-compose.yml", "compose.override.yml"}, config.Compose.Files)
 }
 
@@ -134,6 +138,23 @@ compose:
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "compose.files")
+}
+
+func TestLoadPortainerStackConfigRejectsUnsafeDeploymentDir(t *testing.T) {
+	t.Parallel()
+
+	projectPath := t.TempDir()
+	writePortainerStackConfig(t, projectPath, `
+version: 1
+deploy:
+  mode: flat
+  deploymentDir: ../.deployed
+`)
+
+	_, _, err := LoadPortainerStackConfig(projectPath)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "deploy.deploymentDir")
 }
 
 func writePortainerStackConfig(t *testing.T, projectPath string, content string) {

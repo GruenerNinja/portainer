@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	defaultUnpackerImage       = "themodcrafttmc/compose-unpacker:2.39.3.1"
+	defaultUnpackerImage       = "themodcrafttmc/compose-unpacker:2.39.3.1.1"
 	composeUnpackerImageEnvVar = "COMPOSE_UNPACKER_IMAGE"
 	composePathPrefix          = "portainer-compose-unpacker"
 )
@@ -373,6 +373,11 @@ func applyRelativePathStackConfig(stack *portainer.Stack, opts *unpackerCmdBuild
 	if config.ConfigDir != "" && config.ConfigDir != "." {
 		opts.sourceDir = config.ConfigDir
 	}
+
+	if config.Deploy.DeploymentDir != "" {
+		opts.deploymentDir = config.Deploy.DeploymentDir
+	}
+	opts.cleanupDeploymentFiles = config.Deploy.CleanupDeploymentFiles
 
 	if config.Deploy.TargetName != "" {
 		opts.composeDestination = remoteComposeDestination(stack, config.Deploy.TargetName)

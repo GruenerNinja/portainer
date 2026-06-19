@@ -25,8 +25,10 @@ type PortainerStackConfig struct {
 }
 
 type PortainerStackDeployConfig struct {
-	Mode       string `yaml:"mode"`
-	TargetName string `yaml:"targetName"`
+	Mode                   string `yaml:"mode"`
+	TargetName             string `yaml:"targetName"`
+	DeploymentDir          string `yaml:"deploymentDir"`
+	CleanupDeploymentFiles bool   `yaml:"cleanupDeploymentFiles"`
 }
 
 type PortainerStackComposeConfig struct {
@@ -81,6 +83,16 @@ func (config *PortainerStackConfig) Validate() error {
 		}
 	}
 
+	config.Deploy.DeploymentDir = strings.TrimSpace(config.Deploy.DeploymentDir)
+	if config.Deploy.DeploymentDir != "" {
+		deploymentDir, err := cleanPortainerDeploymentDir(config.Deploy.DeploymentDir)
+		if err != nil {
+			return err
+		}
+
+		config.Deploy.DeploymentDir = deploymentDir
+	}
+
 	for i, file := range config.Compose.Files {
 		cleaned, err := cleanPortainerComposeFilePath(file)
 		if err != nil {
@@ -104,7 +116,10 @@ func (config *PortainerStackConfig) resolveComposeFilePaths() {
 }
 
 func (config PortainerStackConfig) HasDeployConfig() bool {
-	return config.Deploy.Mode != "" || config.Deploy.TargetName != ""
+	return config.Deploy.Mode != "" ||
+		config.Deploy.TargetName != "" ||
+		config.Deploy.DeploymentDir != "" ||
+		config.Deploy.CleanupDeploymentFiles
 }
 
 func findPortainerStackConfig(projectPath string, configFilePath string) (string, string, bool, error) {
@@ -179,6 +194,19 @@ func cleanPortainerComposeFilePath(filePath string) (string, error) {
 	cleaned := path.Clean(filePath)
 	if cleaned == "." || cleaned == ".." || strings.HasPrefix(cleaned, "../") {
 		return "", fmt.Errorf("%s compose.files entries cannot traverse outside the repository", PortainerStackConfigFile)
+	}
+
+	return cleaned, nil
+}
+
+func cleanPortainerDeploymentDir(deploymentDir string) (string, error) {
+	if path.IsAbs(deploymentDir) || filepath.VolumeName(deploymentDir) != "" || strings.Contains(deploymentDir, `\`) {
+		return "", fmt.Errorf("%s deploy.deploymentDir must be a relative repository path", PortainerStackConfigFile)
+	}
+
+	cleaned := path.Clean(deploymentDir)
+	if cleaned == "." || cleaned == ".." || strings.HasPrefix(cleaned, "../") {
+		return "", fmt.Errorf("%s deploy.deploymentDir cannot traverse outside the deployment directory", PortainerStackConfigFile)
 	}
 
 	return cleaned, nil

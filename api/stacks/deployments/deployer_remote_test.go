@@ -76,6 +76,8 @@ func TestApplyRelativePathStackConfigSetsSourceDirAndDestination(t *testing.T) {
 deploy:
   mode: flat
   targetName: tmc-proxy
+  deploymentDir: .deployed
+  cleanupDeploymentFiles: true
 compose:
   files:
     - docker-compose.yml
@@ -93,6 +95,8 @@ compose:
 
 	require.NoError(t, applyRelativePathStackConfig(stack, &opts))
 	assert.Equal(t, "tmc-proxy", opts.sourceDir)
+	assert.Equal(t, ".deployed", opts.deploymentDir)
+	assert.True(t, opts.cleanupDeploymentFiles)
 	assert.Equal(t, "/data/compose/tmc-proxy", opts.composeDestination)
 
 	stack.FilesystemPath = "/data/compose/tmc-proxy"

@@ -69,6 +69,35 @@ func TestBuildDeployCmdSourceDir(t *testing.T) {
 	}, cmd)
 }
 
+func TestBuildDeployCmdDeploymentFileOptions(t *testing.T) {
+	t.Parallel()
+
+	opts := testKeepFilesOptions()
+	opts.sourceDir = "tmc-proxy"
+	opts.deploymentDir = ".deployed"
+	opts.cleanupDeploymentFiles = true
+	stack := testRemoteStack()
+	stack.EntryPoint = "tmc-proxy/docker-compose.yml"
+
+	cmd := buildDeployCmd(stack, opts, nil, nil)
+
+	assert.Equal(t, []string{
+		"deploy",
+		"--flat",
+		"-k",
+		"--source-dir",
+		"tmc-proxy",
+		"--deployment-dir",
+		".deployed",
+		"--cleanup-deployment-files",
+		"https://github.com/example/stack",
+		"refs/heads/main",
+		"my-stack",
+		"/mnt/stacks",
+		"tmc-proxy/docker-compose.yml",
+	}, cmd)
+}
+
 func TestBuildUndeployCmdKeepFiles(t *testing.T) {
 	t.Parallel()
 
@@ -107,6 +136,20 @@ func TestBuildComposeStartCmdSourceDir(t *testing.T) {
 		"/mnt/stacks",
 		"tmc-proxy/docker-compose.yml",
 	}, cmd)
+}
+
+func TestBuildComposeStartCmdDeploymentFileOptions(t *testing.T) {
+	t.Parallel()
+
+	opts := testKeepFilesOptions()
+	opts.deploymentDir = ".deployed"
+	opts.cleanupDeploymentFiles = true
+
+	cmd := buildComposeStartCmd(testRemoteStack(), opts, nil, nil)
+
+	assert.Contains(t, cmd, "--deployment-dir")
+	assert.Contains(t, cmd, ".deployed")
+	assert.Contains(t, cmd, "--cleanup-deployment-files")
 }
 
 func TestBuildSwarmDeployCmdKeepFiles(t *testing.T) {
@@ -150,6 +193,20 @@ func TestBuildSwarmDeployCmdSourceDir(t *testing.T) {
 	}, cmd)
 }
 
+func TestBuildSwarmDeployCmdDeploymentFileOptions(t *testing.T) {
+	t.Parallel()
+
+	opts := testKeepFilesOptions()
+	opts.deploymentDir = ".deployed"
+	opts.cleanupDeploymentFiles = true
+
+	cmd := buildSwarmDeployCmd(testRemoteStack(), opts, nil, nil)
+
+	assert.Contains(t, cmd, "--deployment-dir")
+	assert.Contains(t, cmd, ".deployed")
+	assert.Contains(t, cmd, "--cleanup-deployment-files")
+}
+
 func TestBuildSwarmUndeployCmdKeepFiles(t *testing.T) {
 	t.Parallel()
 
@@ -188,6 +245,20 @@ func TestBuildSwarmStartCmdSourceDir(t *testing.T) {
 		"/mnt/stacks",
 		"tmc-proxy/docker-compose.yml",
 	}, cmd)
+}
+
+func TestBuildSwarmStartCmdDeploymentFileOptions(t *testing.T) {
+	t.Parallel()
+
+	opts := testKeepFilesOptions()
+	opts.deploymentDir = ".deployed"
+	opts.cleanupDeploymentFiles = true
+
+	cmd := buildSwarmStartCmd(testRemoteStack(), opts, nil, nil)
+
+	assert.Contains(t, cmd, "--deployment-dir")
+	assert.Contains(t, cmd, ".deployed")
+	assert.Contains(t, cmd, "--cleanup-deployment-files")
 }
 
 func testRemoteStack() *portainer.Stack {

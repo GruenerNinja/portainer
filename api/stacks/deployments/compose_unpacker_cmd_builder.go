@@ -30,15 +30,17 @@ const (
 )
 
 type unpackerCmdBuilderOptions struct {
-	pullImage          bool
-	prune              bool
-	forceRecreate      bool
-	keepFiles          bool
-	flat               bool
-	sourceDir          string
-	composeDestination string
-	registries         []portainer.Registry
-	gitConfig          *gittypes.RepoConfig
+	pullImage              bool
+	prune                  bool
+	forceRecreate          bool
+	keepFiles              bool
+	flat                   bool
+	sourceDir              string
+	deploymentDir          string
+	cleanupDeploymentFiles bool
+	composeDestination     string
+	registries             []portainer.Registry
+	gitConfig              *gittypes.RepoConfig
 }
 
 type buildCmdFunc func(stack *portainer.Stack, opts unpackerCmdBuilderOptions, registries []string, env []string) []string
@@ -76,6 +78,8 @@ func buildDeployCmd(stack *portainer.Stack, opts unpackerCmdBuilderOptions, regi
 	cmd = appendFlatIfNeeded(cmd, opts.flat)
 	cmd = appendKeepFilesIfNeeded(cmd, opts.keepFiles)
 	cmd = appendSourceDirIfNeeded(cmd, opts.sourceDir)
+	cmd = appendDeploymentDirIfNeeded(cmd, opts.deploymentDir)
+	cmd = appendCleanupDeploymentFilesIfNeeded(cmd, opts.cleanupDeploymentFiles)
 
 	if opts.prune {
 		cmd = append(cmd, "-r")
@@ -117,6 +121,8 @@ func buildComposeStartCmd(stack *portainer.Stack, opts unpackerCmdBuilderOptions
 	cmd = appendFlatIfNeeded(cmd, opts.flat)
 	cmd = append(cmd, "-k")
 	cmd = appendSourceDirIfNeeded(cmd, opts.sourceDir)
+	cmd = appendDeploymentDirIfNeeded(cmd, opts.deploymentDir)
+	cmd = appendCleanupDeploymentFilesIfNeeded(cmd, opts.cleanupDeploymentFiles)
 	cmd = append(cmd, env...)
 	cmd = append(cmd, registries...)
 	cmd = append(cmd, opts.gitConfig.URL,
@@ -154,6 +160,8 @@ func buildSwarmDeployCmd(stack *portainer.Stack, opts unpackerCmdBuilderOptions,
 	cmd = appendFlatIfNeeded(cmd, opts.flat)
 	cmd = appendKeepFilesIfNeeded(cmd, opts.keepFiles)
 	cmd = appendSourceDirIfNeeded(cmd, opts.sourceDir)
+	cmd = appendDeploymentDirIfNeeded(cmd, opts.deploymentDir)
+	cmd = appendCleanupDeploymentFilesIfNeeded(cmd, opts.cleanupDeploymentFiles)
 	if opts.pullImage {
 		cmd = append(cmd, "-f")
 	}
@@ -189,6 +197,8 @@ func buildSwarmStartCmd(stack *portainer.Stack, opts unpackerCmdBuilderOptions, 
 	cmd = appendFlatIfNeeded(cmd, opts.flat)
 	cmd = append(cmd, "-k")
 	cmd = appendSourceDirIfNeeded(cmd, opts.sourceDir)
+	cmd = appendDeploymentDirIfNeeded(cmd, opts.deploymentDir)
+	cmd = appendCleanupDeploymentFilesIfNeeded(cmd, opts.cleanupDeploymentFiles)
 	cmd = append(cmd, getEnv(stack.Env)...)
 	cmd = append(cmd, registries...)
 	cmd = append(cmd, opts.gitConfig.URL,
@@ -251,6 +261,22 @@ func appendFlatIfNeeded(cmd []string, flat bool) []string {
 func appendSourceDirIfNeeded(cmd []string, sourceDir string) []string {
 	if sourceDir != "" {
 		cmd = append(cmd, "--source-dir", sourceDir)
+	}
+
+	return cmd
+}
+
+func appendDeploymentDirIfNeeded(cmd []string, deploymentDir string) []string {
+	if deploymentDir != "" {
+		cmd = append(cmd, "--deployment-dir", deploymentDir)
+	}
+
+	return cmd
+}
+
+func appendCleanupDeploymentFilesIfNeeded(cmd []string, cleanup bool) []string {
+	if cleanup {
+		cmd = append(cmd, "--cleanup-deployment-files")
 	}
 
 	return cmd

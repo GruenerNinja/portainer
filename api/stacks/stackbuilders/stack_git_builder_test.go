@@ -2,6 +2,8 @@ package stackbuilders
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 
 	portainer "github.com/portainer/portainer/api"
@@ -16,10 +18,43 @@ import (
 // stubFileService satisfies portainer.FileService for git builder tests.
 type stubFileService struct {
 	portainer.FileService
+	root string
 }
 
 func (s *stubFileService) GetStackProjectPath(stackIdentifier string) string {
+	if s.root != "" {
+		return filepath.Join(s.root, stackIdentifier)
+	}
+
 	return "/data/compose/" + stackIdentifier
+}
+
+type gitServiceWritingFiles struct {
+	portainer.GitService
+	files      map[string]string
+	commitHash string
+}
+
+func (g gitServiceWritingFiles) CloneRepository(_ context.Context, destination, _, _, _, _ string, _ bool) error {
+	if err := os.MkdirAll(destination, 0755); err != nil {
+		return err
+	}
+
+	for name, content := range g.files {
+		path := filepath.Join(destination, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			return err
+		}
+		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (g gitServiceWritingFiles) LatestCommitID(_ context.Context, _, _, _, _ string, _ bool) (string, error) {
+	return g.commitHash, nil
 }
 
 func newGitMethodBuilder(t *testing.T, commitHash string) *GitMethodStackBuilder {
@@ -33,6 +68,23 @@ func newGitMethodBuilder(t *testing.T, commitHash string) *GitMethodStackBuilder
 			dataStore:   store,
 		},
 		gitService: testhelpers.NewGitService(nil, commitHash),
+	}
+}
+
+func newGitMethodBuilderWithFiles(t *testing.T, files map[string]string) *GitMethodStackBuilder {
+	t.Helper()
+	_, store := datastore.MustNewTestStore(t, false, false)
+	require.NoError(t, store.User().Create(&portainer.User{ID: 1, Username: "testuser"}))
+	return &GitMethodStackBuilder{
+		StackBuilder: StackBuilder{
+			stack:       &portainer.Stack{},
+			fileService: &stubFileService{root: t.TempDir()},
+			dataStore:   store,
+		},
+		gitService: gitServiceWritingFiles{
+			files:      files,
+			commitHash: "feedcafe",
+		},
 	}
 }
 
@@ -139,6 +191,78 @@ func TestGitMethodStackBuilder_PreparePersistsRelativePathSettings(t *testing.T)
 
 	assert.True(t, builder.stack.SupportRelativePath)
 	assert.Equal(t, "/mnt/stacks", builder.stack.FilesystemPath)
+}
+
+func TestGitMethodStackBuilder_PortainerConfigTargetNameResolvesUnderFilesystemPath(t *testing.T) {
+	t.Parallel()
+	builder := newGitMethodBuilderWithFiles(t, map[string]string{
+		".portainer.yml": "version: 1\ndeploy:\n  mode: flat\n  targetName: tmc-proxy\n",
+	})
+	builder.stack.ID = 6
+
+	payload := &StackPayload{
+		RepositoryConfigPayload: RepositoryConfigPayload{
+			URL:           "https://github.com/org/public-repo",
+			ReferenceName: "refs/heads/main",
+		},
+		SupportRelativePath: true,
+		FilesystemPath:      "/data/compose",
+	}
+
+	err := builder.prepare(context.Background(), payload, portainer.UserID(1))
+	require.NoError(t, err)
+
+	assert.True(t, builder.stack.SupportRelativePath)
+	assert.Equal(t, "/data/compose/tmc-proxy", builder.stack.FilesystemPath)
+}
+
+func TestGitMethodStackBuilder_PortainerConfigComposeFilesOverridePayload(t *testing.T) {
+	t.Parallel()
+	builder := newGitMethodBuilderWithFiles(t, map[string]string{
+		".portainer.yml": "version: 1\ncompose:\n  files:\n    - compose.yml\n    - compose.prod.yml\n",
+	})
+	builder.stack.ID = 7
+	builder.stack.EntryPoint = "docker-compose.yml"
+
+	payload := &StackPayload{
+		RepositoryConfigPayload: RepositoryConfigPayload{
+			URL:           "https://github.com/org/public-repo",
+			ReferenceName: "refs/heads/main",
+		},
+		ComposeFile:     "docker-compose.yml",
+		AdditionalFiles: []string{"docker-compose.override.yml"},
+	}
+
+	err := builder.prepare(context.Background(), payload, portainer.UserID(1))
+	require.NoError(t, err)
+
+	assert.Equal(t, "compose.yml", builder.stack.EntryPoint)
+	assert.Equal(t, []string{"compose.prod.yml"}, builder.stack.AdditionalFiles)
+
+	readSrc, artifact, err := workflows.GitSourceAndArtifactForStack(builder.dataStore, builder.stack.WorkflowID, builder.stack.ID)
+	require.NoError(t, err)
+	merged := workflows.MergeSourceAndFile(readSrc, artifact)
+	assert.Equal(t, "compose.yml", merged.ConfigFilePath)
+}
+
+func TestGitMethodStackBuilder_PortainerConfigDeployRequiresRelativePath(t *testing.T) {
+	t.Parallel()
+	builder := newGitMethodBuilderWithFiles(t, map[string]string{
+		".portainer.yml": "version: 1\ndeploy:\n  mode: flat\n  targetName: tmc-proxy\n",
+	})
+	builder.stack.ID = 8
+
+	payload := &StackPayload{
+		RepositoryConfigPayload: RepositoryConfigPayload{
+			URL:           "https://github.com/org/public-repo",
+			ReferenceName: "refs/heads/main",
+		},
+	}
+
+	err := builder.prepare(context.Background(), payload, portainer.UserID(1))
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), ".portainer.yml deploy config requires relative path volumes")
 }
 
 // builderWorkflowSourceID returns the first SourceID referenced by the Workflow Artifact for this stack.

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	portainer "github.com/portainer/portainer/api"
 	"github.com/portainer/portainer/api/dataservices"
@@ -85,6 +86,10 @@ func (b *GitMethodStackBuilder) prepare(ctx context.Context, payload *StackPaylo
 		return fmt.Errorf("failed to download git repository: %w", err)
 	}
 
+	if err := b.applyPortainerStackConfig(&repoConfig); err != nil {
+		return err
+	}
+
 	// Update the latest commit id
 	repoConfig.ConfigHash = commitHash
 
@@ -133,6 +138,35 @@ func (b *GitMethodStackBuilder) prepare(ctx context.Context, payload *StackPaylo
 	}
 
 	b.stack.WorkflowID = workflowID
+
+	return nil
+}
+
+func (b *GitMethodStackBuilder) applyPortainerStackConfig(repoConfig *gittypes.RepoConfig) error {
+	config, found, err := stackutils.LoadPortainerStackConfig(b.stack.ProjectPath)
+	if err != nil {
+		return err
+	}
+
+	if !found {
+		return nil
+	}
+
+	if config.HasDeployConfig() {
+		if !b.stack.SupportRelativePath || strings.TrimSpace(b.stack.FilesystemPath) == "" {
+			return fmt.Errorf("%s deploy config requires relative path volumes and a filesystem path", stackutils.PortainerStackConfigFile)
+		}
+
+		if config.Deploy.TargetName != "" {
+			b.stack.FilesystemPath = filesystem.JoinPaths(strings.TrimSpace(b.stack.FilesystemPath), config.Deploy.TargetName)
+		}
+	}
+
+	if len(config.Compose.Files) > 0 {
+		repoConfig.ConfigFilePath = config.Compose.Files[0]
+		b.stack.EntryPoint = config.Compose.Files[0]
+		b.stack.AdditionalFiles = append([]string{}, config.Compose.Files[1:]...)
+	}
 
 	return nil
 }

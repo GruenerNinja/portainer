@@ -137,7 +137,7 @@ func findPortainerStackConfig(projectPath string, configFilePath string) (string
 func portainerStackConfigSearchDirs(configFilePath string) []string {
 	configDirs := []string{"."}
 
-	cleanedConfigFilePath, err := cleanPortainerComposeFilePath(configFilePath)
+	cleanedConfigFilePath, err := cleanPortainerComposeFilePath(normalizePortainerRepositoryPath(configFilePath))
 	if err != nil {
 		return configDirs
 	}
@@ -148,6 +148,10 @@ func portainerStackConfigSearchDirs(configFilePath string) []string {
 	}
 
 	return configDirs
+}
+
+func normalizePortainerRepositoryPath(filePath string) string {
+	return strings.TrimLeft(strings.TrimSpace(filePath), "/")
 }
 
 func validatePortainerTargetName(targetName string) error {

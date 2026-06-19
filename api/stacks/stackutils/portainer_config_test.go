@@ -69,6 +69,26 @@ compose:
 	assert.Equal(t, []string{"tmc-proxy/docker-compose.yml", "tmc-proxy/compose.override.yml"}, config.Compose.Files)
 }
 
+func TestLoadPortainerStackConfigForFileHandlesLeadingSlashComposeFile(t *testing.T) {
+	t.Parallel()
+
+	projectPath := t.TempDir()
+	writePortainerStackConfig(t, filepath.Join(projectPath, "tmc-proxy"), `
+version: 1
+compose:
+  files:
+    - docker-compose.yml
+`)
+
+	config, found, err := LoadPortainerStackConfigForFile(projectPath, "/tmc-proxy/docker-compose.yml")
+	require.NoError(t, err)
+	require.True(t, found)
+	require.NotNil(t, config)
+
+	assert.Equal(t, "tmc-proxy", config.ConfigDir)
+	assert.Equal(t, []string{"tmc-proxy/docker-compose.yml"}, config.Compose.Files)
+}
+
 func TestLoadPortainerStackConfigForFileRejectsMultipleConfigs(t *testing.T) {
 	t.Parallel()
 

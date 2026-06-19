@@ -15,11 +15,12 @@ func TestBuildDeployCmdKeepFiles(t *testing.T) {
 
 	assert.Equal(t, []string{
 		"deploy",
+		"--flat",
 		"-k",
 		"https://github.com/example/stack",
 		"refs/heads/main",
 		"my-stack",
-		"/mnt/stacks/1/portainer-compose-unpacker",
+		"/mnt/stacks",
 		"docker-compose.yml",
 	}, cmd)
 }
@@ -34,6 +35,16 @@ func TestBuildDeployCmdDoesNotKeepFilesByDefault(t *testing.T) {
 	assert.NotContains(t, cmd, "-k")
 }
 
+func TestBuildDeployCmdDoesNotUseFlatByDefault(t *testing.T) {
+	t.Parallel()
+
+	opts := testKeepFilesOptions()
+	opts.flat = false
+	cmd := buildDeployCmd(testRemoteStack(), opts, nil, nil)
+
+	assert.NotContains(t, cmd, "--flat")
+}
+
 func TestBuildUndeployCmdKeepFiles(t *testing.T) {
 	t.Parallel()
 
@@ -41,10 +52,11 @@ func TestBuildUndeployCmdKeepFiles(t *testing.T) {
 
 	assert.Equal(t, []string{
 		"undeploy",
+		"--flat",
 		"-k",
 		"https://github.com/example/stack",
 		"my-stack",
-		"/mnt/stacks/1/portainer-compose-unpacker",
+		"/mnt/stacks",
 		"docker-compose.yml",
 	}, cmd)
 }
@@ -56,11 +68,12 @@ func TestBuildSwarmDeployCmdKeepFiles(t *testing.T) {
 
 	assert.Equal(t, []string{
 		"swarm-deploy",
+		"--flat",
 		"-k",
 		"https://github.com/example/stack",
 		"refs/heads/main",
 		"my-stack",
-		"/mnt/stacks/1/portainer-compose-unpacker",
+		"/mnt/stacks",
 		"docker-compose.yml",
 	}, cmd)
 }
@@ -72,9 +85,10 @@ func TestBuildSwarmUndeployCmdKeepFiles(t *testing.T) {
 
 	assert.Equal(t, []string{
 		"swarm-undeploy",
+		"--flat",
 		"-k",
 		"my-stack",
-		"/mnt/stacks/1/portainer-compose-unpacker",
+		"/mnt/stacks",
 	}, cmd)
 }
 
@@ -88,7 +102,8 @@ func testRemoteStack() *portainer.Stack {
 func testKeepFilesOptions() unpackerCmdBuilderOptions {
 	return unpackerCmdBuilderOptions{
 		keepFiles:          true,
-		composeDestination: "/mnt/stacks/1/portainer-compose-unpacker",
+		flat:               true,
+		composeDestination: "/mnt/stacks",
 		gitConfig: &gittypes.RepoConfig{
 			URL:           "https://github.com/example/stack",
 			ReferenceName: "refs/heads/main",

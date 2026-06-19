@@ -32,7 +32,7 @@ func TestRemoteComposeDestination(t *testing.T) {
 				SupportRelativePath: true,
 				FilesystemPath:      "/mnt/stacks",
 			},
-			expected: "/mnt/stacks/12/portainer-compose-unpacker",
+			expected: "/mnt/stacks",
 		},
 	}
 

@@ -183,6 +183,7 @@ func (d *stackDeployer) remoteStack(ctx context.Context, stack *portainer.Stack,
 	if stackutils.IsRelativePathStack(stack) {
 		// Relative bind mounts can depend on user-managed files that are not tracked by Git.
 		opts.keepFiles = true
+		opts.flat = true
 	}
 
 	cli, err := d.createDockerClient(ctx, endpoint)
@@ -354,7 +355,7 @@ func getUnpackerImage() string {
 
 func remoteComposeDestination(stack *portainer.Stack) string {
 	if stackutils.IsRelativePathStack(stack) {
-		return filesystem.JoinPaths(stack.FilesystemPath, fmt.Sprintf("%d", stack.ID), composePathPrefix)
+		return stack.FilesystemPath
 	}
 
 	return filesystem.JoinPaths(stack.ProjectPath, composePathPrefix)

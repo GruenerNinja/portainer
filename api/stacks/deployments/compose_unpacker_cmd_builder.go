@@ -34,6 +34,7 @@ type unpackerCmdBuilderOptions struct {
 	prune              bool
 	forceRecreate      bool
 	keepFiles          bool
+	flat               bool
 	composeDestination string
 	registries         []portainer.Registry
 	gitConfig          *gittypes.RepoConfig
@@ -71,6 +72,7 @@ func buildDeployCmd(stack *portainer.Stack, opts unpackerCmdBuilderOptions, regi
 	cmd = appendGitAuthIfNeeded(cmd, opts.gitConfig)
 	cmd = appendSkipTLSVerifyIfNeeded(cmd, opts.gitConfig)
 	cmd = appendForceRecreateIfNeeded(cmd, opts.forceRecreate)
+	cmd = appendFlatIfNeeded(cmd, opts.flat)
 	cmd = appendKeepFilesIfNeeded(cmd, opts.keepFiles)
 
 	if opts.prune {
@@ -94,6 +96,7 @@ func buildDeployCmd(stack *portainer.Stack, opts unpackerCmdBuilderOptions, regi
 func buildUndeployCmd(stack *portainer.Stack, opts unpackerCmdBuilderOptions, registries []string, env []string) []string {
 	cmd := []string{UnpackerCmdUndeploy}
 	cmd = appendGitAuthIfNeeded(cmd, opts.gitConfig)
+	cmd = appendFlatIfNeeded(cmd, opts.flat)
 	cmd = appendKeepFilesIfNeeded(cmd, opts.keepFiles)
 	cmd = append(cmd, opts.gitConfig.URL,
 		stack.Name,
@@ -109,6 +112,7 @@ func buildComposeStartCmd(stack *portainer.Stack, opts unpackerCmdBuilderOptions
 	cmd := []string{UnpackerCmdDeploy}
 	cmd = appendGitAuthIfNeeded(cmd, opts.gitConfig)
 	cmd = appendSkipTLSVerifyIfNeeded(cmd, opts.gitConfig)
+	cmd = appendFlatIfNeeded(cmd, opts.flat)
 	cmd = append(cmd, "-k")
 	cmd = append(cmd, env...)
 	cmd = append(cmd, registries...)
@@ -126,6 +130,7 @@ func buildComposeStartCmd(stack *portainer.Stack, opts unpackerCmdBuilderOptions
 func buildComposeStopCmd(stack *portainer.Stack, opts unpackerCmdBuilderOptions, registries []string, env []string) []string {
 	cmd := []string{UnpackerCmdUndeploy}
 	cmd = appendGitAuthIfNeeded(cmd, opts.gitConfig)
+	cmd = appendFlatIfNeeded(cmd, opts.flat)
 	cmd = append(cmd,
 		"-k",
 		opts.gitConfig.URL,
@@ -143,6 +148,7 @@ func buildSwarmDeployCmd(stack *portainer.Stack, opts unpackerCmdBuilderOptions,
 	cmd = appendGitAuthIfNeeded(cmd, opts.gitConfig)
 	cmd = appendSkipTLSVerifyIfNeeded(cmd, opts.gitConfig)
 	cmd = appendForceRecreateIfNeeded(cmd, opts.forceRecreate)
+	cmd = appendFlatIfNeeded(cmd, opts.flat)
 	cmd = appendKeepFilesIfNeeded(cmd, opts.keepFiles)
 	if opts.pullImage {
 		cmd = append(cmd, "-f")
@@ -167,14 +173,17 @@ func buildSwarmDeployCmd(stack *portainer.Stack, opts unpackerCmdBuilderOptions,
 // swarm-undeploy [-k] <project-name> <destination>
 func buildSwarmUndeployCmd(stack *portainer.Stack, opts unpackerCmdBuilderOptions, registries []string, env []string) []string {
 	cmd := []string{UnpackerCmdSwarmUndeploy}
+	cmd = appendFlatIfNeeded(cmd, opts.flat)
 	cmd = appendKeepFilesIfNeeded(cmd, opts.keepFiles)
 	return append(cmd, stack.Name, opts.composeDestination)
 }
 
 // swarm-deploy [-u username -p password] [-f] [-r] [-k] [--skip-tls-verify] [--env KEY1=VALUE1 --env KEY2=VALUE2] <git-repo-url> <project-name> <destination> <compose-file-path> [<more-file-paths>...]
 func buildSwarmStartCmd(stack *portainer.Stack, opts unpackerCmdBuilderOptions, registries []string, env []string) []string {
-	cmd := []string{UnpackerCmdSwarmDeploy, "-f", "-r", "-k"}
+	cmd := []string{UnpackerCmdSwarmDeploy, "-f", "-r"}
 	cmd = appendSkipTLSVerifyIfNeeded(cmd, opts.gitConfig)
+	cmd = appendFlatIfNeeded(cmd, opts.flat)
+	cmd = append(cmd, "-k")
 	cmd = append(cmd, getEnv(stack.Env)...)
 	cmd = append(cmd, registries...)
 	cmd = append(cmd, opts.gitConfig.URL,
@@ -189,7 +198,9 @@ func buildSwarmStartCmd(stack *portainer.Stack, opts unpackerCmdBuilderOptions, 
 
 // swarm-undeploy [-k] <project-name> <destination>
 func buildSwarmStopCmd(stack *portainer.Stack, opts unpackerCmdBuilderOptions, registries []string, env []string) []string {
-	return []string{UnpackerCmdSwarmUndeploy, "-k", stack.Name, opts.composeDestination}
+	cmd := []string{UnpackerCmdSwarmUndeploy}
+	cmd = appendFlatIfNeeded(cmd, opts.flat)
+	return append(cmd, "-k", stack.Name, opts.composeDestination)
 }
 
 func appendGitAuthIfNeeded(cmd []string, gc *gittypes.RepoConfig) []string {
@@ -219,6 +230,14 @@ func appendForceRecreateIfNeeded(cmd []string, forceRecreate bool) []string {
 func appendKeepFilesIfNeeded(cmd []string, keepFiles bool) []string {
 	if keepFiles {
 		cmd = append(cmd, "-k")
+	}
+
+	return cmd
+}
+
+func appendFlatIfNeeded(cmd []string, flat bool) []string {
+	if flat {
+		cmd = append(cmd, "--flat")
 	}
 
 	return cmd

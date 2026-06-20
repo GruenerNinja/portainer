@@ -14,6 +14,20 @@ interface NotificationsState {
   clearUserNotifications: (userId: number) => void;
 }
 
+const memoryStorage = (() => {
+  const items: Record<string, string> = {};
+
+  return {
+    getItem: (name: string) => items[name] ?? null,
+    setItem: (name: string, value: string) => {
+      items[name] = value;
+    },
+    removeItem: (name: string) => {
+      delete items[name];
+    },
+  };
+})();
+
 export const notificationsStore = create<NotificationsState>()(
   persist(
     (set) => ({
@@ -64,6 +78,27 @@ export const notificationsStore = create<NotificationsState>()(
     }),
     {
       name: keyBuilder('notifications'),
+      getStorage: getNotificationStorage,
     }
   )
 );
+
+function getNotificationStorage() {
+  try {
+    const storage =
+      typeof window !== 'undefined' ? window.localStorage : undefined;
+
+    if (
+      storage &&
+      typeof storage.getItem === 'function' &&
+      typeof storage.setItem === 'function' &&
+      typeof storage.removeItem === 'function'
+    ) {
+      return storage;
+    }
+  } catch {
+    // Ignore unavailable browser storage and fall back for tests or restricted contexts.
+  }
+
+  return memoryStorage;
+}

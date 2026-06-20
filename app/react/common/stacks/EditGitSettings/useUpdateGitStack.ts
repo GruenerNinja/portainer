@@ -39,7 +39,10 @@ export function useUpdateGitStack(stack: Stack) {
         AutoUpdate: autoUpdate,
         AdditionalFiles: values.git.AdditionalFiles,
         env: values.env,
-        SecretMappings: values.secretMappings,
+        SecretMappings: values.secretMappings.map((mapping) => ({
+          ...mapping,
+          name: mapping.key,
+        })),
         prune: values.prune,
         SourceID: values.git.SourceId,
         SupportRelativePath: values.git.SupportRelativePath,

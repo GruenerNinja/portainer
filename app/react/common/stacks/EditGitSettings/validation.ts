@@ -33,20 +33,17 @@ export function useValidationSchema(
         env: envVarValidation(),
         secretMappings: array(
           object({
-            name: string().required('Environment variable name is required'),
+            name: string().default(''),
             sourceId: number()
-              .min(1, 'Vault source is required')
-              .required('Vault source is required'),
+              .min(1, 'Vault provider is required')
+              .required('Vault provider is required'),
             path: string().required('Secret path is required'),
             key: string().required('Secret key is required'),
           })
         ).test(
           'unique',
-          'This secret mapping environment variable is already defined',
-          buildUniquenessTest(
-            () => 'This secret mapping environment variable is already defined',
-            'name'
-          )
+          'This secret key is already defined',
+          buildUniquenessTest(() => 'This secret key is already defined', 'key')
         ),
         prune: boolean().default(false),
         redeployNow: boolean().default(false),

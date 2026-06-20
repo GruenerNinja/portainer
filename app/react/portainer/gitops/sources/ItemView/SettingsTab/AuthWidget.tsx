@@ -9,9 +9,10 @@ import { DetailField } from './DetailField';
 
 interface Props {
   auth?: SourceDetail['connection']['authentication'];
+  vault?: SourceDetail['connection']['vault'];
 }
 
-export function AuthWidget({ auth }: Props) {
+export function AuthWidget({ auth, vault }: Props) {
   return (
     <Card.Container>
       <Card.Header
@@ -21,7 +22,13 @@ export function AuthWidget({ auth }: Props) {
       />
       <Card.Body>
         <div className="grid grid-cols-2 gap-4">
-          {auth ? (
+          {vault ? (
+            <DetailField label="Authentication Method">
+              <Badge type="info" data-cy="source-auth-method">
+                Token
+              </Badge>
+            </DetailField>
+          ) : auth ? (
             <>
               <DetailField label="Authentication Method">
                 <Badge type="info" data-cy="source-auth-method">

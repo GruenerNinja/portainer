@@ -32,6 +32,7 @@ func (b *ComposeStackFileBuilder) prepare(_ context.Context, payload *StackPaylo
 	b.stack.Type = portainer.DockerComposeStack
 	b.stack.EntryPoint = filesystem.ComposeFileDefaultName
 	b.stack.Env = payload.Env
+	b.stack.SecretMappings = payload.SecretMappings
 	b.stack.FromAppTemplate = payload.FromAppTemplate
 
 	if err := b.initCreatedBy(userID); err != nil {

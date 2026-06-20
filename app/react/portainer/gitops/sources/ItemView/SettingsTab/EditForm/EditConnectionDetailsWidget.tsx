@@ -4,13 +4,23 @@ import { useFormikContext } from 'formik';
 import { Card } from '@@/primitives/Card';
 import { FormControl } from '@@/form-components/FormControl';
 import { Input } from '@@/form-components/Input';
+import { Select } from '@@/form-components/ReactSelect';
 import { SwitchField } from '@@/form-components/SwitchField';
 
 import { SettingsFormValues } from './types';
 
+const kvVersionOptions = [
+  { label: 'KV v2', value: 2 },
+  { label: 'KV v1', value: 1 },
+] as const;
+
 export function EditConnectionDetailsWidget() {
   const { values, errors, setFieldValue } =
     useFormikContext<SettingsFormValues>();
+  const isVault = values.type === 'vault';
+  const selectedKVVersion =
+    kvVersionOptions.find((option) => option.value === values.kvVersion) ??
+    kvVersionOptions[0];
 
   return (
     <Card.Container>
@@ -31,7 +41,7 @@ export function EditConnectionDetailsWidget() {
         </FormControl>
         <FormControl
           inputId="url"
-          label="Repository URL"
+          label={isVault ? 'Vault Address' : 'Repository URL'}
           errors={errors.url}
           required
         >
@@ -43,6 +53,39 @@ export function EditConnectionDetailsWidget() {
             data-cy="source-url-input"
           />
         </FormControl>
+        {isVault && (
+          <>
+            <FormControl
+              inputId="namespace"
+              label="Namespace"
+              errors={errors.namespace}
+            >
+              <Input
+                id="namespace"
+                name="namespace"
+                value={values.namespace}
+                onChange={(e) => setFieldValue('namespace', e.target.value)}
+                data-cy="source-vault-namespace-input"
+              />
+            </FormControl>
+            <FormControl
+              inputId="kvVersion"
+              label="KV Engine"
+              errors={errors.kvVersion}
+              required
+            >
+              <Select
+                inputId="kvVersion"
+                data-cy="source-vault-kv-version"
+                options={kvVersionOptions}
+                value={selectedKVVersion}
+                onChange={(option) =>
+                  setFieldValue('kvVersion', option?.value ?? 2)
+                }
+              />
+            </FormControl>
+          </>
+        )}
         <SwitchField
           label="Skip TLS verification"
           name="tlsSkipVerify"

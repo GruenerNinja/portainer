@@ -1,7 +1,9 @@
 package sources
 
 import (
+	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"strings"
 
@@ -15,8 +17,9 @@ import (
 )
 
 var (
-	ErrNotGitSource    = errors.New("source is not a Git source")
-	ErrDuplicateSource = errors.New("a source with this URL and credentials already exists")
+	ErrNotGitSource          = errors.New("source is not a Git source")
+	ErrDuplicateSource       = errors.New("a source with this URL and credentials already exists")
+	ErrUnsupportedSourceType = errors.New("unsupported source type")
 )
 
 // GitSourceUpdatePayload holds the parameters for creating a git-backed source
@@ -62,9 +65,8 @@ func (h *Handler) gitSourceUpdate(w http.ResponseWriter, r *http.Request) *httpe
 		return httperror.BadRequest("Invalid source identifier route variable", err)
 	}
 
-	var payload GitSourceUpdatePayload
-
-	if err := request.DecodeAndValidateJSONPayload(r, &payload); err != nil {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
 		return httperror.BadRequest("Invalid request payload", err)
 	}
 
@@ -79,27 +81,52 @@ func (h *Handler) gitSourceUpdate(w http.ResponseWriter, r *http.Request) *httpe
 			return err
 		}
 
-		if err := ApplyGitSourceChanges(src, payload); err != nil {
-			return err
-		}
+		switch src.Type {
+		case portainer.SourceTypeGit:
+			var payload GitSourceUpdatePayload
+			if err := json.Unmarshal(body, &payload); err != nil {
+				return err
+			}
 
-		username, password := "", ""
-		if src.Git != nil && src.Git.Authentication != nil {
-			username = src.Git.Authentication.Username
-			password = src.Git.Authentication.Password
-		}
+			if err := ApplyGitSourceChanges(src, payload); err != nil {
+				return err
+			}
 
-		if isUnique, err := workflows.ValidateUniqueSource(tx, src.Git.URL, username, password, sourceID); err != nil {
-			return err
-		} else if !isUnique {
-			return ErrDuplicateSource
+			username, password := "", ""
+			if src.Git != nil && src.Git.Authentication != nil {
+				username = src.Git.Authentication.Username
+				password = src.Git.Authentication.Password
+			}
+
+			if isUnique, err := workflows.ValidateUniqueSource(tx, src.Git.URL, username, password, sourceID); err != nil {
+				return err
+			} else if !isUnique {
+				return ErrDuplicateSource
+			}
+		case portainer.SourceTypeVault:
+			var payload VaultSourceUpdatePayload
+			if err := json.Unmarshal(body, &payload); err != nil {
+				return err
+			}
+
+			if err := ApplyVaultSourceChanges(src, payload); err != nil {
+				return err
+			}
+		default:
+			return ErrUnsupportedSourceType
 		}
 
 		return tx.Source().Update(src.ID, src)
 	}); h.dataStore.IsErrObjectNotFound(err) {
 		return httperror.NotFound("Unable to find a source with the specified identifier", err)
+	} else if isJSONDecodeError(err) {
+		return httperror.BadRequest("Invalid request payload", err)
 	} else if errors.Is(err, ErrNotGitSource) {
 		return httperror.BadRequest("Source is not a Git source", err)
+	} else if errors.Is(err, ErrNotVaultSource) {
+		return httperror.BadRequest("Source is not a Vault source", err)
+	} else if errors.Is(err, ErrUnsupportedSourceType) {
+		return httperror.BadRequest("Unsupported source type", err)
 	} else if errors.Is(err, ErrDuplicateSource) {
 		return httperror.Conflict("A source with this URL and credentials already exists", err)
 	} else if err != nil {
@@ -107,8 +134,19 @@ func (h *Handler) gitSourceUpdate(w http.ResponseWriter, r *http.Request) *httpe
 	}
 
 	src.Git = gittypes.SanitizeRepoConfig(src.Git)
+	redactVaultSource(src)
 
 	return response.JSON(w, src)
+}
+
+func isJSONDecodeError(err error) bool {
+	var syntaxErr *json.SyntaxError
+	if errors.As(err, &syntaxErr) {
+		return true
+	}
+
+	var typeErr *json.UnmarshalTypeError
+	return errors.As(err, &typeErr)
 }
 
 // ApplyGitSourceChanges applies the payload changes to the source in place

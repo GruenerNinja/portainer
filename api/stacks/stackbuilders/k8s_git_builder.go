@@ -40,6 +40,7 @@ func (b *KubernetesStackGitBuilder) prepare(ctx context.Context, payload *StackP
 	b.stack.Namespace = payload.Namespace
 	b.stack.Name = payload.StackName
 	b.stack.EntryPoint = payload.ManifestFile
+	b.stack.SecretMappings = payload.SecretMappings
 	if err := b.GitMethodStackBuilder.prepare(ctx, payload, userID); err != nil {
 		return err
 	}

@@ -23,7 +23,16 @@ func FetchSourceWorkflows(tx dataservices.DataStoreTx, src *portainer.Source) ([
 		return nil, ce.SourceStats{}, err
 	}
 
-	if len(wfs) == 0 {
+	secretStacks, err := tx.Stack().ReadAll(func(s portainer.Stack) bool {
+		return slices.ContainsFunc(s.SecretMappings, func(m portainer.StackSecretMapping) bool {
+			return m.SourceID == src.ID
+		})
+	})
+	if err != nil {
+		return nil, ce.SourceStats{}, err
+	}
+
+	if len(wfs) == 0 && len(secretStacks) == 0 {
 		return nil, ce.SourceStats{}, nil
 	}
 
@@ -48,6 +57,16 @@ func FetchSourceWorkflows(tx dataservices.DataStoreTx, src *portainer.Source) ([
 			stats.EndpointIDs.Add(stacks.EndpointID)
 		}
 		if lastSync := ce.StackLastSyncDate(stacks); lastSync > stats.LastSync {
+			stats.LastSync = lastSync
+		}
+	}
+
+	for _, stack := range secretStacks {
+		stats.WorkflowCount++
+		if stack.EndpointID != 0 {
+			stats.EndpointIDs.Add(stack.EndpointID)
+		}
+		if lastSync := ce.StackLastSyncDate(stack); lastSync > stats.LastSync {
 			stats.LastSync = lastSync
 		}
 	}

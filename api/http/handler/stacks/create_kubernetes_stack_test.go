@@ -58,6 +58,7 @@ func TestCreateStackPayloadFromK8sGitPayload_WithSourceID(t *testing.T) {
 		"manifest.yaml",
 		nil,
 		nil,
+		nil,
 		false,
 		portainer.SourceID(7),
 	)

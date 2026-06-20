@@ -26,6 +26,7 @@ import (
 type stackGitUpdatePayload struct {
 	AutoUpdate              *portainer.AutoUpdateSettings
 	Env                     []portainer.Pair
+	SecretMappings          []portainer.StackSecretMapping
 	Prune                   bool
 	ConfigFilePath          string
 	AdditionalFiles         []string
@@ -198,6 +199,7 @@ func (handler *Handler) stackUpdateGit(w http.ResponseWriter, r *http.Request) *
 
 	stack.AutoUpdate = payload.AutoUpdate
 	stack.Env = payload.Env
+	stack.SecretMappings = payload.SecretMappings
 	stack.UpdatedBy = user.Username
 	stack.UpdateDate = time.Now().Unix()
 

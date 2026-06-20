@@ -2,17 +2,27 @@ import { useQuery } from '@tanstack/react-query';
 
 import axios from '@/portainer/services/axios/axios';
 import { withError } from '@/react-tools/react-query';
-import {
-  SourcesAutoUpdateInfo,
-  SourcesConnectionInfo,
-} from '@/react/portainer/generated-api/portainer/types.gen';
+import { SourcesAutoUpdateInfo } from '@/react/portainer/generated-api/portainer/types.gen';
 
 import { Source } from '../types';
 import { Workflow } from '../../WorkflowsView/types';
 
 import { sourceQueryKeys } from './query-keys';
 
-export type ConnectionInfo = SourcesConnectionInfo;
+export type ConnectionInfo = {
+  configFilePath?: string;
+  tlsSkipVerify?: boolean;
+  authentication?: {
+    username?: string;
+  };
+  vault?: {
+    address: string;
+    tlsSkipVerify: boolean;
+    namespace?: string;
+    kvVersion: number;
+    authMethod: string;
+  };
+};
 export type AutoUpdateInfo = SourcesAutoUpdateInfo;
 
 export interface SourceDetail extends Source {

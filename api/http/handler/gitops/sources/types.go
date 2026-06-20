@@ -23,17 +23,18 @@ type Source struct {
 type SourceType string
 
 const (
-	SourceTypeGit  SourceType = "git"
-	SourceTypeHelm SourceType = "helm"
-	SourceTypeOCI  SourceType = "oci"
+	SourceTypeGit   SourceType = "git"
+	SourceTypeHelm  SourceType = "helm"
+	SourceTypeOCI   SourceType = "oci"
+	SourceTypeVault SourceType = "vault"
 )
 
 func parseSourceType(s string) (SourceType, error) {
 	switch SourceType(s) {
-	case SourceTypeGit, SourceTypeHelm, SourceTypeOCI:
+	case SourceTypeGit, SourceTypeHelm, SourceTypeOCI, SourceTypeVault:
 		return SourceType(s), nil
 	default:
-		return "", fmt.Errorf("invalid source type %q: must be git, helm, or oci", s)
+		return "", fmt.Errorf("invalid source type %q: must be git, helm, oci, or vault", s)
 	}
 }
 
@@ -45,6 +46,8 @@ func sourceTypeString(t portainer.SourceType) SourceType {
 		return SourceTypeHelm
 	case portainer.SourceTypeRegistry:
 		return SourceTypeOCI
+	case portainer.SourceTypeVault:
+		return SourceTypeVault
 	default:
 		return SourceTypeGit
 	}

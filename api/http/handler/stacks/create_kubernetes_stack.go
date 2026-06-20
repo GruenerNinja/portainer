@@ -24,15 +24,18 @@ type kubernetesStringDeploymentPayload struct {
 	ComposeFormat    bool
 	Namespace        string
 	StackFileContent string
+	// SecretMappings are resolved from external secret sources during deployment.
+	SecretMappings []portainer.StackSecretMapping
 	// Whether the stack is from a app template
 	FromAppTemplate bool `example:"false"`
 }
 
-func createStackPayloadFromK8sFileContentPayload(name, namespace, fileContent string, composeFormat, fromAppTemplate bool) stackbuilders.StackPayload {
+func createStackPayloadFromK8sFileContentPayload(name, namespace, fileContent string, composeFormat bool, secretMappings []portainer.StackSecretMapping, fromAppTemplate bool) stackbuilders.StackPayload {
 	return stackbuilders.StackPayload{
 		StackName:        name,
 		Namespace:        namespace,
 		StackFileContent: []byte(fileContent),
+		SecretMappings:   secretMappings,
 		FromAppTemplate:  fromAppTemplate,
 	}
 }
@@ -57,11 +60,13 @@ type kubernetesGitDeploymentPayload struct {
 	ManifestFile       string
 	AdditionalFiles    []string
 	AutoUpdate         *portainer.AutoUpdateSettings
+	// SecretMappings are resolved from external secret sources during deployment.
+	SecretMappings []portainer.StackSecretMapping
 	// Deprecated: use SourceID instead. TLSSkipVerify skips SSL verification when cloning the Git repository.
 	TLSSkipVerify bool `example:"false"`
 }
 
-func createStackPayloadFromK8sGitPayload(name, repoUrl, repoReference, repoUsername, repoPassword string, repoAuthentication, composeFormat bool, namespace, manifest string, additionalFiles []string, autoUpdate *portainer.AutoUpdateSettings, repoSkipSSLVerify bool, sourceID portainer.SourceID) stackbuilders.StackPayload {
+func createStackPayloadFromK8sGitPayload(name, repoUrl, repoReference, repoUsername, repoPassword string, repoAuthentication, composeFormat bool, namespace, manifest string, additionalFiles []string, autoUpdate *portainer.AutoUpdateSettings, secretMappings []portainer.StackSecretMapping, repoSkipSSLVerify bool, sourceID portainer.SourceID) stackbuilders.StackPayload {
 	return stackbuilders.StackPayload{
 		StackName: name,
 		RepositoryConfigPayload: stackbuilders.RepositoryConfigPayload{
@@ -77,6 +82,7 @@ func createStackPayloadFromK8sGitPayload(name, repoUrl, repoReference, repoUsern
 		ManifestFile:    manifest,
 		AdditionalFiles: additionalFiles,
 		AutoUpdate:      autoUpdate,
+		SecretMappings:  secretMappings,
 	}
 }
 
@@ -161,7 +167,7 @@ func (handler *Handler) createKubernetesStackFromFileContent(w http.ResponseWrit
 		return httperror.InternalServerError("Unable to load user information from the database", err)
 	}
 
-	stackPayload := createStackPayloadFromK8sFileContentPayload(payload.StackName, payload.Namespace, payload.StackFileContent, payload.ComposeFormat, payload.FromAppTemplate)
+	stackPayload := createStackPayloadFromK8sFileContentPayload(payload.StackName, payload.Namespace, payload.StackFileContent, payload.ComposeFormat, payload.SecretMappings, payload.FromAppTemplate)
 
 	k8sStackBuilder := stackbuilders.CreateK8sStackFileContentBuilder(handler.DataStore,
 		handler.FileService,
@@ -246,6 +252,7 @@ func (handler *Handler) createKubernetesStackFromGitRepository(w http.ResponseWr
 		payload.ManifestFile,
 		payload.AdditionalFiles,
 		payload.AutoUpdate,
+		payload.SecretMappings,
 		payload.TLSSkipVerify,
 		payload.SourceID,
 	)

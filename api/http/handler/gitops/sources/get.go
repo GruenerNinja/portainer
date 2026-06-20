@@ -20,6 +20,15 @@ type connectionInfo struct {
 	ConfigFilePath string       `json:"configFilePath"`
 	TLSSkipVerify  bool         `json:"tlsSkipVerify"`
 	Authentication *gitAuthInfo `json:"authentication,omitempty"`
+	Vault          *vaultInfo   `json:"vault,omitempty"`
+}
+
+type vaultInfo struct {
+	Address       string `json:"address"`
+	TLSSkipVerify bool   `json:"tlsSkipVerify"`
+	Namespace     string `json:"namespace,omitempty"`
+	KVVersion     int    `json:"kvVersion"`
+	AuthMethod    string `json:"authMethod"`
 }
 
 type AutoUpdateInfo struct {
@@ -79,11 +88,11 @@ func (h *Handler) getSource(w http.ResponseWriter, r *http.Request) *httperror.H
 		return httperror.InternalServerError("Unable to retrieve source", err)
 	}
 
-	detail := BuildSourceDetail(h.buildSource(r.Context(), source, stats), source.Git, sourceWfs)
+	detail := BuildSourceDetail(h.buildSource(r.Context(), source, stats), source, sourceWfs)
 	return response.JSON(w, detail)
 }
 
-func BuildSourceDetail(baseSource Source, cfg *gittypes.RepoConfig, sourceWfs []workflows.Workflow) SourceDetail {
+func BuildSourceDetail(baseSource Source, src *portainer.Source, sourceWfs []workflows.Workflow) SourceDetail {
 	var autoUpdate *AutoUpdateInfo
 	if len(sourceWfs) > 0 {
 		autoUpdate = BuildAutoUpdateInfo(sourceWfs[0].AutoUpdate)
@@ -91,13 +100,36 @@ func BuildSourceDetail(baseSource Source, cfg *gittypes.RepoConfig, sourceWfs []
 
 	return SourceDetail{
 		Source:     baseSource,
-		Connection: buildConnectionInfo(cfg),
+		Connection: buildConnectionInfo(src),
 		AutoUpdate: autoUpdate,
 		Workflows:  redactWorkflowCredentials(sourceWfs),
 	}
 }
 
-func buildConnectionInfo(cfg *gittypes.RepoConfig) connectionInfo {
+func buildConnectionInfo(src *portainer.Source) connectionInfo {
+	if src == nil {
+		return connectionInfo{}
+	}
+	cfg := src.Git
+	if src.Vault != nil {
+		return connectionInfo{
+			TLSSkipVerify: src.Vault.TLSSkipVerify,
+			Vault: &vaultInfo{
+				Address:       src.Vault.Address,
+				TLSSkipVerify: src.Vault.TLSSkipVerify,
+				Namespace:     src.Vault.Namespace,
+				KVVersion:     src.Vault.KVVersion,
+				AuthMethod:    src.Vault.Authentication.Method,
+			},
+		}
+	}
+	if cfg == nil {
+		return connectionInfo{}
+	}
+	return buildGitConnectionInfo(cfg)
+}
+
+func buildGitConnectionInfo(cfg *gittypes.RepoConfig) connectionInfo {
 	if cfg == nil {
 		return connectionInfo{}
 	}

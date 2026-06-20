@@ -15,6 +15,8 @@ func (h *Handler) buildSource(ctx context.Context, src *portainer.Source, stats 
 		phase, _ := ce.ComputeGitPhasesForConfig(ctx, h.gitService, src.Git)
 		status = phase.Status
 		sourceErr = phase.Error
+	} else if src.Vault != nil {
+		status = ce.StatusUnknown
 	} else {
 		status = ce.StatusUnknown
 	}
@@ -22,6 +24,8 @@ func (h *Handler) buildSource(ctx context.Context, src *portainer.Source, stats 
 	url := ""
 	if src.Git != nil {
 		url = gittypes.SanitizeURL(src.Git.URL)
+	} else if src.Vault != nil {
+		url = src.Vault.Address
 	}
 
 	return Source{

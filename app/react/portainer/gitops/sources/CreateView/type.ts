@@ -3,7 +3,7 @@ import {
   type SourcesGitSourceCreatePayload,
 } from '@api/types.gen';
 
-import { CreateSourcePayload } from './useSourceCreateMutation';
+import type { CreateSourcePayload } from './useSourceCreateMutation';
 
 type GitFormValues = {
   url: string;
@@ -17,21 +17,56 @@ type GitFormValues = {
   connectionOk: boolean;
 };
 
-export const FormValueTypes = ['git', 'registry', 'helm'] as const;
+export type VaultFormValues = {
+  address: string;
+  namespace?: string;
+  kvVersion: 1 | 2;
+  tlsSkipVerify?: boolean;
+  authentication: {
+    method: 'token';
+    token?: string;
+  };
+  /** Mirrors the connection-test result; not sent in the create payload. */
+  connectionOk: boolean;
+};
+
+export type VaultSourcePayload = {
+  name?: string;
+  address: string;
+  namespace?: string;
+  kvVersion?: 1 | 2;
+  tlsSkipVerify?: boolean;
+  authentication: {
+    method: 'token';
+    token: string;
+  };
+};
+
+export const FormValueTypes = ['git', 'registry', 'helm', 'vault'] as const;
 
 export type FormValues = {
   name: string;
   type: (typeof FormValueTypes)[number];
   git: GitFormValues;
+  vault: VaultFormValues;
 };
 
-export function formValuesToCreatePayload({
-  name,
-  type,
-  git: { authentication, tlsSkipVerify, url },
-}: FormValues): CreateSourcePayload {
+export function formValuesToCreatePayload(
+  values: FormValues
+): CreateSourcePayload {
+  const { name, type } = values;
+
+  if (type === 'vault') {
+    return {
+      type,
+      vault: vaultFormValuesToPayload(name, values.vault),
+    };
+  }
+
+  const { authentication, tlsSkipVerify, url } = values.git;
+
   return {
-    type,
+    type: 'git',
     git: {
       name,
       tlsSkipVerify,
@@ -50,6 +85,35 @@ export function gitFormValuesToTestPayload({
     url,
     tlsSkipVerify,
     authentication: buildAuthPayload(authentication),
+  };
+}
+
+export function vaultFormValuesToTestPayload(
+  values: VaultFormValues
+): VaultSourcePayload {
+  return vaultFormValuesToPayload('', values);
+}
+
+function vaultFormValuesToPayload(
+  name: string,
+  {
+    address,
+    namespace,
+    kvVersion,
+    tlsSkipVerify,
+    authentication,
+  }: VaultFormValues
+): VaultSourcePayload {
+  return {
+    name,
+    address,
+    namespace,
+    kvVersion,
+    tlsSkipVerify,
+    authentication: {
+      method: authentication.method,
+      token: authentication.token || '',
+    },
   };
 }
 

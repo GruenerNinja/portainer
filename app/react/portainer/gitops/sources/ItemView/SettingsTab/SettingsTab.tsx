@@ -22,7 +22,10 @@ export function SettingsTab({ source, isEditing, onEditingChange }: Props) {
   return (
     <>
       <ConnectionDetailsWidget source={source} />
-      <AuthWidget auth={source?.connection.authentication} />
+      <AuthWidget
+        auth={source?.connection.authentication}
+        vault={source?.connection.vault}
+      />
       <AutoUpdateWidget autoUpdate={source.autoUpdate} />
       <SyncStatusWidget source={source} />
     </>

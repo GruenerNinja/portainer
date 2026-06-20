@@ -162,6 +162,9 @@ func FetchSourceStats(
 		if srcIDs := wfSources[stack.WorkflowID]; len(srcIDs) > 0 {
 			stackSourceIDs[stack.ID] = srcIDs
 		}
+		for _, mapping := range stack.SecretMappings {
+			stackSourceIDs[stack.ID] = append(stackSourceIDs[stack.ID], mapping.SourceID)
+		}
 	}
 
 	accessMap, err := buildEndpointAccessMap(k8sFactory, sc, endpointMap)

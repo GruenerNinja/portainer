@@ -63,6 +63,13 @@ export interface StackDeploymentInfo {
   SourceID?: number;
 }
 
+export interface StackSecretMapping {
+  name: string;
+  sourceId: number;
+  path: string;
+  key: string;
+}
+
 export interface Stack {
   Id: number;
   Name: string;
@@ -71,6 +78,7 @@ export interface Stack {
   SwarmId: string;
   EntryPoint: string;
   Env: EnvVar[] | null;
+  SecretMappings?: StackSecretMapping[] | null;
   ResourceControl?: ResourceControlResponse;
   Status: StackStatus;
   DeploymentStatus?: StackDeploymentStatus[];

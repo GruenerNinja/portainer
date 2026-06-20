@@ -40,6 +40,7 @@ func (b *SwarmStackGitBuilder) prepare(ctx context.Context, payload *StackPayloa
 	b.stack.EntryPoint = payload.ComposeFile
 	b.stack.FromAppTemplate = payload.FromAppTemplate
 	b.stack.Env = payload.Env
+	b.stack.SecretMappings = payload.SecretMappings
 
 	return b.GitMethodStackBuilder.prepare(ctx, payload, userID)
 }

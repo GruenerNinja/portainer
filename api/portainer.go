@@ -966,6 +966,21 @@ type (
 		Value string `json:"value" example:"value" validate:"required"`
 	}
 
+	// VaultConfig represents a HashiCorp Vault source configuration.
+	VaultConfig struct {
+		Address        string              `json:"address" example:"https://vault.example.com"`
+		TLSSkipVerify  bool                `json:"tlsSkipVerify" example:"false"`
+		Namespace      string              `json:"namespace,omitempty" example:"admin"`
+		KVVersion      int                 `json:"kvVersion" example:"2"`
+		Authentication VaultAuthentication `json:"authentication"`
+	}
+
+	// VaultAuthentication represents Vault authentication settings.
+	VaultAuthentication struct {
+		Method string `json:"method" example:"token"`
+		Token  string `json:"token,omitempty"`
+	}
+
 	// Registry represents a Docker registry with all the info required
 	// to connect to it
 	Registry struct {
@@ -1258,6 +1273,8 @@ type (
 		EntryPoint string `json:"EntryPoint" example:"docker-compose.yml"`
 		// A list of environment(endpoint) variables used during stack deployment
 		Env []Pair `json:"Env"`
+		// SecretMappings are resolved at deployment time and injected into the stack environment.
+		SecretMappings []StackSecretMapping `json:"SecretMappings,omitempty"`
 		//
 		ResourceControl *ResourceControl `json:"ResourceControl"`
 		// Stack status (1 - active, 2 - inactive, 3 - deploying, 4 - error)
@@ -1313,6 +1330,14 @@ type (
 		HelmAtomic bool `example:"false"`
 	}
 
+	// StackSecretMapping maps an environment variable to a secret source key.
+	StackSecretMapping struct {
+		Name     string   `json:"name" example:"DATABASE_PASSWORD"`
+		SourceID SourceID `json:"sourceId" example:"1"`
+		Path     string   `json:"path" example:"kv/apps/my-stack"`
+		Key      string   `json:"key" example:"password"`
+	}
+
 	// StackID represents a stack identifier (it must be composed of Name + "_" + SwarmID to create a unique identifier)
 	StackID int
 
@@ -1331,6 +1356,7 @@ type (
 		Git      *gittypes.RepoConfig `json:"git,omitempty"`
 		Registry *Registry            `json:"registry,omitempty"`
 		Helm     *HelmConfig          `json:"helm,omitempty"`
+		Vault    *VaultConfig         `json:"vault,omitempty"`
 	}
 
 	// SourceID represents a source identifier
@@ -2294,6 +2320,7 @@ const (
 	SourceTypeGit
 	SourceTypeRegistry
 	SourceTypeHelm
+	SourceTypeVault
 )
 
 const (

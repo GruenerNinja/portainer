@@ -27,6 +27,8 @@ type swarmStackFromFileContentPayload struct {
 	StackFileContent string `example:"version: 3\n services:\n web:\n image:nginx" validate:"required"`
 	// A list of environment variables used during stack deployment
 	Env []portainer.Pair
+	// SecretMappings are resolved from external secret sources during deployment.
+	SecretMappings []portainer.StackSecretMapping
 	// Whether the stack is from a app template
 	FromAppTemplate bool `example:"false"`
 }
@@ -44,12 +46,13 @@ func (payload *swarmStackFromFileContentPayload) Validate(r *http.Request) error
 	return nil
 }
 
-func createStackPayloadFromSwarmFileContentPayload(name string, swarmID string, fileContent string, env []portainer.Pair, fromAppTemplate bool) stackbuilders.StackPayload {
+func createStackPayloadFromSwarmFileContentPayload(name string, swarmID string, fileContent string, env []portainer.Pair, secretMappings []portainer.StackSecretMapping, fromAppTemplate bool) stackbuilders.StackPayload {
 	return stackbuilders.StackPayload{
 		Name:             name,
 		SwarmID:          swarmID,
 		StackFileContent: []byte(fileContent),
 		Env:              env,
+		SecretMappings:   secretMappings,
 		FromAppTemplate:  fromAppTemplate,
 	}
 }
@@ -91,7 +94,7 @@ func (handler *Handler) createSwarmStackFromFileContent(w http.ResponseWriter, r
 		return httperror.InternalServerError("Unable to retrieve info from request context", err)
 	}
 
-	stackPayload := createStackPayloadFromSwarmFileContentPayload(payload.Name, payload.SwarmID, payload.StackFileContent, payload.Env, payload.FromAppTemplate)
+	stackPayload := createStackPayloadFromSwarmFileContentPayload(payload.Name, payload.SwarmID, payload.StackFileContent, payload.Env, payload.SecretMappings, payload.FromAppTemplate)
 
 	swarmStackBuilder := stackbuilders.CreateSwarmStackFileBuilder(securityContext,
 		handler.DataStore,
@@ -113,6 +116,8 @@ type swarmStackFromGitRepositoryPayload struct {
 	SwarmID string `example:"jpofkc0i9uo9wtx1zesuk649w" validate:"required"`
 	// A list of environment variables used during stack deployment
 	Env []portainer.Pair
+	// SecretMappings are resolved from external secret sources during deployment.
+	SecretMappings []portainer.StackSecretMapping
 
 	// SourceID references an existing Source for git credentials/URL.
 	// When set, the inline URL and authentication fields are ignored.
@@ -167,7 +172,7 @@ func (payload *swarmStackFromGitRepositoryPayload) Validate(r *http.Request) err
 	return update.ValidateAutoUpdateSettings(payload.AutoUpdate)
 }
 
-func createStackPayloadFromSwarmGitPayload(name, swarmID, repoUrl, repoReference, repoUsername, repoPassword string, repoAuthentication bool, composeFile string, additionalFiles []string, supportRelativePath bool, filesystemPath string, autoUpdate *portainer.AutoUpdateSettings, env []portainer.Pair, fromAppTemplate bool, repoSkipSSLVerify bool, sourceID portainer.SourceID) stackbuilders.StackPayload {
+func createStackPayloadFromSwarmGitPayload(name, swarmID, repoUrl, repoReference, repoUsername, repoPassword string, repoAuthentication bool, composeFile string, additionalFiles []string, supportRelativePath bool, filesystemPath string, autoUpdate *portainer.AutoUpdateSettings, env []portainer.Pair, secretMappings []portainer.StackSecretMapping, fromAppTemplate bool, repoSkipSSLVerify bool, sourceID portainer.SourceID) stackbuilders.StackPayload {
 	return stackbuilders.StackPayload{
 		Name:    name,
 		SwarmID: swarmID,
@@ -186,6 +191,7 @@ func createStackPayloadFromSwarmGitPayload(name, swarmID, repoUrl, repoReference
 		FilesystemPath:      strings.TrimSpace(filesystemPath),
 		AutoUpdate:          autoUpdate,
 		Env:                 env,
+		SecretMappings:      secretMappings,
 		FromAppTemplate:     fromAppTemplate,
 	}
 }
@@ -253,6 +259,7 @@ func (handler *Handler) createSwarmStackFromGitRepository(w http.ResponseWriter,
 		payload.FilesystemPath,
 		payload.AutoUpdate,
 		payload.Env,
+		payload.SecretMappings,
 		payload.FromAppTemplate,
 		payload.TLSSkipVerify,
 		payload.SourceID,

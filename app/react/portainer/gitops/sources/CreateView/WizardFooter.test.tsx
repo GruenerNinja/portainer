@@ -51,6 +51,17 @@ const initialFormValues: FormValues = {
     connectionOk: false,
     authentication: { authEnabled: false },
   },
+  vault: {
+    address: '',
+    namespace: '',
+    kvVersion: 2,
+    tlsSkipVerify: false,
+    authentication: {
+      method: 'token',
+      token: '',
+    },
+    connectionOk: false,
+  },
 };
 
 const validFormValues: FormValues = {
@@ -61,6 +72,7 @@ const validFormValues: FormValues = {
     connectionOk: true,
     authentication: { authEnabled: false },
   },
+  vault: initialFormValues.vault,
 };
 
 function renderFooter({

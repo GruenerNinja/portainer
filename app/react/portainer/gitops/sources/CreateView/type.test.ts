@@ -6,84 +6,121 @@ const baseGit = {
   connectionOk: false,
 };
 
+const baseVault = {
+  address: '',
+  namespace: '',
+  kvVersion: 2 as const,
+  tlsSkipVerify: false,
+  authentication: {
+    method: 'token' as const,
+    token: '',
+  },
+  connectionOk: false,
+};
+
+function expectGitPayload(
+  payload: ReturnType<typeof formValuesToCreatePayload>
+) {
+  expect(payload.type).toBe('git');
+  if (payload.type !== 'git') {
+    throw new Error('expected git payload');
+  }
+  return payload.git;
+}
+
 describe('formValuesToCreatePayload', () => {
   it('populates authentication when authEnabled with username and password', () => {
-    const payload = formValuesToCreatePayload({
-      name: 'my-source',
-      type: 'git',
-      git: {
-        ...baseGit,
-        authentication: {
-          authEnabled: true,
-          username: 'alice',
-          password: 'secret',
+    const payload = expectGitPayload(
+      formValuesToCreatePayload({
+        name: 'my-source',
+        type: 'git',
+        git: {
+          ...baseGit,
+          authentication: {
+            authEnabled: true,
+            username: 'alice',
+            password: 'secret',
+          },
         },
-      },
-    });
+        vault: baseVault,
+      })
+    );
 
-    expect(payload.git.authentication).toEqual({
+    expect(payload.authentication).toEqual({
       username: 'alice',
       password: 'secret',
     });
   });
 
   it('omits authentication when authEnabled is false', () => {
-    const payload = formValuesToCreatePayload({
-      name: 'my-source',
-      type: 'git',
-      git: {
-        ...baseGit,
-        authentication: { authEnabled: false },
-      },
-    });
+    const payload = expectGitPayload(
+      formValuesToCreatePayload({
+        name: 'my-source',
+        type: 'git',
+        git: {
+          ...baseGit,
+          authentication: { authEnabled: false },
+        },
+        vault: baseVault,
+      })
+    );
 
-    expect(payload.git.authentication).toBeUndefined();
+    expect(payload.authentication).toBeUndefined();
   });
 
   it('omits authentication when authEnabled but username is missing', () => {
-    const payload = formValuesToCreatePayload({
-      name: 'my-source',
-      type: 'git',
-      git: {
-        ...baseGit,
-        authentication: {
-          authEnabled: true,
-          password: 'secret',
+    const payload = expectGitPayload(
+      formValuesToCreatePayload({
+        name: 'my-source',
+        type: 'git',
+        git: {
+          ...baseGit,
+          authentication: {
+            authEnabled: true,
+            password: 'secret',
+          },
         },
-      },
-    });
+        vault: baseVault,
+      })
+    );
 
-    expect(payload.git.authentication).toBeUndefined();
+    expect(payload.authentication).toBeUndefined();
   });
 
   it('omits authentication when authEnabled but password is missing', () => {
-    const payload = formValuesToCreatePayload({
-      name: 'my-source',
-      type: 'git',
-      git: {
-        ...baseGit,
-        authentication: {
-          authEnabled: true,
-          username: 'alice',
+    const payload = expectGitPayload(
+      formValuesToCreatePayload({
+        name: 'my-source',
+        type: 'git',
+        git: {
+          ...baseGit,
+          authentication: {
+            authEnabled: true,
+            username: 'alice',
+          },
         },
-      },
-    });
+        vault: baseVault,
+      })
+    );
 
-    expect(payload.git.authentication).toBeUndefined();
+    expect(payload.authentication).toBeUndefined();
   });
 
   it('does not include connectionOk in the create payload', () => {
-    const payload = formValuesToCreatePayload({
-      name: 'my-source',
-      type: 'git',
-      git: {
-        ...baseGit,
-        connectionOk: true,
-        authentication: { authEnabled: false },
-      },
-    });
+    const payload = expectGitPayload(
+      formValuesToCreatePayload({
+        name: 'my-source',
+        type: 'git',
+        git: {
+          ...baseGit,
+          connectionOk: true,
+          authentication: { authEnabled: false },
+        },
+        vault: baseVault,
+      })
+    );
 
-    expect(payload.git).not.toHaveProperty('connectionOk');
+    expect(payload).not.toHaveProperty('connectionOk');
   });
 });
 

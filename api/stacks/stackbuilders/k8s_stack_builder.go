@@ -63,6 +63,7 @@ func (b *KubernetesStackBuilder) prepare(_ context.Context, payload *StackPayloa
 	b.stack.EntryPoint = filesystem.ManifestFileDefaultName
 	b.stack.Namespace = payload.Namespace
 	b.stack.FromAppTemplate = payload.FromAppTemplate
+	b.stack.SecretMappings = payload.SecretMappings
 
 	if err := b.initCreatedBy(userID); err != nil {
 		return err

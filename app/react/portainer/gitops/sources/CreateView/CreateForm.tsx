@@ -21,6 +21,17 @@ const initialFormValues: FormValues = {
     },
     connectionOk: false,
   },
+  vault: {
+    address: '',
+    namespace: '',
+    kvVersion: 2,
+    tlsSkipVerify: false,
+    authentication: {
+      method: 'token',
+      token: '',
+    },
+    connectionOk: false,
+  },
 };
 
 type Props = {

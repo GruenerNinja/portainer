@@ -170,6 +170,14 @@ func (d *stackDeployer) StopRemoteSwarmStack(ctx context.Context, stack *portain
 // * wait for deployment to end
 // * gather deployment logs and bubble them up
 func (d *stackDeployer) remoteStack(ctx context.Context, stack *portainer.Stack, endpoint *portainer.Endpoint, operation StackRemoteOperation, opts unpackerCmdBuilderOptions) error {
+	if operationResolvesSecrets(operation) {
+		resolvedStack, err := stackWithResolvedSecrets(ctx, d.dataStore, stack)
+		if err != nil {
+			return err
+		}
+		stack = resolvedStack
+	}
+
 	if stack.WorkflowID != 0 && opts.gitConfig == nil {
 		src, file, err := workflows.GitSourceAndArtifactForStack(d.dataStore, stack.WorkflowID, stack.ID)
 		if err != nil {
@@ -391,6 +399,15 @@ func applyRelativePathStackConfig(stack *portainer.Stack, opts *unpackerCmdBuild
 }
 
 func requiresPortainerStackConfig(operation StackRemoteOperation) bool {
+	switch operation {
+	case OperationDeploy, OperationComposeStart, OperationSwarmDeploy, OperationSwarmStart:
+		return true
+	default:
+		return false
+	}
+}
+
+func operationResolvesSecrets(operation StackRemoteOperation) bool {
 	switch operation {
 	case OperationDeploy, OperationComposeStart, OperationSwarmDeploy, OperationSwarmStart:
 		return true

@@ -29,12 +29,16 @@ export function SettingsForm({ source, onCancel }: Props) {
   usePreventFormExit(() => !!formikRef.current?.dirty);
 
   const initialValues: SettingsFormValues = {
+    type: source.type === 'vault' ? 'vault' : 'git',
     name: source.name ?? '',
-    url: source.url ?? '',
+    url: source.connection.vault?.address ?? source.url ?? '',
     tlsSkipVerify: source.connection.tlsSkipVerify ?? false,
     authEnabled: !!source.connection.authentication,
     username: source.connection.authentication?.username ?? '',
     password: '',
+    namespace: source.connection.vault?.namespace ?? '',
+    kvVersion: source.connection.vault?.kvVersion ?? 2,
+    token: '',
   };
 
   return (

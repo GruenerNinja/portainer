@@ -50,23 +50,33 @@ func (d *stackDeployer) DeploySwarmStack(ctx context.Context, stack *portainer.S
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
-	return d.swarmStackManager.Deploy(ctx, stack, prune, pullImage, endpoint, registries)
+	resolvedStack, err := stackWithResolvedSecrets(ctx, d.dataStore, stack)
+	if err != nil {
+		return err
+	}
+
+	return d.swarmStackManager.Deploy(ctx, resolvedStack, prune, pullImage, endpoint, registries)
 }
 
 func (d *stackDeployer) DeployComposeStack(ctx context.Context, stack *portainer.Stack, endpoint *portainer.Endpoint, registries []portainer.Registry, prune, forcePullImage, forceRecreate bool) error {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
+	resolvedStack, err := stackWithResolvedSecrets(ctx, d.dataStore, stack)
+	if err != nil {
+		return err
+	}
+
 	options := portainer.ComposeOptions{Registries: registries}
 
 	// --force-recreate doesn't pull updated images
 	if forcePullImage {
-		if err := d.composeStackManager.Pull(ctx, stack, endpoint, options); err != nil {
+		if err := d.composeStackManager.Pull(ctx, resolvedStack, endpoint, options); err != nil {
 			return err
 		}
 	}
 
-	return d.composeStackManager.Up(ctx, stack, endpoint, portainer.ComposeUpOptions{
+	return d.composeStackManager.Up(ctx, resolvedStack, endpoint, portainer.ComposeUpOptions{
 		ComposeOptions: options,
 		ForceRecreate:  forceRecreate,
 		Prune:          prune,
@@ -84,19 +94,24 @@ func (d *stackDeployer) DeployKubernetesStack(ctx context.Context, stack *portai
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
+	resolvedStack, err := stackWithResolvedSecrets(ctx, d.dataStore, stack)
+	if err != nil {
+		return err
+	}
+
 	appLabels := k.KubeAppLabels{
-		StackID:   int(stack.ID),
-		StackName: stack.Name,
+		StackID:   int(resolvedStack.ID),
+		StackName: resolvedStack.Name,
 		Owner:     user.Username,
 	}
 
-	if stack.WorkflowID == 0 {
+	if resolvedStack.WorkflowID == 0 {
 		appLabels.Kind = "content"
 	} else {
 		appLabels.Kind = "git"
 	}
 
-	k8sDeploymentConfig := CreateKubernetesStackDeploymentConfig(stack, d.kubernetesDeployer, appLabels, user, endpoint)
+	k8sDeploymentConfig := CreateKubernetesStackDeploymentConfig(resolvedStack, d.kubernetesDeployer, appLabels, user, endpoint)
 
 	if err := k8sDeploymentConfig.Deploy(ctx); err != nil {
 		return errors.Wrap(err, "failed to deploy kubernetes application")

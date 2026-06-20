@@ -36,7 +36,9 @@ export function ConnectionDetailsWidget({ source }: Props) {
             )}
           </DetailField>
         </div>
-        <DetailField label="Repository URL">
+        <DetailField
+          label={source.type === 'vault' ? 'Vault Address' : 'Repository URL'}
+        >
           <code
             className="bg-transparent p-0 font-mono text-sm"
             data-cy="source-url"
@@ -44,6 +46,16 @@ export function ConnectionDetailsWidget({ source }: Props) {
             {source.url ?? '-'}
           </code>
         </DetailField>
+        {source.connection.vault && (
+          <div className="grid grid-cols-2 gap-4">
+            <DetailField label="Namespace">
+              {source.connection.vault.namespace || '-'}
+            </DetailField>
+            <DetailField label="KV Engine">
+              KV v{source.connection.vault.kvVersion}
+            </DetailField>
+          </div>
+        )}
       </Card.Body>
     </Card.Container>
   );

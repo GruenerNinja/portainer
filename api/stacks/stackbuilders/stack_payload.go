@@ -15,6 +15,8 @@ type StackPayload struct {
 	Webhook          string
 	// A list of environment(endpoint) variables used during stack deployment
 	Env []portainer.Pair
+	// A list of deploy-time secret mappings injected into the stack environment
+	SecretMappings []portainer.StackSecretMapping
 	// Optional GitOps update configuration
 	AutoUpdate *portainer.AutoUpdateSettings
 	// Whether the stack is from a app template

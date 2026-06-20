@@ -11,6 +11,7 @@ import { validationSchema } from '../validation';
 import { ConfigureGit } from './ConfigureGit';
 import { ConfigureHelm } from './ConfigureHelm';
 import { ConfigureRegistry } from './ConfigureRegistry';
+import { ConfigureVault } from './ConfigureVault';
 
 const panels: Record<
   FormValues['type'],
@@ -19,6 +20,7 @@ const panels: Record<
   git: { title: 'Git Repository', component: ConfigureGit },
   helm: { title: 'Helm Repository', component: ConfigureHelm },
   registry: { title: 'OCI Registry', component: ConfigureRegistry },
+  vault: { title: 'Vault', component: ConfigureVault },
 };
 
 export function ConfigureStep() {
@@ -41,7 +43,7 @@ export function ConfigureStep() {
 }
 
 export function validateConfigureStep() {
-  return validationSchema().pick(['name', 'git']);
+  return validationSchema().pick(['name', 'type', 'git', 'vault']);
 }
 
 function SharedFields() {

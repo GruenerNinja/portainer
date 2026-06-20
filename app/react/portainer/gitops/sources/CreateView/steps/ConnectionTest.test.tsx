@@ -28,11 +28,24 @@ const invalidGitValues: FormValues['git'] = {
   },
 };
 
+const baseVaultValues: FormValues['vault'] = {
+  address: '',
+  namespace: '',
+  kvVersion: 2,
+  tlsSkipVerify: false,
+  authentication: {
+    method: 'token',
+    token: '',
+  },
+  connectionOk: false,
+};
+
 function renderConnectionTest(gitValues: FormValues['git']) {
   const initialValues: FormValues = {
     name: 'test-source',
     type: 'git',
     git: gitValues,
+    vault: baseVaultValues,
   };
 
   const Wrapped = withTestQueryProvider(ConnectionTest);

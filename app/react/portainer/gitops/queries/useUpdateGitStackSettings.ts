@@ -9,9 +9,11 @@ import { EnvVar } from '@@/form-components/EnvironmentVariablesFieldset/types';
 
 import { AutoUpdateResponse } from '../types';
 import { AuthTypeOption } from '../../account/git-credentials/types';
+import { StackSecretMapping } from '../../../common/stacks/types';
 
 export interface GitStackPayload {
   env: Array<EnvVar>;
+  SecretMappings?: StackSecretMapping[];
   prune?: boolean;
   RepositoryURL?: string;
   ConfigFilePath?: string;

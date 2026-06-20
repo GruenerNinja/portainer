@@ -1,4 +1,4 @@
-import { Cylinder, Radio } from 'lucide-react';
+import { Cylinder, KeyRound, Radio } from 'lucide-react';
 
 import GitIcon from '@/assets/ico/git.svg?c';
 import HelmIcon from '@/assets/ico/helm.svg?c';
@@ -50,6 +50,17 @@ const registry: BoxSelectorOption<'registry'> = {
   disabled: true,
 };
 
+const vault: BoxSelectorOption<'vault'> = {
+  id: 'vault',
+  value: 'vault',
+  label: 'HashiCorp Vault',
+  icon: KeyRound,
+  description: Description({
+    txt: 'Connect to a Vault server to resolve stack environment secrets during deployment.',
+    items: ['Reusable source', 'KV v1 or v2', 'Token authentication'],
+  }),
+};
+
 const s3: BoxSelectorOption<'s3'> = {
   id: 's3',
   value: 's3',
@@ -62,7 +73,7 @@ const s3: BoxSelectorOption<'s3'> = {
   disabled: true,
 };
 
-export const sourceTypeOptions = [git, helm, registry, s3];
+export const sourceTypeOptions = [git, vault, helm, registry, s3];
 
 function Description({ txt, items }: { txt: string; items: string[] }) {
   return (

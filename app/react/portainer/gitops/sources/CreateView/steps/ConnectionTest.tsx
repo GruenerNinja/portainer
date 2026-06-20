@@ -6,17 +6,18 @@ import { useDebouncedValue } from '@/react/hooks/useDebouncedValue';
 
 import { Alert } from '@@/Alert';
 
-import { FormValues, gitFormValuesToTestPayload } from '../type';
+import {
+  FormValues,
+  gitFormValuesToTestPayload,
+  vaultFormValuesToTestPayload,
+} from '../type';
 import { useTestSourceConnection } from '../useTestSourceConnection';
-import { validateGitConnection } from '../validation';
+import { validateGitConnection, validateVaultConnection } from '../validation';
 
 export function ConnectionTest() {
   const { values, setFieldValue } = useFormikContext<FormValues>();
-  const { git } = values;
 
-  const livePayload = validateGitConnection().isValidSync(git)
-    ? gitFormValuesToTestPayload(git)
-    : undefined;
+  const livePayload = buildLivePayload(values);
 
   const debouncedPayload = useDebouncedValue(livePayload);
   const query = useTestSourceConnection(debouncedPayload);
@@ -25,8 +26,13 @@ export function ConnectionTest() {
   const connectionOk = settled && query.data?.success === true;
 
   useEffect(() => {
+    if (values.type === 'vault') {
+      setFieldValue('vault.connectionOk', connectionOk);
+      return;
+    }
+
     setFieldValue('git.connectionOk', connectionOk);
-  }, [connectionOk, setFieldValue]);
+  }, [connectionOk, setFieldValue, values.type]);
 
   if (!livePayload) {
     return null;
@@ -35,7 +41,7 @@ export function ConnectionTest() {
   if (!settled) {
     return (
       <Alert color="info" title="Testing connection...">
-        Checking that Portainer can reach the repository.
+        Checking that Portainer can reach the source.
       </Alert>
     );
   }
@@ -51,14 +57,32 @@ export function ConnectionTest() {
   if (query.data?.success) {
     return (
       <Alert color="success" title="Connection successful">
-        Portainer reached the repository with these details.
+        Portainer reached the source with these details.
       </Alert>
     );
   }
 
   return (
     <Alert color="error" title="Connection failed">
-      {query.data?.error || 'Unable to reach the repository.'}
+      {query.data?.error || 'Unable to reach the source.'}
     </Alert>
   );
+}
+
+function buildLivePayload(values: FormValues) {
+  if (values.type === 'vault') {
+    return validateVaultConnection().isValidSync(values.vault)
+      ? {
+          type: 'vault' as const,
+          vault: vaultFormValuesToTestPayload(values.vault),
+        }
+      : undefined;
+  }
+
+  return validateGitConnection().isValidSync(values.git)
+    ? {
+        type: 'git' as const,
+        git: gitFormValuesToTestPayload(values.git),
+      }
+    : undefined;
 }

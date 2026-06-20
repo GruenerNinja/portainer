@@ -40,6 +40,7 @@ export function EditGitSettingsModal({ stack, onClose }: Props) {
       FilesystemPath: stack.FilesystemPath,
     },
     env: stack.Env || [],
+    secretMappings: stack.SecretMappings || [],
     prune: stack.Option?.Prune || false,
     redeployNow: false,
   };

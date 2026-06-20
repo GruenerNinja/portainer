@@ -16,7 +16,7 @@ const SOURCE_STATUSES = new Set<SourceStatus>([
   'unknown',
 ]);
 
-const SOURCE_TYPES = new Set<SourceType>(['git', 'helm', 'oci']);
+const SOURCE_TYPES = new Set<SourceType>(['git', 'helm', 'oci', 'vault']);
 
 const SORT_KEYS = ['name', 'status', 'type'] as const;
 

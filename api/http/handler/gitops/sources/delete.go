@@ -71,6 +71,18 @@ func (h *Handler) sourceDelete(w http.ResponseWriter, r *http.Request) *httperro
 			return ErrSourceInUse
 		}
 
+		stacks, err := tx.Stack().ReadAll(func(s portainer.Stack) bool {
+			return slices.ContainsFunc(s.SecretMappings, func(m portainer.StackSecretMapping) bool {
+				return m.SourceID == portainer.SourceID(sourceID)
+			})
+		})
+		if err != nil {
+			return err
+		}
+		if len(stacks) > 0 {
+			return ErrSourceInUse
+		}
+
 		return tx.Source().Delete(portainer.SourceID(sourceID))
 	}); h.dataStore.IsErrObjectNotFound(err) {
 		return httperror.NotFound("Unable to find a source with the specified identifier", err)

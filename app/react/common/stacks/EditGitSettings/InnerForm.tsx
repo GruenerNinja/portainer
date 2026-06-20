@@ -22,6 +22,7 @@ import { StackEnvironmentVariablesPanel } from '@@/form-components/EnvironmentVa
 import { PruneField } from '../PruneField';
 
 import { FormValues } from './types';
+import { SecretMappingsFieldset } from './SecretMappingsFieldset';
 
 export function InnerForm({
   stackName,
@@ -138,6 +139,17 @@ export function InnerForm({
                 showHelpMessage
                 isFoldable
                 errors={errors.env}
+              />
+
+              <SecretMappingsFieldset
+                values={values.secretMappings}
+                onChange={(value) => setFieldValue('secretMappings', value)}
+                errors={
+                  Array.isArray(errors.secretMappings) ||
+                  typeof errors.secretMappings === 'string'
+                    ? errors.secretMappings
+                    : undefined
+                }
               />
 
               {isDocker && (

@@ -28,6 +28,8 @@ type composeStackFromFileContentPayload struct {
 	StackFileContent string `example:"version: 3\n services:\n web:\n image:nginx" validate:"required"`
 	// A list of environment variables used during stack deployment
 	Env []portainer.Pair
+	// SecretMappings are resolved from external secret sources during deployment.
+	SecretMappings []portainer.StackSecretMapping
 	// Whether the stack is from a app template
 	FromAppTemplate bool `example:"false"`
 }
@@ -43,11 +45,12 @@ func (payload *composeStackFromFileContentPayload) Validate(r *http.Request) err
 	return nil
 }
 
-func createStackPayloadFromComposeFileContentPayload(name string, fileContent string, env []portainer.Pair, fromAppTemplate bool) stackbuilders.StackPayload {
+func createStackPayloadFromComposeFileContentPayload(name string, fileContent string, env []portainer.Pair, secretMappings []portainer.StackSecretMapping, fromAppTemplate bool) stackbuilders.StackPayload {
 	return stackbuilders.StackPayload{
 		Name:             name,
 		StackFileContent: []byte(fileContent),
 		Env:              env,
+		SecretMappings:   secretMappings,
 		FromAppTemplate:  fromAppTemplate,
 	}
 }
@@ -154,7 +157,7 @@ func (handler *Handler) createComposeStackFromFileContent(w http.ResponseWriter,
 		return httperror.InternalServerError("Unable to retrieve info from request context", err)
 	}
 
-	stackPayload := createStackPayloadFromComposeFileContentPayload(payload.Name, payload.StackFileContent, payload.Env, payload.FromAppTemplate)
+	stackPayload := createStackPayloadFromComposeFileContentPayload(payload.Name, payload.StackFileContent, payload.Env, payload.SecretMappings, payload.FromAppTemplate)
 
 	composeStackBuilder := stackbuilders.CreateComposeStackFileBuilder(securityContext,
 		handler.DataStore,
@@ -197,13 +200,15 @@ type composeStackFromGitRepositoryPayload struct {
 	AutoUpdate *portainer.AutoUpdateSettings
 	// A list of environment variables used during stack deployment
 	Env []portainer.Pair
+	// SecretMappings are resolved from external secret sources during deployment.
+	SecretMappings []portainer.StackSecretMapping
 	// Whether the stack is from a app template
 	FromAppTemplate bool `example:"false"`
 	// Deprecated: use SourceID instead. TLSSkipVerify skips SSL verification when cloning the Git repository.
 	TLSSkipVerify bool `example:"false"`
 }
 
-func createStackPayloadFromComposeGitPayload(name, repoUrl, repoReference, repoUsername, repoPassword string, repoAuthentication bool, composeFile string, additionalFiles []string, supportRelativePath bool, filesystemPath string, autoUpdate *portainer.AutoUpdateSettings, env []portainer.Pair, fromAppTemplate bool, repoSkipSSLVerify bool, sourceID portainer.SourceID) stackbuilders.StackPayload {
+func createStackPayloadFromComposeGitPayload(name, repoUrl, repoReference, repoUsername, repoPassword string, repoAuthentication bool, composeFile string, additionalFiles []string, supportRelativePath bool, filesystemPath string, autoUpdate *portainer.AutoUpdateSettings, env []portainer.Pair, secretMappings []portainer.StackSecretMapping, fromAppTemplate bool, repoSkipSSLVerify bool, sourceID portainer.SourceID) stackbuilders.StackPayload {
 	return stackbuilders.StackPayload{
 		Name: name,
 		RepositoryConfigPayload: stackbuilders.RepositoryConfigPayload{
@@ -221,6 +226,7 @@ func createStackPayloadFromComposeGitPayload(name, repoUrl, repoReference, repoU
 		FilesystemPath:      strings.TrimSpace(filesystemPath),
 		AutoUpdate:          autoUpdate,
 		Env:                 env,
+		SecretMappings:      secretMappings,
 		FromAppTemplate:     fromAppTemplate,
 	}
 }
@@ -312,6 +318,7 @@ func (handler *Handler) createComposeStackFromGitRepository(w http.ResponseWrite
 		payload.FilesystemPath,
 		payload.AutoUpdate,
 		payload.Env,
+		payload.SecretMappings,
 		payload.FromAppTemplate,
 		payload.TLSSkipVerify,
 		payload.SourceID,

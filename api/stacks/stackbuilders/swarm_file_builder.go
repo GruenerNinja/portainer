@@ -33,6 +33,7 @@ func (b *SwarmStackFileBuilder) prepare(_ context.Context, payload *StackPayload
 	b.stack.SwarmID = payload.SwarmID
 	b.stack.EntryPoint = filesystem.ComposeFileDefaultName
 	b.stack.Env = payload.Env
+	b.stack.SecretMappings = payload.SecretMappings
 	b.stack.FromAppTemplate = payload.FromAppTemplate
 
 	if err := b.initCreatedBy(userID); err != nil {

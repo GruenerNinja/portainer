@@ -6,11 +6,38 @@ export function buildUpdatePayload(
   values: SettingsFormValues,
   initialValues: SettingsFormValues
 ): UpdateSourcePayload {
+  if (values.type === 'vault') {
+    return {
+      type: 'vault',
+      name: changed(values.name, initialValues.name),
+      address: changed(values.url, initialValues.url),
+      tlsSkipVerify: changed(values.tlsSkipVerify, initialValues.tlsSkipVerify),
+      namespace: changed(values.namespace, initialValues.namespace),
+      kvVersion: changed(values.kvVersion, initialValues.kvVersion),
+      authentication: buildVaultAuthenticationPayload(values, initialValues),
+    };
+  }
+
   return {
+    type: 'git',
     name: changed(values.name, initialValues.name),
     url: changed(values.url, initialValues.url),
     tlsSkipVerify: changed(values.tlsSkipVerify, initialValues.tlsSkipVerify),
     authentication: buildAuthenticationPayload(values, initialValues),
+  };
+}
+
+function buildVaultAuthenticationPayload(
+  values: SettingsFormValues,
+  initialValues: SettingsFormValues
+) {
+  if (values.token === initialValues.token) {
+    return undefined;
+  }
+
+  return {
+    method: 'token' as const,
+    token: values.token,
   };
 }
 

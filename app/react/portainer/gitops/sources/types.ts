@@ -1,9 +1,15 @@
-import { type LucideIcon, Box, GitBranch, Package } from 'lucide-react';
+import {
+  type LucideIcon,
+  Box,
+  GitBranch,
+  KeyRound,
+  Package,
+} from 'lucide-react';
 
-import { WorkflowsStatus, SourcesSourceType } from '@api/types.gen';
+import { WorkflowsStatus } from '@api/types.gen';
 
 export type SourceStatus = WorkflowsStatus;
-export type SourceType = SourcesSourceType;
+export type SourceType = 'git' | 'helm' | 'oci' | 'vault';
 
 export interface Source {
   id: number;
@@ -24,4 +30,5 @@ export const SOURCE_TYPES: Record<
   git: { label: 'Git', icon: GitBranch },
   helm: { label: 'Helm', icon: Package },
   oci: { label: 'OCI', icon: Box },
+  vault: { label: 'Vault', icon: KeyRound },
 };

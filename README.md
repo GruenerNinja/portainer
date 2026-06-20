@@ -23,6 +23,8 @@ Portainer CE is updated regularly. We aim to do an update release every couple o
 - [Deploy Portainer](https://docs.portainer.io/start/install-ce)
 - [Documentation](https://docs.portainer.io)
 - [Contribute to the project](https://docs.portainer.io/contribute/contribute)
+- [Build Portainer locally](./docs/build-guide.md)
+- [Set up a local development environment](./docs/development-setup.md)
 
 ## Features & Functions
 

@@ -79,6 +79,11 @@ The feature request process is similar to the bug report process but has an extr
 
 Ensure you have Docker, Node.js, pnpm, and Golang installed in the correct versions.
 
+Use these short guides for the common local workflows:
+
+- [Build Portainer locally](./docs/build-guide.md)
+- [Set up a local development environment](./docs/development-setup.md)
+
 Install dependencies:
 
 ```sh

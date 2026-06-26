@@ -44,6 +44,11 @@ export function EditConnectionDetailsWidget() {
           label={isVault ? 'Vault Address' : 'Repository URL'}
           errors={errors.url}
           required
+          tooltip={
+            isVault
+              ? 'Enter the URL of the Vault server, for example https://vault.example.com. Do not paste a Vault UI secret URL here.'
+              : undefined
+          }
         >
           <Input
             id="url"
@@ -59,6 +64,7 @@ export function EditConnectionDetailsWidget() {
               inputId="namespace"
               label="Namespace"
               errors={errors.namespace}
+              tooltip="Only for Vault Enterprise or HCP namespaces. Leave empty for normal Vault; this is not the KV mount or secret folder."
             >
               <Input
                 id="namespace"
@@ -70,7 +76,7 @@ export function EditConnectionDetailsWidget() {
             </FormControl>
             <FormControl
               inputId="kvVersion"
-              label="KV Engine"
+              label="KV engine version"
               errors={errors.kvVersion}
               required
             >

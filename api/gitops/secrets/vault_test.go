@@ -105,3 +105,59 @@ func TestResolveVaultSecretValues_KV2(t *testing.T) {
 		"port":     "5432",
 	}, values)
 }
+
+func TestResolveVaultSecretValues_KV2FolderFallback(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/v1/kv/data/tmc-proxy":
+			http.NotFound(w, r)
+		case r.Method == "LIST" && r.URL.Path == "/v1/kv/metadata/tmc-proxy":
+			err := json.NewEncoder(w).Encode(map[string]any{
+				"data": map[string]any{
+					"keys": []string{"DATABASE_PASSWORD", "API_TOKEN", "nested/"},
+				},
+			})
+			require.NoError(t, err)
+		case r.Method == http.MethodGet && r.URL.Path == "/v1/kv/data/tmc-proxy/DATABASE_PASSWORD":
+			err := json.NewEncoder(w).Encode(map[string]any{
+				"data": map[string]any{
+					"data": map[string]any{
+						"value": "p@ss",
+					},
+				},
+			})
+			require.NoError(t, err)
+		case r.Method == http.MethodGet && r.URL.Path == "/v1/kv/data/tmc-proxy/API_TOKEN":
+			err := json.NewEncoder(w).Encode(map[string]any{
+				"data": map[string]any{
+					"data": map[string]any{
+						"token":   "abc",
+						"expires": 30,
+					},
+				},
+			})
+			require.NoError(t, err)
+		default:
+			t.Fatalf("unexpected Vault request %s %s", r.Method, r.URL.String())
+		}
+	}))
+	t.Cleanup(server.Close)
+
+	values, err := ResolveVaultSecretValues(t.Context(), &portainer.VaultConfig{
+		Address:   server.URL,
+		KVVersion: 2,
+		Authentication: portainer.VaultAuthentication{
+			Method: "token",
+			Token:  "token-value",
+		},
+	}, "kv/tmc-proxy")
+
+	require.NoError(t, err)
+	require.Equal(t, map[string]string{
+		"DATABASE_PASSWORD": "p@ss",
+		"API_TOKEN_expires": "30",
+		"API_TOKEN_token":   "abc",
+	}, values)
+}

@@ -51,7 +51,7 @@ export function ConnectionDetailsWidget({ source }: Props) {
             <DetailField label="Namespace">
               {source.connection.vault.namespace || '-'}
             </DetailField>
-            <DetailField label="KV Engine">
+            <DetailField label="KV engine version">
               KV v{source.connection.vault.kvVersion}
             </DetailField>
           </div>

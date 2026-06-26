@@ -56,7 +56,8 @@ export function SecretMappingsFieldset({ values, onChange, errors }: Props) {
           <div>
             <div className="control-label !p-0 text-left">Vault secrets</div>
             <p className="mb-0 text-sm text-gray-7 th-highcontrast:text-white th-dark:text-gray-6">
-              Choose the Vault paths and keys to pull during deployment.
+              Choose Vault paths and optional keys. Include the KV mount, for
+              example kv/tmc-proxy.
             </p>
           </div>
           <Button
@@ -202,7 +203,7 @@ function SecretMappingRow({
         <FormControl
           inputId={`secret-key-${index}`}
           label="Secret key"
-          tooltip="Leave empty to inject every key from the Vault path."
+          tooltip="Leave empty to inject every key from the Vault path. If the path is a folder, direct child secrets are injected by secret name."
           errors={error?.key}
           size="vertical"
           className="mb-0 w-full"

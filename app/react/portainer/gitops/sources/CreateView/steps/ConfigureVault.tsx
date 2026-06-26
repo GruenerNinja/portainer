@@ -33,7 +33,7 @@ export function ConfigureVault() {
         label="Vault Address"
         required
         errors={errors.vault?.address}
-        tooltip="Enter the full URL of your Vault server"
+        tooltip="Enter the URL of the Vault server, for example https://vault.example.com. Do not paste a Vault UI secret URL here."
       >
         <Input
           id="vault-address-input"
@@ -51,7 +51,7 @@ export function ConfigureVault() {
         inputId="vault-namespace-input"
         label="Namespace"
         errors={errors.vault?.namespace}
-        tooltip="Optional Vault Enterprise namespace"
+        tooltip="Only for Vault Enterprise or HCP namespaces. Leave empty for normal Vault; this is not the KV mount or secret folder."
       >
         <Input
           id="vault-namespace-input"
@@ -66,7 +66,7 @@ export function ConfigureVault() {
 
       <FormControl
         inputId="vault-kv-version"
-        label="KV Engine"
+        label="KV engine version"
         required
         errors={errors.vault?.kvVersion}
       >

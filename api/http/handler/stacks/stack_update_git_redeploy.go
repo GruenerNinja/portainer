@@ -175,18 +175,7 @@ func (handler *Handler) stackGitRedeploy(w http.ResponseWriter, r *http.Request)
 		stack.Name = payload.StackName
 	}
 
-	repositoryUsername := ""
-	repositoryPassword := ""
-	if payload.RepositoryAuthentication {
-		repositoryPassword = payload.RepositoryPassword
-
-		// When the existing stack is using the custom username/password and the password is not updated,
-		// the stack should keep using the saved username/password
-		if repositoryPassword == "" && gitConfig.Authentication != nil {
-			repositoryPassword = gitConfig.Authentication.Password
-		}
-		repositoryUsername = payload.RepositoryUsername
-	}
+	repositoryUsername, repositoryPassword := redeployGitCredentials(gitConfig, payload)
 
 	cloneOptions := git.CloneOptions{
 		ProjectPath:   stack.ProjectPath,
@@ -280,6 +269,32 @@ func (handler *Handler) stackGitRedeploy(w http.ResponseWriter, r *http.Request)
 	deployGate.startDeploy()
 
 	return response.JSON(w, stack)
+}
+
+func redeployGitCredentials(gitConfig *gittypes.RepoConfig, payload stackGitRedeployPayload) (string, string) {
+	if payload.RepositoryAuthentication {
+		username := payload.RepositoryUsername
+		password := payload.RepositoryPassword
+
+		// When the existing stack is using custom username/password and either field is not updated,
+		// keep using the saved value.
+		if gitConfig != nil && gitConfig.Authentication != nil {
+			if username == "" {
+				username = gitConfig.Authentication.Username
+			}
+			if password == "" {
+				password = gitConfig.Authentication.Password
+			}
+		}
+
+		return username, password
+	}
+
+	if gitConfig == nil || gitConfig.Authentication == nil {
+		return "", ""
+	}
+
+	return gitConfig.Authentication.Username, gitConfig.Authentication.Password
 }
 
 func (handler *Handler) deployStack(r *http.Request, stack *portainer.Stack, pullImage bool, endpoint *portainer.Endpoint, gate *deployGate, postDeploy postDeployFunc) *httperror.HandlerError {

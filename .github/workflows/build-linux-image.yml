@@ -11,17 +11,17 @@ on:
       version_tag:
         description: Docker image version tag
         required: true
-        default: "2.39.3.2.1"
+        default: "2.39.3.2.2"
       compose_unpacker_tag:
         description: Compose unpacker image version tag
         required: true
-        default: "2.39.3.1.1"
+        default: "2.39.3.2.1"
 
 env:
   IMAGE_NAME: themodcrafttmc/portainer
   COMPOSE_UNPACKER_IMAGE_NAME: themodcrafttmc/compose-unpacker
-  DEFAULT_VERSION_TAG: "2.39.3.2.1"
-  DEFAULT_COMPOSE_UNPACKER_TAG: "2.39.3.1.1"
+  DEFAULT_VERSION_TAG: "2.39.3.2.2"
+  DEFAULT_COMPOSE_UNPACKER_TAG: "2.39.3.2.1"
 
 jobs:
   build-linux-image:

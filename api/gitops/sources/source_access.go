@@ -5,6 +5,7 @@ import (
 
 	portainer "github.com/portainer/portainer/api"
 	"github.com/portainer/portainer/api/dataservices"
+	"github.com/portainer/portainer/api/dataservices/source"
 	httperror "github.com/portainer/portainer/pkg/libhttp/error"
 )
 
@@ -16,9 +17,8 @@ type gitSourceStore interface {
 }
 
 // ValidateGitSourceAccess checks that the given Source exists and is a git Source, and returns it.
-// TODO(BE-12905): enforce per-user access policies once Source ownership is introduced.
-func ValidateGitSourceAccess(tx gitSourceStore, sourceID portainer.SourceID) (*portainer.Source, *httperror.HandlerError) {
-	src, err := tx.Source().Read(sourceID)
+func ValidateGitSourceAccess(tx gitSourceStore, userContext source.UserContext, sourceID portainer.SourceID) (*portainer.Source, *httperror.HandlerError) {
+	src, err := tx.Source().Read(userContext, sourceID)
 	if err != nil {
 		if tx.IsErrObjectNotFound(err) {
 			return nil, httperror.NotFound("Source not found", err)

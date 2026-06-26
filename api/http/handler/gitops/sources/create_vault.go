@@ -7,6 +7,8 @@ import (
 
 	portainer "github.com/portainer/portainer/api"
 	"github.com/portainer/portainer/api/dataservices"
+	"github.com/portainer/portainer/api/dataservices/source"
+	"github.com/portainer/portainer/api/http/security"
 	httperror "github.com/portainer/portainer/pkg/libhttp/error"
 	"github.com/portainer/portainer/pkg/libhttp/request"
 	"github.com/portainer/portainer/pkg/libhttp/response"
@@ -18,6 +20,7 @@ type VaultAuthenticationPayload struct {
 }
 
 type VaultSourceCreatePayload struct {
+	SourceAccessControlPayload
 	Name           string                     `json:"name"`
 	Address        string                     `json:"address" validate:"required"`
 	TLSSkipVerify  bool                       `json:"tlsSkipVerify"`
@@ -63,9 +66,15 @@ func (h *Handler) vaultSourceCreate(w http.ResponseWriter, r *http.Request) *htt
 		return httperror.BadRequest("Invalid request payload", err)
 	}
 
+	securityContext, err := security.RetrieveRestrictedRequestContext(r)
+	if err != nil {
+		return httperror.InternalServerError("Unable to retrieve info from request context", err)
+	}
+
 	src := BuildVaultSource(payload)
 	if err := h.dataStore.UpdateTx(func(tx dataservices.DataStoreTx) error {
-		return tx.Source().Create(src)
+		userContext := source.NewUserContext(securityContext.User, securityContext.UserMemberships)
+		return tx.Source().Create(userContext, src)
 	}); err != nil {
 		return httperror.InternalServerError("Unable to create source", err)
 	}
@@ -86,8 +95,12 @@ func BuildVaultSource(payload VaultSourceCreatePayload) *portainer.Source {
 	}
 
 	return &portainer.Source{
-		Name: name,
-		Type: portainer.SourceTypeVault,
+		Name:               name,
+		Type:               portainer.SourceTypeVault,
+		UserAccesses:       payload.UserAccesses,
+		TeamAccesses:       payload.TeamAccesses,
+		Public:             payload.Public,
+		AdministratorsOnly: payload.AdministratorsOnly,
 		Vault: &portainer.VaultConfig{
 			Address:       strings.TrimSpace(payload.Address),
 			TLSSkipVerify: payload.TLSSkipVerify,

@@ -16,8 +16,7 @@ import (
 func CreateClient(registry *portainer.Registry) (httpClient *http.Client, usePlainHttp bool, err error) {
 	switch registry.Type {
 	case portainer.AzureRegistry, portainer.EcrRegistry, portainer.GithubRegistry, portainer.GitlabRegistry, portainer.DockerHubRegistry:
-		base := http.DefaultTransport.(*http.Transport).Clone()
-		return &http.Client{Transport: retry.NewTransport(ssrf.WrapTransport(base))}, false, nil
+		return &http.Client{Transport: retry.NewTransport(ssrf.NewTransport(nil))}, false, nil
 	default:
 		// For all other registry types, use shared helper to build transport and scheme
 

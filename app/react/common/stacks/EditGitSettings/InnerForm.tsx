@@ -27,14 +27,12 @@ import { SecretMappingsFieldset } from './SecretMappingsFieldset';
 export function InnerForm({
   stackName,
   stackType,
-  gitSourceId,
   onDismiss,
   isSubmitting,
   webhookId,
 }: {
   stackName: string;
   stackType: StackType;
-  gitSourceId?: number;
   onDismiss: () => void;
   isSubmitting: boolean;
   webhookId: string;
@@ -102,7 +100,6 @@ export function InnerForm({
                 baseWebhookUrl={baseStackWebhookUrl()}
                 webhookId={webhookId}
                 webhooksDocs="/user/docker/stacks/webhooks"
-                isAuthExplanationVisible
                 isAdditionalFilesFieldVisible
                 isAutoUpdateVisible
                 errors={errors.git}
@@ -110,7 +107,6 @@ export function InnerForm({
                   stackType === StackType.Kubernetes ? 'manifest' : 'compose'
                 }
                 isDockerStandalone={isDockerStandalone}
-                isSourceSelectionVisible={!!gitSourceId}
               />
 
               {isDocker && (

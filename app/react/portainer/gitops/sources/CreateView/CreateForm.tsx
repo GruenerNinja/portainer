@@ -2,6 +2,8 @@ import { Form, Formik, FormikHelpers } from 'formik';
 import { useRouter } from '@uirouter/react';
 
 import { notifySuccess } from '@/portainer/services/notifications';
+import { ResourceControlOwnership } from '@/react/portainer/access-control/types';
+import { useIsPureAdmin } from '@/react/hooks/useUser';
 
 import { Widget } from '@@/Widget';
 
@@ -11,37 +13,43 @@ import { WizardStep, useWizardContext } from './WizardContext';
 import { WizardHeader } from './WizardHeader';
 import { WizardFooter } from './WizardFooter';
 
-const initialFormValues: FormValues = {
-  name: '',
-  type: 'git',
-  git: {
-    url: '',
-    authentication: {
-      authEnabled: true,
-    },
-    connectionOk: false,
-  },
-  vault: {
-    address: '',
-    namespace: '',
-    kvVersion: 2,
-    tlsSkipVerify: false,
-    authentication: {
-      method: 'token',
-      token: '',
-    },
-    connectionOk: false,
-  },
-};
-
 type Props = {
   steps: WizardStep[];
 };
 
 export function CreateForm({ steps }: Props) {
+  const isAdmin = useIsPureAdmin();
   const mutation = useCreateSourceMutation();
   const router = useRouter();
   const { currentStep, isLastStep, goToNextStep } = useWizardContext();
+
+  const initialFormValues: FormValues = {
+    name: '',
+    type: 'git',
+    git: {
+      url: '',
+      authentication: {
+        authEnabled: true,
+      },
+      connectionOk: false,
+    },
+    vault: {
+      address: '',
+      namespace: '',
+      kvVersion: 2,
+      tlsSkipVerify: false,
+      authentication: {
+        method: 'token',
+        token: '',
+      },
+      connectionOk: false,
+    },
+    authorizedTeams: [],
+    authorizedUsers: [],
+    ownership: isAdmin
+      ? ResourceControlOwnership.ADMINISTRATORS
+      : ResourceControlOwnership.PRIVATE,
+  };
 
   return (
     <Formik

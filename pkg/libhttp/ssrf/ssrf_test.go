@@ -116,22 +116,27 @@ func TestConfigure_NilServicesReturnsError(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestWrapTransport_NoPolicy(t *testing.T) {
+func TestNewTransport_NoPolicy(t *testing.T) {
 	globalDialer.Store(nil)
+	t.Cleanup(func() { globalDialer.Store(nil) })
 
-	base := &http.Transport{}
-	result := WrapTransport(base)
-	require.Equal(t, base, result)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	client := &http.Client{Transport: NewTransport(nil)}
+	resp, err := client.Get(srv.URL)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
 }
 
-func TestWrapTransport_WithPolicy(t *testing.T) {
+func TestNewTransport_WithPolicy(t *testing.T) {
 	err := Configure(newStaticService(portainer.SSRFModeEnforce, []string{"example.com"}))
 	require.NoError(t, err)
 	t.Cleanup(func() { globalDialer.Store(nil) })
 
-	base := &http.Transport{}
-	result := WrapTransport(base)
-	require.NotEqual(t, base, result)
+	result := NewTransport(nil)
 	require.NotNil(t, result.DialContext)
 }
 
@@ -219,6 +224,40 @@ func TestCheckURL(t *testing.T) {
 			url:     "http://",
 			wantErr: false,
 		},
+		{
+			name:    "scheme-less IP:port SSRF disabled",
+			mode:    portainer.SSRFModeOff,
+			url:     "10.10.1.41:30775",
+			wantErr: false,
+		},
+		{
+			name:    "scheme-less IP:port blocked",
+			mode:    portainer.SSRFModeEnforce,
+			entries: []string{"8.8.8.0/24"},
+			url:     "10.10.1.41:30775",
+			wantErr: true,
+		},
+		{
+			name:    "scheme-less IP:port allowed by CIDR",
+			mode:    portainer.SSRFModeEnforce,
+			entries: []string{"10.10.1.0/24"},
+			url:     "10.10.1.41:30775",
+			wantErr: false,
+		},
+		{
+			name:    "git scheme IP blocked",
+			mode:    portainer.SSRFModeEnforce,
+			entries: []string{"8.8.8.0/24"},
+			url:     "git://10.10.1.41:9418/",
+			wantErr: true,
+		},
+		{
+			name:    "git scheme IP allowed by CIDR",
+			mode:    portainer.SSRFModeEnforce,
+			entries: []string{"10.10.1.0/24"},
+			url:     "git://10.10.1.41:9418/",
+			wantErr: false,
+		},
 	}
 
 	for _, tc := range tests {
@@ -267,12 +306,12 @@ func TestIsEnabled(t *testing.T) {
 	require.False(t, IsEnabled())
 }
 
-func TestWrapTransportInternal(t *testing.T) {
+func TestNewInternalTransport(t *testing.T) {
 	t.Parallel()
 
-	base := &http.Transport{}
-	result := WrapTransportInternal(base)
-	require.Equal(t, base, result)
+	result := NewInternalTransport(nil)
+	require.NotNil(t, result)
+	require.Nil(t, result.TLSClientConfig)
 }
 
 // TestDialContext_BlocksLoopback is an end-to-end test: it starts a real HTTP
@@ -288,7 +327,7 @@ func TestDialContext_BlocksLoopback(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { globalDialer.Store(nil) })
 
-	blocked := &http.Client{Transport: WrapTransport(&http.Transport{})}
+	blocked := &http.Client{Transport: NewTransport(nil)}
 	resp, err := blocked.Get(srv.URL)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "ssrf")
@@ -300,7 +339,7 @@ func TestDialContext_BlocksLoopback(t *testing.T) {
 	err = Configure(newStaticService(portainer.SSRFModeOff, nil))
 	require.NoError(t, err)
 
-	open := &http.Client{Transport: WrapTransport(&http.Transport{})}
+	open := &http.Client{Transport: NewTransport(nil)}
 	resp, err = open.Get(srv.URL)
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
@@ -318,7 +357,7 @@ func TestDialContext_AuditMode_AllowsLoopback(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { globalDialer.Store(nil) })
 
-	client := &http.Client{Transport: WrapTransport(&http.Transport{})}
+	client := &http.Client{Transport: NewTransport(nil)}
 	resp, err := client.Get(srv.URL)
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
@@ -364,7 +403,7 @@ func TestDialContext_AllowedByCIDR(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { globalDialer.Store(nil) })
 
-	client := &http.Client{Transport: WrapTransport(&http.Transport{})}
+	client := &http.Client{Transport: NewTransport(nil)}
 	resp, err := client.Get(srv.URL)
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
@@ -398,7 +437,7 @@ func TestDialContext_AllowedByExactHostname(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { globalDialer.Store(nil) })
 
-	client := &http.Client{Transport: WrapTransport(&http.Transport{})}
+	client := &http.Client{Transport: NewTransport(nil)}
 	resp, err := client.Get("http://localhost:" + portStr)
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())

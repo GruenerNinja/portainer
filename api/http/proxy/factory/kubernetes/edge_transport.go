@@ -22,7 +22,7 @@ func NewEdgeTransport(dataStore dataservices.DataStore, signatureService portain
 		reverseTunnelService: reverseTunnelService,
 		signatureService:     signatureService,
 		baseTransport: newBaseTransport(
-			ssrf.WrapTransportInternal(&http.Transport{}),
+			ssrf.NewInternalTransport(nil),
 			tokenManager,
 			endpoint,
 			k8sClientFactory,

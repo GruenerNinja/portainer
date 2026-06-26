@@ -42,15 +42,16 @@ func NewHandler(bouncer security.BouncerService, dataStore dataservices.DataStor
 	authenticatedRouter.Handle("", httperror.LoggerHandler(h.list)).Methods(http.MethodGet)
 	authenticatedRouter.Handle("/summary", httperror.LoggerHandler(h.summary)).Methods(http.MethodGet)
 	authenticatedRouter.Handle("/{id}", httperror.LoggerHandler(h.getSource)).Methods(http.MethodGet)
+	authenticatedRouter.Handle("/git", httperror.LoggerHandler(h.gitSourceCreate)).Methods(http.MethodPost)
+	authenticatedRouter.Handle("/test", httperror.LoggerHandler(h.gitSourceTest)).Methods(http.MethodPost)
+	authenticatedRouter.Handle("/{id}", httperror.LoggerHandler(h.gitSourceUpdate)).Methods(http.MethodPut)
+	authenticatedRouter.Handle("/{id}", httperror.LoggerHandler(h.sourceDelete)).Methods(http.MethodDelete)
+	authenticatedRouter.Handle("/{id}/test", httperror.LoggerHandler(h.sourceTestConnection)).Methods(http.MethodPost)
 
 	adminRouter := h.PathPrefix("/gitops/sources").Subrouter()
 	adminRouter.Use(bouncer.AdminAccess)
-	adminRouter.Handle("/git", httperror.LoggerHandler(h.gitSourceCreate)).Methods(http.MethodPost)
 	adminRouter.Handle("/vault", httperror.LoggerHandler(h.vaultSourceCreate)).Methods(http.MethodPost)
-	adminRouter.Handle("/test", httperror.LoggerHandler(h.gitSourceTest)).Methods(http.MethodPost)
 	adminRouter.Handle("/vault/test", httperror.LoggerHandler(h.vaultSourceTest)).Methods(http.MethodPost)
-	adminRouter.Handle("/{id}", httperror.LoggerHandler(h.gitSourceUpdate)).Methods(http.MethodPut)
-	adminRouter.Handle("/{id}", httperror.LoggerHandler(h.sourceDelete)).Methods(http.MethodDelete)
-	adminRouter.Handle("/{id}/test", httperror.LoggerHandler(h.sourceTestConnection)).Methods(http.MethodPost)
+	adminRouter.Handle("/{id}/access", httperror.LoggerHandler(h.gitSourceUpdateAccess)).Methods(http.MethodPut)
 	return h
 }

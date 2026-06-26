@@ -7,6 +7,7 @@ import (
 
 	portainer "github.com/portainer/portainer/api"
 	"github.com/portainer/portainer/api/dataservices"
+	sourceDS "github.com/portainer/portainer/api/dataservices/source"
 	"github.com/portainer/portainer/api/gitops/secrets"
 )
 
@@ -27,7 +28,7 @@ func stackWithResolvedSecrets(ctx context.Context, dataStore dataservices.DataSt
 			return nil, fmt.Errorf("secret mapping environment variable name is required")
 		}
 
-		src, err := dataStore.Source().Read(mapping.SourceID)
+		src, err := dataStore.Source().Read(sourceDS.InsecureNewAdminContext(), mapping.SourceID)
 		if dataStore.IsErrObjectNotFound(err) {
 			return nil, fmt.Errorf("secret source %d was not found", mapping.SourceID)
 		} else if err != nil {

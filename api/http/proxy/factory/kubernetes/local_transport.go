@@ -23,9 +23,7 @@ func NewLocalTransport(tokenManager *tokenManager, endpoint *portainer.Endpoint,
 
 	transport := &localTransport{
 		baseTransport: newBaseTransport(
-			ssrf.WrapTransportInternal(&http.Transport{
-				TLSClientConfig: config,
-			}),
+			ssrf.NewInternalTransport(config),
 			tokenManager,
 			endpoint,
 			k8sClientFactory,

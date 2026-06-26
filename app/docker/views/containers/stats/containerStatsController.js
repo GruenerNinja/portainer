@@ -26,7 +26,6 @@ angular.module('portainer.docker').controller('ContainerStatsController', [
       var repeater = $scope.repeater;
       if (angular.isDefined(repeater)) {
         $interval.cancel(repeater);
-        repeater = null;
       }
     }
 

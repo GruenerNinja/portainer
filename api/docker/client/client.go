@@ -193,13 +193,11 @@ func httpClient(endpoint *portainer.Endpoint, timeout *time.Duration) (*http.Cli
 			return nil, err
 		}
 
-		transport = &NodeNameTransport{
-			Transport: ssrf.WrapTransport(&http.Transport{TLSClientConfig: tlsConfig}),
-		}
+		t := ssrf.NewTransport(tlsConfig)
+		t.Protocols = ssrf.HTTP1Only()
+		transport = &NodeNameTransport{Transport: t}
 	} else {
-		transport = &NodeNameTransport{
-			Transport: ssrf.WrapTransport(&http.Transport{}),
-		}
+		transport = &NodeNameTransport{Transport: ssrf.NewTransport(nil)}
 	}
 
 	clientTimeout := defaultDockerRequestTimeout

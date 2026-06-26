@@ -1,6 +1,6 @@
 import clsx from 'clsx';
 import { PropsWithChildren } from 'react';
-import { Cpu, Hexagon, LaptopMinimal, MemoryStick } from 'lucide-react';
+import { Cpu, Gpu, Hexagon, LaptopMinimal, MemoryStick } from 'lucide-react';
 
 import { Icon, IconProps } from '@/react/components/Icon';
 
@@ -60,6 +60,14 @@ export function CPUStats({ value }: StatsProps) {
 export function MemoryStats({ value }: StatsProps) {
   return (
     <StatsItem icon={MemoryStick} title="MEMORY">
+      <span className="text-left font-bold leading-none">{value}</span>
+    </StatsItem>
+  );
+}
+
+export function GpuStats({ value }: StatsProps) {
+  return (
+    <StatsItem icon={Gpu} title="GPUS">
       <span className="text-left font-bold leading-none">{value}</span>
     </StatsItem>
   );

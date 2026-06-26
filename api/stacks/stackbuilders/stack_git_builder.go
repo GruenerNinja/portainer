@@ -9,12 +9,15 @@ import (
 
 	portainer "github.com/portainer/portainer/api"
 	"github.com/portainer/portainer/api/dataservices"
+	"github.com/portainer/portainer/api/dataservices/source"
 	"github.com/portainer/portainer/api/filesystem"
 	gittypes "github.com/portainer/portainer/api/git/types"
 	"github.com/portainer/portainer/api/gitops/workflows"
 	"github.com/portainer/portainer/api/scheduler"
 	"github.com/portainer/portainer/api/stacks/deployments"
 	"github.com/portainer/portainer/api/stacks/stackutils"
+	httperror "github.com/portainer/portainer/pkg/libhttp/error"
+	"github.com/portainer/portainer/pkg/libhttp/ssrf"
 )
 
 type GitMethodStackBuilder struct {
@@ -33,11 +36,28 @@ func (b *GitMethodStackBuilder) prepare(ctx context.Context, payload *StackPaylo
 		return err
 	}
 
+	var userContext source.UserContext
+	if err := b.dataStore.ViewTx(func(tx dataservices.DataStoreTx) error {
+		user, err := tx.User().Read(userID)
+		if err != nil {
+			return httperror.InternalServerError("Unable to read user", err)
+		}
+		memberships, err := tx.TeamMembership().TeamMembershipsByUserID(userID)
+		if err != nil {
+			return httperror.InternalServerError("Unable to read user team memberships", err)
+		}
+
+		userContext = source.NewUserContext(user, memberships)
+		return nil
+	}); err != nil {
+		return err
+	}
+
 	var repoConfig gittypes.RepoConfig
 	var sourceID portainer.SourceID
 
 	if payload.SourceID != 0 {
-		src, err := b.dataStore.Source().Read(payload.SourceID)
+		src, err := b.dataStore.Source().Read(userContext, payload.SourceID)
 		if err != nil {
 			return fmt.Errorf("failed to read source: %w", err)
 		}
@@ -82,6 +102,10 @@ func (b *GitMethodStackBuilder) prepare(ctx context.Context, payload *StackPaylo
 		return b.fileService.GetStackProjectPath(stackFolder)
 	}
 
+	if err := ssrf.CheckURL(ctx, repoConfig.URL); err != nil {
+		return fmt.Errorf("repository URL blocked by SSRF policy: %w", err)
+	}
+
 	commitHash, err := stackutils.DownloadGitRepository(ctx, repoConfig, b.gitService, getProjectPath)
 	if err != nil {
 		return fmt.Errorf("failed to download git repository: %w", err)
@@ -108,7 +132,7 @@ func (b *GitMethodStackBuilder) prepare(ctx context.Context, payload *StackPaylo
 		} else {
 			repoConfig.URL = gittypes.SanitizeURL(repoConfig.URL)
 
-			src, err := workflows.FindOrCreateGitSource(tx, &portainer.Source{
+			src, err := workflows.FindOrCreateGitSource(tx, userContext, &portainer.Source{
 				Name: gittypes.RepoName(repoConfig.URL),
 				Type: portainer.SourceTypeGit,
 				Git:  &repoConfig,
@@ -157,9 +181,9 @@ func (b *GitMethodStackBuilder) applyPortainerStackConfig(repoConfig *gittypes.R
 		return nil
 	}
 
-	if config.HasDeployConfig() {
-		if !b.stack.SupportRelativePath || strings.TrimSpace(b.stack.FilesystemPath) == "" {
-			return fmt.Errorf("%s deploy config requires relative path volumes and a filesystem path", stackutils.PortainerStackConfigFile)
+	if config.HasDeployConfig() && b.stack.SupportRelativePath {
+		if strings.TrimSpace(b.stack.FilesystemPath) == "" {
+			return fmt.Errorf("%s deploy config requires a filesystem path when relative path volumes are enabled", stackutils.PortainerStackConfigFile)
 		}
 
 		if config.Deploy.TargetName != "" {

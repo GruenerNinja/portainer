@@ -1,4 +1,7 @@
-import { bool, mixed, object, string } from 'yup';
+import { array, bool, mixed, number, object, string } from 'yup';
+
+import { ResourceControlOwnership } from '@/react/portainer/access-control/types';
+import { stringEnumValues } from '@/types';
 
 import { isValidUrl } from '@@/form-components/validate-url';
 
@@ -21,6 +24,11 @@ export function validationSchema() {
       then: validateVault(),
       otherwise: mixed().notRequired(),
     }),
+    ownership: mixed<ResourceControlOwnership>()
+      .oneOf(stringEnumValues(ResourceControlOwnership))
+      .required(),
+    authorizedTeams: array().of(number().required()),
+    authorizedUsers: array().of(number().required()),
   });
 }
 

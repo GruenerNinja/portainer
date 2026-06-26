@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	portainer "github.com/portainer/portainer/api"
+	"github.com/portainer/portainer/api/dataservices/source"
 	"github.com/portainer/portainer/api/datastore"
 	gittypes "github.com/portainer/portainer/api/git/types"
 	"github.com/portainer/portainer/api/gitops/workflows"
@@ -14,6 +15,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+var adminUserContext = source.InsecureNewAdminContext()
 
 // stubFileService satisfies portainer.FileService for git builder tests.
 type stubFileService struct {
@@ -60,7 +63,7 @@ func (g gitServiceWritingFiles) LatestCommitID(_ context.Context, _, _, _, _ str
 func newGitMethodBuilder(t *testing.T, commitHash string) *GitMethodStackBuilder {
 	t.Helper()
 	_, store := datastore.MustNewTestStore(t, false, false)
-	require.NoError(t, store.User().Create(&portainer.User{ID: 1, Username: "testuser"}))
+	require.NoError(t, store.User().Create(&portainer.User{ID: 1, Username: "testuser", Role: portainer.AdministratorRole}))
 	return &GitMethodStackBuilder{
 		StackBuilder: StackBuilder{
 			stack:       &portainer.Stack{},
@@ -104,7 +107,7 @@ func TestGitMethodStackBuilder_WithSourceID_ReferencesExistingSource(t *testing.
 			},
 		},
 	}
-	require.NoError(t, builder.dataStore.Source().Create(src))
+	require.NoError(t, builder.dataStore.Source().Create(adminUserContext, src))
 
 	payload := &StackPayload{
 		RepositoryConfigPayload: RepositoryConfigPayload{
@@ -121,12 +124,12 @@ func TestGitMethodStackBuilder_WithSourceID_ReferencesExistingSource(t *testing.
 	assert.Equal(t, src.ID, referencedSourceID)
 
 	// Only one Source exists — no duplicate was created.
-	allSources, err := builder.dataStore.Source().ReadAll()
+	allSources, err := builder.dataStore.Source().ReadAll(adminUserContext)
 	require.NoError(t, err)
 	assert.Len(t, allSources, 1)
 
 	// The merged git config picks up the Source URL/auth.
-	readSrc, artifact, err := workflows.GitSourceAndArtifactForStack(builder.dataStore, builder.stack.WorkflowID, builder.stack.ID)
+	readSrc, artifact, err := workflows.GitSourceAndArtifactForStack(builder.dataStore, adminUserContext, builder.stack.WorkflowID, builder.stack.ID)
 	require.NoError(t, err)
 	merged := workflows.MergeSourceAndFile(readSrc, artifact)
 	assert.Equal(t, "https://github.com/org/private-repo", merged.URL)
@@ -166,7 +169,7 @@ func TestGitMethodStackBuilder_WithoutSourceID_InlinePathStillWorks(t *testing.T
 	require.NoError(t, err)
 
 	// A Source was created via the inline path.
-	allSources, err := builder.dataStore.Source().ReadAll()
+	allSources, err := builder.dataStore.Source().ReadAll(adminUserContext)
 	require.NoError(t, err)
 	assert.Len(t, allSources, 1)
 	assert.Equal(t, "https://github.com/org/public-repo", allSources[0].Git.URL)
@@ -284,7 +287,7 @@ func TestGitMethodStackBuilder_PortainerConfigLoadsFromComposeFileDirectory(t *t
 	assert.Equal(t, "/data/compose/tmc-proxy", builder.stack.FilesystemPath)
 	assert.Equal(t, "tmc-proxy/docker-compose.yml", builder.stack.EntryPoint)
 
-	readSrc, artifact, err := workflows.GitSourceAndArtifactForStack(builder.dataStore, builder.stack.WorkflowID, builder.stack.ID)
+	readSrc, artifact, err := workflows.GitSourceAndArtifactForStack(builder.dataStore, adminUserContext, builder.stack.WorkflowID, builder.stack.ID)
 	require.NoError(t, err)
 	merged := workflows.MergeSourceAndFile(readSrc, artifact)
 	assert.Equal(t, "tmc-proxy/docker-compose.yml", merged.ConfigFilePath)
@@ -313,16 +316,16 @@ func TestGitMethodStackBuilder_PortainerConfigComposeFilesOverridePayload(t *tes
 	assert.Equal(t, "compose.yml", builder.stack.EntryPoint)
 	assert.Equal(t, []string{"compose.prod.yml"}, builder.stack.AdditionalFiles)
 
-	readSrc, artifact, err := workflows.GitSourceAndArtifactForStack(builder.dataStore, builder.stack.WorkflowID, builder.stack.ID)
+	readSrc, artifact, err := workflows.GitSourceAndArtifactForStack(builder.dataStore, adminUserContext, builder.stack.WorkflowID, builder.stack.ID)
 	require.NoError(t, err)
 	merged := workflows.MergeSourceAndFile(readSrc, artifact)
 	assert.Equal(t, "compose.yml", merged.ConfigFilePath)
 }
 
-func TestGitMethodStackBuilder_PortainerConfigDeployRequiresRelativePath(t *testing.T) {
+func TestGitMethodStackBuilder_PortainerDeployConfigDoesNotEnableRelativePath(t *testing.T) {
 	t.Parallel()
 	builder := newGitMethodBuilderWithFiles(t, map[string]string{
-		"portainer.yml": "version: 1\ndeploy:\n  mode: flat\n  targetName: tmc-proxy\n",
+		"portainer.yml": "version: 1\ndeploy:\n  mode: flat\n  targetName: tmc-proxy\ncompose:\n  files:\n    - compose.yml\n",
 	})
 	builder.stack.ID = 8
 
@@ -334,9 +337,11 @@ func TestGitMethodStackBuilder_PortainerConfigDeployRequiresRelativePath(t *test
 	}
 
 	err := builder.prepare(context.Background(), payload, portainer.UserID(1))
+	require.NoError(t, err)
 
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "portainer.yml deploy config requires relative path volumes")
+	assert.False(t, builder.stack.SupportRelativePath)
+	assert.Empty(t, builder.stack.FilesystemPath)
+	assert.Equal(t, "compose.yml", builder.stack.EntryPoint)
 }
 
 // builderWorkflowSourceID returns the first SourceID referenced by the Workflow Artifact for this stack.

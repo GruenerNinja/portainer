@@ -4,6 +4,8 @@ import {
   Transition,
 } from '@uirouter/angularjs';
 
+import { get, keyBuilder } from '@/react/hooks/useLocalStorage';
+
 import { checkAuthorizations } from './authorization-guard';
 import { IAuthenticationService } from './services/types';
 
@@ -47,6 +49,7 @@ describe('checkAuthorizations', () => {
     } as unknown as Transition;
 
     stateTo.data.access = 'restricted';
+    localStorage.removeItem(keyBuilder('RETURN_URL'));
   });
 
   afterEach(() => {
@@ -73,6 +76,24 @@ describe('checkAuthorizations', () => {
 
     expect(result).toBeDefined();
     expect($state.target).toHaveBeenCalledWith('portainer.logout');
+  });
+
+  it('should store the current URL in localStorage when the user is not authenticated', async () => {
+    authService.init.mockResolvedValue(false);
+
+    await checkAuthorizations(transition);
+
+    expect(get('RETURN_URL', null)).toBe(
+      window.location.pathname + window.location.search + window.location.hash
+    );
+  });
+
+  it('should not store a returnUrl when the user is authenticated', async () => {
+    authService.init.mockResolvedValue(true);
+
+    await checkAuthorizations(transition);
+
+    expect(get('RETURN_URL', null)).toBeNull();
   });
 
   it('should return undefined if user is an admin and access is "admin"', async () => {

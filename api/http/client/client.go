@@ -125,9 +125,9 @@ func ExecutePingOperation(host string, tlsConfiguration portainer.TLSConfigurati
 		}
 
 		scheme = "https"
-		transport = ssrf.WrapTransport(&http.Transport{TLSClientConfig: tlsConfig})
+		transport = ssrf.NewTransport(tlsConfig)
 	} else {
-		transport = ssrf.WrapTransport(&http.Transport{})
+		transport = ssrf.NewTransport(nil)
 	}
 
 	client := &http.Client{

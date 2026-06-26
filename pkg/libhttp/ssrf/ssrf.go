@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"net/http"
 	"net/url"
 	"strings"
 	"sync/atomic"
@@ -99,7 +98,12 @@ func CheckURL(ctx context.Context, rawURL string) error {
 		return nil
 	}
 
-	u, err := url.Parse(rawURL)
+	normalized := rawURL
+	if !strings.Contains(normalized, "://") && !strings.HasPrefix(normalized, "//") {
+		normalized = "//" + normalized
+	}
+
+	u, err := url.Parse(normalized)
 	if err != nil {
 		return fmt.Errorf("ssrf: invalid URL %q: %w", rawURL, err)
 	}
@@ -110,31 +114,6 @@ func CheckURL(ctx context.Context, rawURL string) error {
 	}
 
 	return d.checkHost(ctx, host)
-}
-
-// WrapTransport clones t and replaces its DialContext with the global SSRF-filtering
-// dialer. The dialer checks the mode on every connection, so the transport is always
-// wrapped and mode changes take effect without restarting.
-func WrapTransport(t *http.Transport) *http.Transport {
-	d := globalDialer.Load()
-	if d == nil {
-		return t
-	}
-
-	cloned := t.Clone()
-	cloned.DialContext = d.DialContext
-
-	return cloned
-}
-
-// WrapTransportInternal is a documented no-op for transports that connect to
-// internally computed destinations (local Docker socket proxy, Chisel tunnels,
-// in-cluster Kubernetes API). The destination is chosen by Portainer, not
-// supplied by any user, so SSRF validation is not applicable. Using this
-// function instead of WrapTransport makes the exemption explicit and
-// satisfies the ruleguard lint rule.
-func WrapTransportInternal(t *http.Transport) *http.Transport {
-	return t
 }
 
 // DialContext resolves addr, validates all resolved IPs against the allowlist policy,

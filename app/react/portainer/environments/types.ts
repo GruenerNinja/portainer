@@ -58,6 +58,8 @@ export interface KubernetesSnapshot {
   TotalMemory: number;
   Time: number;
   NodeCount: number;
+  GPUNodeCount?: number;
+  TotalGPU?: Record<string, number>;
 }
 
 export type IngressClass = {

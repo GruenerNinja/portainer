@@ -48,7 +48,6 @@ class KubernetesApplicationStatsController {
     var repeater = this.repeater;
     if (angular.isDefined(repeater)) {
       this.$interval.cancel(repeater);
-      repeater = undefined;
     }
   }
 

@@ -5,8 +5,10 @@ import (
 	"net/http"
 
 	portainer "github.com/portainer/portainer/api"
+	"github.com/portainer/portainer/api/dataservices/source"
 	"github.com/portainer/portainer/api/git/update"
 	"github.com/portainer/portainer/api/gitops/sources"
+	"github.com/portainer/portainer/api/http/security"
 	"github.com/portainer/portainer/api/internal/endpointutils"
 	"github.com/portainer/portainer/api/internal/registryutils"
 	"github.com/portainer/portainer/api/stacks/stackbuilders"
@@ -14,6 +16,7 @@ import (
 	httperror "github.com/portainer/portainer/pkg/libhttp/error"
 	"github.com/portainer/portainer/pkg/libhttp/request"
 	"github.com/portainer/portainer/pkg/libhttp/response"
+	"github.com/portainer/portainer/pkg/libhttp/ssrf"
 	"github.com/portainer/portainer/pkg/validate"
 
 	"github.com/pkg/errors"
@@ -131,6 +134,10 @@ func (payload *kubernetesManifestURLDeploymentPayload) Validate(r *http.Request)
 		return errors.New("Invalid manifest URL")
 	}
 
+	if err := ssrf.CheckURL(r.Context(), payload.ManifestURL); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -235,8 +242,13 @@ func (handler *Handler) createKubernetesStackFromGitRepository(w http.ResponseWr
 		}
 	}
 
+	securityContext, err := security.RetrieveRestrictedRequestContext(r)
+	if err != nil {
+		return httperror.InternalServerError("Unable to retrieve user info from request context", err)
+	}
+	userContext := source.NewUserContext(securityContext.User, securityContext.UserMemberships)
 	if payload.SourceID != 0 {
-		if _, httpErr := sources.ValidateGitSourceAccess(handler.DataStore, payload.SourceID); httpErr != nil {
+		if _, httpErr := sources.ValidateGitSourceAccess(handler.DataStore, userContext, payload.SourceID); httpErr != nil {
 			return httpErr
 		}
 	}

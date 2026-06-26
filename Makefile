@@ -6,6 +6,7 @@ TAG=local
 SWAG=go run github.com/swaggo/swag/cmd/swag@v1.16.6
 GOTESTSUM_VERSION?=v1.13.0
 GOTESTSUM=go run gotest.tools/gotestsum@$(GOTESTSUM_VERSION)
+GOLANGCI_LINT_VERSION := $(shell cat $(shell git rev-parse --show-toplevel)/.golangci-version)
 
 # Don't change anything below this line unless you know what you're doing
 .DEFAULT_GOAL := help
@@ -90,13 +91,25 @@ format-server: ## Format server code
 	go fmt ./...
 
 ##@ Lint
-.PHONY: lint lint-client lint-server
+.PHONY: lint lint-client lint-server check-lint-version
 lint: lint-client lint-server ## Lint all code
 
 lint-client: ## Lint client code
 	pnpm run lint
 
-lint-server: tidy ## Lint server code
+check-lint-version:
+	@installed=v$$(golangci-lint --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1); \
+	if [ "$$installed" = "v" ]; then \
+		echo "ERROR: golangci-lint not found, need $(GOLANGCI_LINT_VERSION)"; \
+		echo "Install: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)"; \
+		exit 1; \
+	elif [ "$$installed" != "$(GOLANGCI_LINT_VERSION)" ]; then \
+		echo "ERROR: golangci-lint $$installed installed, need $(GOLANGCI_LINT_VERSION)"; \
+		echo "Install: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)"; \
+		exit 1; \
+	fi
+
+lint-server: tidy check-lint-version ## Lint server code
 	golangci-lint run --timeout=10m -c .golangci.yaml
 	golangci-lint run --timeout=10m --new-from-rev=HEAD~ -c .golangci-forward.yaml
 

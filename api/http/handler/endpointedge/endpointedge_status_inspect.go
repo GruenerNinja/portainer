@@ -135,6 +135,10 @@ func (handler *Handler) parseHeaders(r *http.Request, endpoint *portainer.Endpoi
 	version := r.Header.Get(portainer.PortainerAgentHeader)
 	endpoint.Agent.Version = version
 
+	if gpuOperatorHeader := r.Header.Get(portainer.HTTPResponseAgentGPUOperator); gpuOperatorHeader != "" {
+		endpoint.Kubernetes.Flags.GPUOperator = gpuOperatorHeader == "true"
+	}
+
 	return nil
 }
 

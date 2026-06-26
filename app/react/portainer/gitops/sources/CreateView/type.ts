@@ -3,7 +3,12 @@ import {
   type SourcesGitSourceCreatePayload,
 } from '@api/types.gen';
 
-import type { CreateSourcePayload } from './useSourceCreateMutation';
+import {
+  AccessControlFormData,
+  ResourceControlOwnership,
+} from '@/react/portainer/access-control/types';
+
+import { CreateSourcePayload } from './useSourceCreateMutation';
 
 type GitFormValues = {
   url: string;
@@ -36,6 +41,10 @@ export type VaultSourcePayload = {
   namespace?: string;
   kvVersion?: 1 | 2;
   tlsSkipVerify?: boolean;
+  administratorsOnly?: boolean;
+  public?: boolean;
+  teamAccesses?: Array<number>;
+  userAccesses?: Array<number>;
   authentication: {
     method: 'token';
     token: string;
@@ -44,7 +53,7 @@ export type VaultSourcePayload = {
 
 export const FormValueTypes = ['git', 'registry', 'helm', 'vault'] as const;
 
-export type FormValues = {
+export type FormValues = AccessControlFormData & {
   name: string;
   type: (typeof FormValueTypes)[number];
   git: GitFormValues;
@@ -54,12 +63,28 @@ export type FormValues = {
 export function formValuesToCreatePayload(
   values: FormValues
 ): CreateSourcePayload {
-  const { name, type } = values;
+  const {
+    name,
+    type,
+    authorizedTeams,
+    authorizedUsers,
+    ownership,
+  } = values;
+
+  const accessControl = {
+    administratorsOnly: ownership === ResourceControlOwnership.ADMINISTRATORS,
+    public: ownership === ResourceControlOwnership.PUBLIC,
+    teamAccesses: authorizedTeams,
+    userAccesses: authorizedUsers,
+  };
 
   if (type === 'vault') {
     return {
       type,
-      vault: vaultFormValuesToPayload(name, values.vault),
+      vault: {
+        ...vaultFormValuesToPayload(name, values.vault),
+        ...accessControl,
+      },
     };
   }
 
@@ -72,6 +97,7 @@ export function formValuesToCreatePayload(
       tlsSkipVerify,
       url,
       authentication: buildAuthPayload(authentication),
+      ...accessControl,
     },
   };
 }

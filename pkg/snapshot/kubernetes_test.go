@@ -2,6 +2,7 @@ package snapshot
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	portainer "github.com/portainer/portainer/api"
@@ -94,7 +95,7 @@ func TestKubernetesSnapshotNodes(t *testing.T) {
 	snapshot := &portainer.KubernetesSnapshot{}
 
 	// Use the actual function now that it accepts kubernetes.Interface
-	err = kubernetesSnapshotNodes(snapshot, fakeClient)
+	err = kubernetesSnapshotNodes(snapshot, fakeClient, false)
 	require.NoError(t, err)
 
 	// Verify the results - these should match what kubernetesSnapshotNodes would produce
@@ -103,6 +104,8 @@ func TestKubernetesSnapshotNodes(t *testing.T) {
 	require.Equal(t, int64(25769803776), snapshot.TotalMemory)      // 12GB + 8GB + 4GB = 24GB in bytes
 	require.Equal(t, ClusterTypeGKEAutopilot, snapshot.ClusterType) // detected from node1's ProviderID
 	require.Nil(t, snapshot.PerformanceMetrics)                     // Performance metrics are no longer collected server-side
+	require.Equal(t, 0, snapshot.GPUNodeCount)
+	require.Nil(t, snapshot.TotalGPU)
 
 	t.Logf("kubernetesSnapshotNodes test result: Nodes=%d, CPUs=%d, Memory=%d bytes",
 		snapshot.NodeCount, snapshot.TotalCPU, snapshot.TotalMemory)
@@ -114,7 +117,7 @@ func TestKubernetesSnapshotNodesEmptyCluster(t *testing.T) {
 	fakeClient := kfake.NewClientset()
 	snapshot := &portainer.KubernetesSnapshot{}
 
-	err := kubernetesSnapshotNodes(snapshot, fakeClient)
+	err := kubernetesSnapshotNodes(snapshot, fakeClient, false)
 	require.NoError(t, err)
 
 	// Values should remain at their zero state when no nodes exist
@@ -170,7 +173,7 @@ func TestCreateKubernetesSnapshotIntegration(t *testing.T) {
 
 	// Test that kubernetesSnapshotNodes logic works
 	snapshot := &portainer.KubernetesSnapshot{}
-	err = kubernetesSnapshotNodes(snapshot, fakeClient)
+	err = kubernetesSnapshotNodes(snapshot, fakeClient, false)
 	require.NoError(t, err)
 
 	// Verify the integration results
@@ -198,7 +201,7 @@ func TestKubernetesSnapshotNodesWithAPIError(t *testing.T) {
 	})
 
 	snapshot := &portainer.KubernetesSnapshot{}
-	err := kubernetesSnapshotNodes(snapshot, fakeClient)
+	err := kubernetesSnapshotNodes(snapshot, fakeClient, false)
 
 	// Should return the API error
 	require.Error(t, err)
@@ -234,7 +237,7 @@ func TestKubernetesSnapshotNodesSingleNode(t *testing.T) {
 	require.NoError(t, err)
 
 	snapshot := &portainer.KubernetesSnapshot{}
-	err = kubernetesSnapshotNodes(snapshot, fakeClient)
+	err = kubernetesSnapshotNodes(snapshot, fakeClient, false)
 	require.NoError(t, err)
 
 	require.Equal(t, 1, snapshot.NodeCount)
@@ -244,6 +247,123 @@ func TestKubernetesSnapshotNodesSingleNode(t *testing.T) {
 
 	t.Logf("Single node test result: Nodes=%d, CPUs=%d, Memory=%d bytes",
 		snapshot.NodeCount, snapshot.TotalCPU, snapshot.TotalMemory)
+}
+
+func TestKubernetesSnapshotNodesWithGPU(t *testing.T) {
+	t.Parallel()
+	fakeClient := kfake.NewClientset()
+
+	gpuNode := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{Name: "gpu-node"},
+		Status: corev1.NodeStatus{
+			Capacity: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("8"),
+				corev1.ResourceMemory: resource.MustParse("16Gi"),
+				"nvidia.com/gpu":      resource.MustParse("4"),
+			},
+		},
+	}
+	cpuNode := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{Name: "cpu-node"},
+		Status: corev1.NodeStatus{
+			Capacity: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("4"),
+				corev1.ResourceMemory: resource.MustParse("8Gi"),
+			},
+		},
+	}
+
+	_, err := fakeClient.CoreV1().Nodes().Create(t.Context(), gpuNode, metav1.CreateOptions{})
+	require.NoError(t, err)
+	_, err = fakeClient.CoreV1().Nodes().Create(t.Context(), cpuNode, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	snapshot := &portainer.KubernetesSnapshot{}
+	err = kubernetesSnapshotNodes(snapshot, fakeClient, true)
+	require.NoError(t, err)
+
+	require.Equal(t, 2, snapshot.NodeCount)
+	require.Equal(t, 1, snapshot.GPUNodeCount)
+	require.Equal(t, int64(4), snapshot.TotalGPU["nvidia.com/gpu"])
+}
+
+func TestKubernetesSnapshotNodesMultipleGPUTypes(t *testing.T) {
+	t.Parallel()
+	fakeClient := kfake.NewClientset()
+
+	node := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{Name: "mig-node"},
+		Status: corev1.NodeStatus{
+			Capacity: corev1.ResourceList{
+				corev1.ResourceCPU:       resource.MustParse("8"),
+				corev1.ResourceMemory:    resource.MustParse("16Gi"),
+				"nvidia.com/gpu":         resource.MustParse("2"),
+				"nvidia.com/mig-2g.10gb": resource.MustParse("4"),
+			},
+		},
+	}
+
+	_, err := fakeClient.CoreV1().Nodes().Create(t.Context(), node, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	snapshot := &portainer.KubernetesSnapshot{}
+	err = kubernetesSnapshotNodes(snapshot, fakeClient, true)
+	require.NoError(t, err)
+
+	require.Equal(t, 1, snapshot.GPUNodeCount)
+	require.Equal(t, int64(2), snapshot.TotalGPU["nvidia.com/gpu"])
+	require.Equal(t, int64(4), snapshot.TotalGPU["nvidia.com/mig-2g.10gb"])
+}
+
+func TestKubernetesSnapshotNodesGPUAggregatedAcrossNodes(t *testing.T) {
+	t.Parallel()
+	fakeClient := kfake.NewClientset()
+
+	for i, gpuCount := range []int{2, 4} {
+		node := &corev1.Node{
+			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("gpu-node-%d", i)},
+			Status: corev1.NodeStatus{
+				Capacity: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("8"),
+					corev1.ResourceMemory: resource.MustParse("16Gi"),
+					"nvidia.com/gpu":      *resource.NewQuantity(int64(gpuCount), resource.DecimalSI),
+				},
+			},
+		}
+		_, err := fakeClient.CoreV1().Nodes().Create(t.Context(), node, metav1.CreateOptions{})
+		require.NoError(t, err)
+	}
+
+	snapshot := &portainer.KubernetesSnapshot{}
+	err := kubernetesSnapshotNodes(snapshot, fakeClient, true)
+	require.NoError(t, err)
+
+	require.Equal(t, 2, snapshot.GPUNodeCount)
+	require.Equal(t, int64(6), snapshot.TotalGPU["nvidia.com/gpu"]) // 2 + 4
+}
+
+func TestKubernetesSnapshotNodesNoGPULeavesTotalGPUNil(t *testing.T) {
+	t.Parallel()
+	fakeClient := kfake.NewClientset()
+
+	node := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{Name: "cpu-only-node"},
+		Status: corev1.NodeStatus{
+			Capacity: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("4"),
+				corev1.ResourceMemory: resource.MustParse("8Gi"),
+			},
+		},
+	}
+	_, err := fakeClient.CoreV1().Nodes().Create(t.Context(), node, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	snapshot := &portainer.KubernetesSnapshot{}
+	err = kubernetesSnapshotNodes(snapshot, fakeClient, false)
+	require.NoError(t, err)
+
+	require.Equal(t, 0, snapshot.GPUNodeCount)
+	require.Nil(t, snapshot.TotalGPU)
 }
 
 func TestKubernetesSnapshotNodesZeroResources(t *testing.T) {
@@ -267,7 +387,7 @@ func TestKubernetesSnapshotNodesZeroResources(t *testing.T) {
 	require.NoError(t, err)
 
 	snapshot := &portainer.KubernetesSnapshot{}
-	err = kubernetesSnapshotNodes(snapshot, fakeClient)
+	err = kubernetesSnapshotNodes(snapshot, fakeClient, false)
 	require.NoError(t, err)
 
 	require.Equal(t, 1, snapshot.NodeCount)
@@ -276,4 +396,99 @@ func TestKubernetesSnapshotNodesZeroResources(t *testing.T) {
 	require.Nil(t, snapshot.PerformanceMetrics)
 
 	t.Log("Zero resources test passed - handles edge case correctly")
+}
+
+func TestKubernetesSnapshotNodesGPUOperator(t *testing.T) {
+	t.Parallel()
+
+	const gpuMemoryBytes = int64(25769803776) // 16GiB + 8GiB
+
+	tests := []struct {
+		name         string
+		gpuOperator  bool
+		wantGPUCount int
+		wantTotalGPU map[string]int64
+	}{
+		{
+			name:         "disabled does not populate GPU fields even when GPU nodes exist",
+			gpuOperator:  false,
+			wantGPUCount: 0,
+			wantTotalGPU: nil,
+		},
+		{
+			name:         "enabled populates GPU fields from GPU nodes",
+			gpuOperator:  true,
+			wantGPUCount: 1,
+			wantTotalGPU: map[string]int64{"nvidia.com/gpu": 4},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			fakeClient := kfake.NewClientset()
+			nodes := []*corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "gpu-node"},
+					Status: corev1.NodeStatus{
+						Capacity: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("8"),
+							corev1.ResourceMemory: resource.MustParse("16Gi"),
+							"nvidia.com/gpu":      resource.MustParse("4"),
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "cpu-node"},
+					Status: corev1.NodeStatus{
+						Capacity: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("4"),
+							corev1.ResourceMemory: resource.MustParse("8Gi"),
+						},
+					},
+				},
+			}
+			for _, n := range nodes {
+				_, err := fakeClient.CoreV1().Nodes().Create(t.Context(), n, metav1.CreateOptions{})
+				require.NoError(t, err)
+			}
+
+			snap := &portainer.KubernetesSnapshot{}
+			err := kubernetesSnapshotNodes(snap, fakeClient, tt.gpuOperator)
+			require.NoError(t, err)
+
+			require.Equal(t, 2, snap.NodeCount)
+			require.Equal(t, int64(12), snap.TotalCPU)
+			require.Equal(t, gpuMemoryBytes, snap.TotalMemory)
+			require.Equal(t, tt.wantGPUCount, snap.GPUNodeCount)
+			require.Equal(t, tt.wantTotalGPU, snap.TotalGPU)
+		})
+	}
+}
+
+func TestKubernetesSnapshotNodesGPUOperatorEnabledNoGPUNodes(t *testing.T) {
+	t.Parallel()
+
+	fakeClient := kfake.NewClientset()
+	node := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{Name: "cpu-node"},
+		Status: corev1.NodeStatus{
+			Capacity: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("4"),
+				corev1.ResourceMemory: resource.MustParse("8Gi"),
+			},
+		},
+	}
+	_, err := fakeClient.CoreV1().Nodes().Create(t.Context(), node, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	snap := &portainer.KubernetesSnapshot{}
+	err = kubernetesSnapshotNodes(snap, fakeClient, true)
+	require.NoError(t, err)
+
+	require.Equal(t, 1, snap.NodeCount)
+	require.Equal(t, int64(4), snap.TotalCPU)
+	require.Equal(t, 0, snap.GPUNodeCount)
+	require.Nil(t, snap.TotalGPU)
 }

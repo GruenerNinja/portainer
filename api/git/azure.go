@@ -66,11 +66,8 @@ func NewAzureClient() *azureClient {
 
 func newHttpClientForAzure(insecureSkipVerify bool) *http.Client {
 	return &http.Client{
-		Transport: ssrf.WrapTransport(&http.Transport{
-			TLSClientConfig: crypto.CreateTLSConfiguration(insecureSkipVerify),
-			Proxy:           http.ProxyFromEnvironment,
-		}),
-		Timeout: 300 * time.Second,
+		Transport: ssrf.NewTransport(crypto.CreateTLSConfiguration(insecureSkipVerify)),
+		Timeout:   300 * time.Second,
 	}
 }
 

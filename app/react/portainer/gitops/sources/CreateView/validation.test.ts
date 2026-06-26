@@ -1,3 +1,6 @@
+import { ResourceControlOwnership } from '@/react/portainer/access-control/types';
+
+import { FormValues } from './type';
 import { validateGitConnection, validationSchema } from './validation';
 
 const baseAuth = {
@@ -9,6 +12,18 @@ const validGitValues = {
   tlsSkipVerify: false,
   connectionOk: true,
   authentication: baseAuth,
+};
+
+const validVaultValues = {
+  address: 'https://vault.example.com',
+  namespace: '',
+  kvVersion: 2 as const,
+  tlsSkipVerify: false,
+  authentication: {
+    method: 'token' as const,
+    token: 'secret-token',
+  },
+  connectionOk: true,
 };
 
 describe('validateGitConnection (pick schema — no connectionOk)', () => {
@@ -74,7 +89,11 @@ describe('validationSchema git.authentication', () => {
         ...validGitValues,
         authentication: { ...baseAuth, authEnabled: true },
       },
-    });
+      vault: validVaultValues,
+      authorizedTeams: [],
+      authorizedUsers: [],
+      ownership: ResourceControlOwnership.ADMINISTRATORS,
+    } satisfies FormValues);
     expect(result).toBe(false);
   });
 
@@ -84,7 +103,11 @@ describe('validationSchema git.authentication', () => {
       name: 'src',
       type: 'git',
       git: validGitValues,
-    });
+      vault: validVaultValues,
+      authorizedTeams: [],
+      authorizedUsers: [],
+      ownership: ResourceControlOwnership.ADMINISTRATORS,
+    } satisfies FormValues);
     expect(result).toBe(true);
   });
 
@@ -102,7 +125,11 @@ describe('validationSchema git.authentication', () => {
           password: 'secret',
         },
       },
-    });
+      vault: validVaultValues,
+      authorizedTeams: [],
+      authorizedUsers: [],
+      ownership: ResourceControlOwnership.ADMINISTRATORS,
+    } satisfies FormValues);
     expect(result).toBe(true);
   });
 });
@@ -117,7 +144,11 @@ describe('validationSchema full git (requires connectionOk)', () => {
         ...validGitValues,
         connectionOk: false,
       },
-    });
+      vault: validVaultValues,
+      authorizedTeams: [],
+      authorizedUsers: [],
+      ownership: ResourceControlOwnership.ADMINISTRATORS,
+    } satisfies FormValues);
     expect(result).toBe(false);
   });
 
@@ -127,7 +158,11 @@ describe('validationSchema full git (requires connectionOk)', () => {
       name: 'src',
       type: 'git',
       git: validGitValues,
-    });
+      vault: validVaultValues,
+      authorizedTeams: [],
+      authorizedUsers: [],
+      ownership: ResourceControlOwnership.ADMINISTRATORS,
+    } satisfies FormValues);
     expect(result).toBe(true);
   });
 
@@ -137,7 +172,11 @@ describe('validationSchema full git (requires connectionOk)', () => {
       name: '',
       type: 'git',
       git: validGitValues,
-    });
+      vault: validVaultValues,
+      authorizedTeams: [],
+      authorizedUsers: [],
+      ownership: ResourceControlOwnership.ADMINISTRATORS,
+    } satisfies FormValues);
     expect(result).toBe(false);
   });
 });

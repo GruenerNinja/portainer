@@ -83,7 +83,7 @@ linters:
         - ruleguard
       settings:
         ruleguard:
-          rules: './analysis/ssrf.go'
+          rules: './analysis/ssrf.go,./analysis/git.go'
     forbidigo:
       forbid:
         - pattern: ^tls\.Config$
@@ -94,6 +94,8 @@ linters:
           msg: 'Not allowed because of FIPS mode'
         - pattern: ^(types\.SystemContext\.)?(DockerDaemonInsecureSkipTLSVerify|DockerInsecureSkipTLSVerify|OCIInsecureSkipTLSVerify)$
           msg: 'Not allowed because of FIPS mode'
+        - pattern: ^git\.PlainClone(Context|WithOptions)?$
+          msg: Use git.CloneContext with NewNoSymlinkFS to prevent symlink traversal attacks
       analyze-types: true
   exclusions:
     generated: lax
@@ -106,6 +108,9 @@ linters:
         linters:
           - gocritic
         text: ruleguard
+      - path: pkg/libhttp/ssrf/builder\.go
+        linters:
+          - forbidigo
     paths:
       - third_party$
       - builtin$

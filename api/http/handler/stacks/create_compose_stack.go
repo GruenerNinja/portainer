@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	portainer "github.com/portainer/portainer/api"
+	"github.com/portainer/portainer/api/dataservices/source"
 	"github.com/portainer/portainer/api/filesystem"
 	"github.com/portainer/portainer/api/git/update"
 	"github.com/portainer/portainer/api/gitops/sources"
@@ -55,7 +56,7 @@ func createStackPayloadFromComposeFileContentPayload(name string, fileContent st
 	}
 }
 
-func (handler *Handler) checkAndCleanStackDupFromSwarm(w http.ResponseWriter, r *http.Request, endpoint *portainer.Endpoint, userID portainer.UserID, stack *portainer.Stack) error {
+func (handler *Handler) checkAndCleanStackDupFromSwarm(_ http.ResponseWriter, _ *http.Request, _ *portainer.Endpoint, _ portainer.UserID, stack *portainer.Stack) error {
 	resourceControl, err := handler.DataStore.ResourceControl().ResourceControlByResourceIDAndType(stackutils.ResourceControlID(stack.EndpointID, stack.Name), portainer.StackResourceControl)
 	if err != nil {
 		return err
@@ -295,15 +296,16 @@ func (handler *Handler) createComposeStackFromGitRepository(w http.ResponseWrite
 		}
 	}
 
-	if payload.SourceID != 0 {
-		if _, httpErr := sources.ValidateGitSourceAccess(handler.DataStore, payload.SourceID); httpErr != nil {
-			return httpErr
-		}
-	}
-
 	securityContext, err := security.RetrieveRestrictedRequestContext(r)
 	if err != nil {
-		return httperror.InternalServerError("Unable to retrieve info from request context", err)
+		return httperror.InternalServerError("Unable to retrieve user info from request context", err)
+	}
+	userContext := source.NewUserContext(securityContext.User, securityContext.UserMemberships)
+
+	if payload.SourceID != 0 {
+		if _, httpErr := sources.ValidateGitSourceAccess(handler.DataStore, userContext, payload.SourceID); httpErr != nil {
+			return httpErr
+		}
 	}
 
 	stackPayload := createStackPayloadFromComposeGitPayload(payload.Name,

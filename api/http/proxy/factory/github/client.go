@@ -94,7 +94,7 @@ func NewHTTPClient(token string) *http.Client {
 	return &http.Client{
 		Transport: &tokenTransport{
 			token:     token,
-			transport: retry.NewTransport(ssrf.WrapTransport(&http.Transport{})), // Use ORAS retry transport for consistent rate limiting and error handling
+			transport: retry.NewTransport(ssrf.NewTransport(nil)), // Use ORAS retry transport for consistent rate limiting and error handling
 		},
 		Timeout: 1 * time.Minute,
 	}

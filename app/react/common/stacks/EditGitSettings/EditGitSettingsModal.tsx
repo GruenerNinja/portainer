@@ -19,13 +19,19 @@ interface Props {
 }
 
 export function EditGitSettingsModal({ stack, onClose }: Props) {
-  const validationSchema = useValidationSchema(stack.Type, !!stack.GitSourceId);
+  const validationSchema = useValidationSchema(stack.Type);
   const [webhookId] = useState(
     () => stack.AutoUpdate?.Webhook || createWebhookId()
   );
 
+  const mutation = useUpdateGitStack(stack);
+
   const gitModel = toGitFormModel(
-    stack.GitConfig,
+    stack.GitSourceId,
+    {
+      ReferenceName: stack.GitConfig?.ReferenceName ?? '',
+      ConfigFilePath: stack.GitConfig?.ConfigFilePath ?? '',
+    },
     parseAutoUpdateResponse(stack.AutoUpdate)
   );
 
@@ -35,7 +41,6 @@ export function EditGitSettingsModal({ stack, onClose }: Props) {
       ...gitModel,
       AdditionalFiles: stack.AdditionalFiles || [],
       SourceId: stack.GitSourceId,
-      RepositoryURLValid: !!gitModel.RepositoryURL,
       SupportRelativePath: stack.SupportRelativePath,
       FilesystemPath: stack.FilesystemPath,
     },
@@ -44,8 +49,6 @@ export function EditGitSettingsModal({ stack, onClose }: Props) {
     prune: stack.Option?.Prune || false,
     redeployNow: false,
   };
-
-  const mutation = useUpdateGitStack(stack);
 
   return (
     <Formik
@@ -56,7 +59,6 @@ export function EditGitSettingsModal({ stack, onClose }: Props) {
       <InnerForm
         stackName={stack.Name}
         stackType={stack.Type}
-        gitSourceId={stack.GitSourceId}
         webhookId={webhookId}
         onDismiss={onClose}
         isSubmitting={mutation.isLoading}

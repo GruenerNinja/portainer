@@ -1,6 +1,12 @@
 import { render, screen } from '@testing-library/react';
 
-import { ContainerStats, CPUStats, MemoryStats, NodeStats } from './StatsItem';
+import {
+  ContainerStats,
+  CPUStats,
+  GpuStats,
+  MemoryStats,
+  NodeStats,
+} from './StatsItem';
 
 describe('StatsItem', () => {
   describe('NodeStats', () => {
@@ -24,6 +30,14 @@ describe('StatsItem', () => {
       render(<MemoryStats value="8 GB" />);
       expect(screen.getByText('8 GB')).toBeVisible();
       expect(screen.getByText('MEMORY')).toBeVisible();
+    });
+  });
+
+  describe('GpuStats', () => {
+    it('renders GPU count with GPUS label', () => {
+      render(<GpuStats value={4} />);
+      expect(screen.getByText('4')).toBeVisible();
+      expect(screen.getByText('GPUS')).toBeVisible();
     });
   });
 

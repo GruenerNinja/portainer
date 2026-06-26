@@ -2,6 +2,8 @@ package factory
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"net/http/httputil"
 	"testing"
 	"time"
@@ -65,8 +67,6 @@ func enableSSRF(t *testing.T) {
 	})
 }
 
-// TestNewDockerHTTPProxy_NonEdgeNoTLS verifies that a plain non-edge endpoint
-// uses WrapTransport, setting DialContext on the inner transport.
 func TestNewDockerHTTPProxy_NonEdgeNoTLS(t *testing.T) {
 	enableSSRF(t)
 
@@ -84,8 +84,6 @@ func TestNewDockerHTTPProxy_NonEdgeNoTLS(t *testing.T) {
 	require.NotNil(t, dt.HTTPTransport.DialContext)
 }
 
-// TestNewDockerHTTPProxy_NonEdgeTLS verifies that a TLS non-edge endpoint
-// uses WrapTransport, setting DialContext on the inner transport.
 func TestNewDockerHTTPProxy_NonEdgeTLS(t *testing.T) {
 	enableSSRF(t)
 
@@ -107,10 +105,13 @@ func TestNewDockerHTTPProxy_NonEdgeTLS(t *testing.T) {
 	require.NotNil(t, dt.HTTPTransport.DialContext)
 }
 
-// TestNewDockerHTTPProxy_EdgeNoTLS verifies that an edge endpoint without TLS
-// uses WrapTransportInternal, leaving DialContext nil.
 func TestNewDockerHTTPProxy_EdgeNoTLS(t *testing.T) {
 	enableSSRF(t)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
 
 	f := &ProxyFactory{reverseTunnelService: &stubTunnelService{}}
 	endpoint := &portainer.Endpoint{
@@ -123,13 +124,19 @@ func TestNewDockerHTTPProxy_EdgeNoTLS(t *testing.T) {
 
 	proxy := handler.(*httputil.ReverseProxy)
 	dt := proxy.Transport.(*docker.Transport)
-	require.Nil(t, dt.HTTPTransport.DialContext)
+
+	resp, err := (&http.Client{Transport: dt.HTTPTransport}).Get(srv.URL)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
 }
 
-// TestNewDockerHTTPProxy_EdgeTLS verifies that an edge endpoint with TLS
-// uses WrapTransportInternal, leaving DialContext nil.
 func TestNewDockerHTTPProxy_EdgeTLS(t *testing.T) {
 	enableSSRF(t)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
 
 	f := &ProxyFactory{reverseTunnelService: &stubTunnelService{}}
 	endpoint := &portainer.Endpoint{
@@ -146,7 +153,10 @@ func TestNewDockerHTTPProxy_EdgeTLS(t *testing.T) {
 
 	proxy := handler.(*httputil.ReverseProxy)
 	dt := proxy.Transport.(*docker.Transport)
-	require.Nil(t, dt.HTTPTransport.DialContext)
+
+	resp, err := (&http.Client{Transport: dt.HTTPTransport}).Get(srv.URL)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
 }
 
 func TestNewAgentProxy_NonEdgeNoTLS(t *testing.T) {

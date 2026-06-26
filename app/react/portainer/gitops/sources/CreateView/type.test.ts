@@ -1,3 +1,8 @@
+import {
+  AccessControlFormData,
+  ResourceControlOwnership,
+} from '@/react/portainer/access-control/types';
+
 import { formValuesToCreatePayload, gitFormValuesToTestPayload } from './type';
 
 const baseGit = {
@@ -7,15 +12,21 @@ const baseGit = {
 };
 
 const baseVault = {
-  address: '',
+  address: 'https://vault.example.com',
   namespace: '',
   kvVersion: 2 as const,
   tlsSkipVerify: false,
   authentication: {
     method: 'token' as const,
-    token: '',
+    token: 'secret-token',
   },
   connectionOk: false,
+};
+
+const baseUAC: AccessControlFormData = {
+  authorizedTeams: [],
+  authorizedUsers: [],
+  ownership: ResourceControlOwnership.ADMINISTRATORS,
 };
 
 function expectGitPayload(
@@ -28,10 +39,21 @@ function expectGitPayload(
   return payload.git;
 }
 
+function expectVaultPayload(
+  payload: ReturnType<typeof formValuesToCreatePayload>
+) {
+  expect(payload.type).toBe('vault');
+  if (payload.type !== 'vault') {
+    throw new Error('expected vault payload');
+  }
+  return payload.vault;
+}
+
 describe('formValuesToCreatePayload', () => {
   it('populates authentication when authEnabled with username and password', () => {
     const payload = expectGitPayload(
       formValuesToCreatePayload({
+        ...baseUAC,
         name: 'my-source',
         type: 'git',
         git: {
@@ -55,6 +77,7 @@ describe('formValuesToCreatePayload', () => {
   it('omits authentication when authEnabled is false', () => {
     const payload = expectGitPayload(
       formValuesToCreatePayload({
+        ...baseUAC,
         name: 'my-source',
         type: 'git',
         git: {
@@ -71,6 +94,7 @@ describe('formValuesToCreatePayload', () => {
   it('omits authentication when authEnabled but username is missing', () => {
     const payload = expectGitPayload(
       formValuesToCreatePayload({
+        ...baseUAC,
         name: 'my-source',
         type: 'git',
         git: {
@@ -90,6 +114,7 @@ describe('formValuesToCreatePayload', () => {
   it('omits authentication when authEnabled but password is missing', () => {
     const payload = expectGitPayload(
       formValuesToCreatePayload({
+        ...baseUAC,
         name: 'my-source',
         type: 'git',
         git: {
@@ -109,6 +134,7 @@ describe('formValuesToCreatePayload', () => {
   it('does not include connectionOk in the create payload', () => {
     const payload = expectGitPayload(
       formValuesToCreatePayload({
+        ...baseUAC,
         name: 'my-source',
         type: 'git',
         git: {
@@ -121,6 +147,55 @@ describe('formValuesToCreatePayload', () => {
     );
 
     expect(payload).not.toHaveProperty('connectionOk');
+  });
+
+  it('maps access-control fields into git payloads', () => {
+    const payload = expectGitPayload(
+      formValuesToCreatePayload({
+        name: 'my-source',
+        type: 'git',
+        git: {
+          ...baseGit,
+          authentication: { authEnabled: false },
+        },
+        vault: baseVault,
+        authorizedTeams: [1],
+        authorizedUsers: [2],
+        ownership: ResourceControlOwnership.RESTRICTED,
+      })
+    );
+
+    expect(payload).toMatchObject({
+      administratorsOnly: false,
+      public: false,
+      teamAccesses: [1],
+      userAccesses: [2],
+    });
+  });
+
+  it('creates vault payloads with access-control fields', () => {
+    const payload = expectVaultPayload(
+      formValuesToCreatePayload({
+        ...baseUAC,
+        name: 'vault-source',
+        type: 'vault',
+        git: {
+          ...baseGit,
+          authentication: { authEnabled: false },
+        },
+        vault: baseVault,
+      })
+    );
+
+    expect(payload).toMatchObject({
+      name: 'vault-source',
+      address: baseVault.address,
+      authentication: baseVault.authentication,
+      administratorsOnly: true,
+      public: false,
+      teamAccesses: [],
+      userAccesses: [],
+    });
   });
 });
 

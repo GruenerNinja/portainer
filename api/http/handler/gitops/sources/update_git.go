@@ -9,16 +9,17 @@ import (
 
 	portainer "github.com/portainer/portainer/api"
 	"github.com/portainer/portainer/api/dataservices"
+	"github.com/portainer/portainer/api/dataservices/source"
 	gittypes "github.com/portainer/portainer/api/git/types"
-	"github.com/portainer/portainer/api/gitops/workflows"
+	"github.com/portainer/portainer/api/http/security"
 	httperror "github.com/portainer/portainer/pkg/libhttp/error"
 	"github.com/portainer/portainer/pkg/libhttp/request"
 	"github.com/portainer/portainer/pkg/libhttp/response"
+	"github.com/portainer/portainer/pkg/validate"
 )
 
 var (
 	ErrNotGitSource          = errors.New("source is not a Git source")
-	ErrDuplicateSource       = errors.New("a source with this URL and credentials already exists")
 	ErrUnsupportedSourceType = errors.New("unsupported source type")
 )
 
@@ -38,13 +39,17 @@ type GitAuthenticationUpdatePayload struct {
 
 // Validate implements the portainer.Validatable interface
 func (payload *GitSourceUpdatePayload) Validate(_ *http.Request) error {
+	if payload.URL != nil && !validate.IsURL(*payload.URL) {
+		return errors.New("invalid repository URL. Must correspond to a valid URL format")
+	}
+
 	return nil
 }
 
 // @id GitOpsSourcesUpdateGit
 // @summary Update a Git source
 // @description Updates an existing GitOps source backed by a Git repository.
-// @description **Access policy**: administrator
+// @description **Access policy**: authenticated
 // @tags gitops
 // @security ApiKeyAuth
 // @security jwt
@@ -70,6 +75,11 @@ func (h *Handler) gitSourceUpdate(w http.ResponseWriter, r *http.Request) *httpe
 		return httperror.BadRequest("Invalid request payload", err)
 	}
 
+	securityContext, err := security.RetrieveRestrictedRequestContext(r)
+	if err != nil {
+		return httperror.InternalServerError("Unable to retrieve info from request context", err)
+	}
+
 	sourceID := portainer.SourceID(id)
 
 	var src *portainer.Source
@@ -77,7 +87,8 @@ func (h *Handler) gitSourceUpdate(w http.ResponseWriter, r *http.Request) *httpe
 	if err := h.dataStore.UpdateTx(func(tx dataservices.DataStoreTx) error {
 		var err error
 
-		if src, err = tx.Source().Read(sourceID); err != nil {
+		userContext := source.NewUserContext(securityContext.User, securityContext.UserMemberships)
+		if src, err = tx.Source().Read(userContext, sourceID); err != nil {
 			return err
 		}
 
@@ -90,18 +101,6 @@ func (h *Handler) gitSourceUpdate(w http.ResponseWriter, r *http.Request) *httpe
 
 			if err := ApplyGitSourceChanges(src, payload); err != nil {
 				return err
-			}
-
-			username, password := "", ""
-			if src.Git != nil && src.Git.Authentication != nil {
-				username = src.Git.Authentication.Username
-				password = src.Git.Authentication.Password
-			}
-
-			if isUnique, err := workflows.ValidateUniqueSource(tx, src.Git.URL, username, password, sourceID); err != nil {
-				return err
-			} else if !isUnique {
-				return ErrDuplicateSource
 			}
 		case portainer.SourceTypeVault:
 			var payload VaultSourceUpdatePayload
@@ -116,7 +115,7 @@ func (h *Handler) gitSourceUpdate(w http.ResponseWriter, r *http.Request) *httpe
 			return ErrUnsupportedSourceType
 		}
 
-		return tx.Source().Update(src.ID, src)
+		return tx.Source().Update(userContext, src.ID, src)
 	}); h.dataStore.IsErrObjectNotFound(err) {
 		return httperror.NotFound("Unable to find a source with the specified identifier", err)
 	} else if isJSONDecodeError(err) {
@@ -127,7 +126,9 @@ func (h *Handler) gitSourceUpdate(w http.ResponseWriter, r *http.Request) *httpe
 		return httperror.BadRequest("Source is not a Vault source", err)
 	} else if errors.Is(err, ErrUnsupportedSourceType) {
 		return httperror.BadRequest("Unsupported source type", err)
-	} else if errors.Is(err, ErrDuplicateSource) {
+	} else if errors.Is(err, source.ErrNotEnoughPermission) {
+		return httperror.Forbidden("Not enough permissions to update source", err)
+	} else if errors.Is(err, source.ErrDuplicateSource) {
 		return httperror.Conflict("A source with this URL and credentials already exists", err)
 	} else if err != nil {
 		return httperror.InternalServerError("Unable to update source", err)

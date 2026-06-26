@@ -68,14 +68,14 @@ func (factory *ProxyFactory) newDockerHTTPProxy(endpoint *portainer.Endpoint) (h
 		endpointURL.Scheme = "https"
 
 		if endpointutils.IsEdgeEndpoint(endpoint) {
-			innerTransport = ssrf.WrapTransportInternal(&http.Transport{TLSClientConfig: tlsConfig})
+			innerTransport = ssrf.NewInternalTransport(tlsConfig)
 		} else {
-			innerTransport = ssrf.WrapTransport(&http.Transport{TLSClientConfig: tlsConfig})
+			innerTransport = ssrf.NewTransport(tlsConfig)
 		}
 	} else if endpointutils.IsEdgeEndpoint(endpoint) {
-		innerTransport = ssrf.WrapTransportInternal(&http.Transport{})
+		innerTransport = ssrf.NewInternalTransport(nil)
 	} else {
-		innerTransport = ssrf.WrapTransport(&http.Transport{})
+		innerTransport = ssrf.NewTransport(nil)
 	}
 
 	dockerTransport, err := docker.NewTransport(transportParameters, innerTransport, factory.gitService, factory.snapshotService)

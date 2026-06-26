@@ -3,6 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { Formik } from 'formik';
 import * as yup from 'yup';
 
+import { ResourceControlOwnership } from '@/react/portainer/access-control/types';
+
 import { WizardStepState } from '@@/Stepper/useWizardSteps';
 
 import { WizardStep, WizardProvider } from './WizardContext';
@@ -62,6 +64,9 @@ const initialFormValues: FormValues = {
     },
     connectionOk: false,
   },
+  authorizedTeams: [],
+  authorizedUsers: [],
+  ownership: ResourceControlOwnership.ADMINISTRATORS,
 };
 
 const validFormValues: FormValues = {
@@ -73,6 +78,9 @@ const validFormValues: FormValues = {
     authentication: { authEnabled: false },
   },
   vault: initialFormValues.vault,
+  authorizedTeams: [],
+  authorizedUsers: [],
+  ownership: ResourceControlOwnership.ADMINISTRATORS,
 };
 
 function renderFooter({

@@ -75,11 +75,15 @@ func NewSwarmDeployer() *SwarmDeployer { return &SwarmDeployer{} }
 
 // Deploy creates or updates a Docker Swarm stack from the given compose files.
 func (d *SwarmDeployer) Deploy(ctx context.Context, filePaths []string, options DeployOptions) error {
+	// WithCli replaces the context with Background internally, so we capture the
+	// caller's context here to preserve cancellation.
+	callerCtx := ctx
+
 	return libstack.WithCli(
 		ctx,
 		libstack.DockerCliOptions{Host: options.Host, Registries: options.Registries},
-		func(ctx context.Context, dockerCLI *command.DockerCli) error {
-			return deployStack(ctx, dockerCLI, filePaths, options)
+		func(_ context.Context, dockerCLI *command.DockerCli) error {
+			return deployStack(callerCtx, dockerCLI, filePaths, options)
 		})
 }
 
@@ -91,28 +95,32 @@ func (d *SwarmDeployer) Validate(_ context.Context, filePaths []string, options 
 
 // Remove deletes all resources belonging to a Swarm stack and waits for tasks to terminate.
 func (d *SwarmDeployer) Remove(ctx context.Context, projectName string, options RemoveOptions) error {
+	// WithCli replaces the context with Background internally, so we capture the
+	// caller's context here to preserve cancellation.
+	callerCtx := ctx
+
 	return libstack.WithCli(
 		ctx,
 		libstack.DockerCliOptions{Host: options.Host, Registries: options.Registries},
-		func(ctx context.Context, dockerCLI *command.DockerCli) error {
+		func(_ context.Context, dockerCLI *command.DockerCli) error {
 			apiClient := dockerCLI.Client()
 
-			services, err := getStackServices(ctx, apiClient, projectName)
+			services, err := getStackServices(callerCtx, apiClient, projectName)
 			if err != nil {
 				return err
 			}
 
-			secrets, err := getStackSecrets(ctx, apiClient, projectName)
+			secrets, err := getStackSecrets(callerCtx, apiClient, projectName)
 			if err != nil {
 				return err
 			}
 
-			configs, err := getStackConfigs(ctx, apiClient, projectName)
+			configs, err := getStackConfigs(callerCtx, apiClient, projectName)
 			if err != nil {
 				return err
 			}
 
-			networks, err := getStackNetworks(ctx, apiClient, projectName)
+			networks, err := getStackNetworks(callerCtx, apiClient, projectName)
 			if err != nil {
 				return err
 			}
@@ -124,19 +132,19 @@ func (d *SwarmDeployer) Remove(ctx context.Context, projectName string, options 
 
 			var errs []error
 
-			if err := removeServices(ctx, apiClient, services); err != nil {
+			if err := removeServices(callerCtx, apiClient, services); err != nil {
 				errs = append(errs, err)
 			}
 
-			if err := removeSecrets(ctx, apiClient, secrets); err != nil {
+			if err := removeSecrets(callerCtx, apiClient, secrets); err != nil {
 				errs = append(errs, err)
 			}
 
-			if err := removeConfigs(ctx, apiClient, configs); err != nil {
+			if err := removeConfigs(callerCtx, apiClient, configs); err != nil {
 				errs = append(errs, err)
 			}
 
-			if err := removeNetworks(ctx, apiClient, networks); err != nil {
+			if err := removeNetworks(callerCtx, apiClient, networks); err != nil {
 				errs = append(errs, err)
 			}
 
@@ -146,7 +154,7 @@ func (d *SwarmDeployer) Remove(ctx context.Context, projectName string, options 
 
 			// Wait for all tasks to reach a terminal state before returning, mirroring
 			// the behaviour of `docker stack rm --detach=false`.
-			return waitOnTasks(ctx, apiClient, projectName)
+			return waitOnTasks(callerCtx, apiClient, projectName)
 		})
 }
 
@@ -769,6 +777,8 @@ func (d *SwarmDeployer) WaitForStatus(
 					}
 
 					if errorMessage != "" {
+						// An error message means a service failed, so the result must reflect that.
+						waitResult.Status = libstack.StatusError
 						waitResult.ErrorMsg = errorMessage
 						return nil
 					}
@@ -860,7 +870,8 @@ func getServiceStatus(
 			return libstack.StatusStarting, "", nil
 		case swarm.TaskStateRemove:
 			return libstack.StatusRemoving, "", nil
-		case swarm.TaskStateFailed:
+		case swarm.TaskStateFailed, swarm.TaskStateRejected:
+			// Rejected means the task could never start (e.g. missing image, no disk space).
 			return libstack.StatusError, task.Status.Err, nil
 		default:
 			return libstack.StatusUnknown, "", nil

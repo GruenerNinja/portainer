@@ -52,14 +52,15 @@ func (factory *ProxyFactory) NewAgentProxy(endpoint *portainer.Endpoint) (*Proxy
 		endpointURL.Scheme = "https"
 
 		if endpointutils.IsEdgeEndpoint(endpoint) {
-			innerTransport = ssrf.WrapTransportInternal(&http.Transport{TLSClientConfig: tlsConfig})
+			innerTransport = ssrf.NewInternalTransport(tlsConfig)
 		} else {
-			innerTransport = ssrf.WrapTransport(&http.Transport{TLSClientConfig: tlsConfig})
+			innerTransport = ssrf.NewTransport(tlsConfig)
+			innerTransport.Protocols = ssrf.HTTP1Only()
 		}
 	} else if endpointutils.IsEdgeEndpoint(endpoint) {
-		innerTransport = ssrf.WrapTransportInternal(&http.Transport{})
+		innerTransport = ssrf.NewInternalTransport(nil)
 	} else {
-		innerTransport = ssrf.WrapTransport(&http.Transport{})
+		innerTransport = ssrf.NewTransport(nil)
 	}
 
 	proxy := NewSingleHostReverseProxyWithHostHeader(endpointURL)

@@ -544,8 +544,7 @@ angular.module('portainer.docker').controller('CreateServiceController', [
 
     function validateForm(accessControlData, isAdmin) {
       $scope.state.formValidationError = '';
-      var error = '';
-      error = FormValidator.validateAccessControl(accessControlData, isAdmin) || $scope.formValues.Secrets.$error || $scope.formValues.Configs.$error;
+      var error = FormValidator.validateAccessControl(accessControlData, isAdmin) || $scope.formValues.Secrets.$error || $scope.formValues.Configs.$error;
 
       if (error) {
         $scope.state.formValidationError = error;

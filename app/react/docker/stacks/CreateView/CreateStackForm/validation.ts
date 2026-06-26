@@ -1,4 +1,13 @@
-import { object, array, number, mixed, SchemaOf, bool, string } from 'yup';
+import {
+  object,
+  array,
+  number,
+  mixed,
+  SchemaOf,
+  bool,
+  string,
+  ValidationError,
+} from 'yup';
 
 import { accessControlFormValidation } from '@/react/portainer/access-control/AccessControlForm';
 import { EnvironmentId } from '@/react/portainer/environments/types';
@@ -6,7 +15,6 @@ import { nameValidation } from '@/react/docker/stacks/common/NameField';
 import { Stack } from '@/react/common/stacks/types';
 
 import { envVarValidation } from '@@/form-components/EnvironmentVariablesFieldset';
-import { buildUniquenessTest } from '@@/form-components/validate-unique';
 
 import { BaseFormValues, FormValues } from './types';
 import { getEditorValidationSchema } from './EditorSection/validation';
@@ -75,15 +83,41 @@ function getBaseValidationSchema({
           .min(1, 'Vault provider is required')
           .required('Vault provider is required'),
         path: string().required('Secret path is required'),
-        key: string().required('Secret key is required'),
+        key: string().default(''),
       })
-    ).test(
-      'unique',
-      'This secret key is already defined',
-      buildUniquenessTest(() => 'This secret key is already defined', 'key')
+    ).test('unique', 'This secret key is already defined', (mappings, ctx) =>
+      validateUniqueSecretKeys(mappings, ctx)
     ),
     accessControl: accessControlFormValidation(isAdmin),
     enableWebhook: bool().default(false),
     registries: array(number().required()).default([]),
   });
+}
+
+function validateUniqueSecretKeys(
+  mappings: Array<{ key?: string }> | undefined,
+  ctx: {
+    path: string;
+    createError(args: { path: string; message: string }): ValidationError;
+  }
+) {
+  const seen = new Set<string>();
+
+  for (const [index, mapping] of (mappings ?? []).entries()) {
+    const key = mapping.key?.trim();
+    if (!key) {
+      continue;
+    }
+
+    if (seen.has(key)) {
+      return ctx.createError({
+        path: `${ctx.path}[${index}].key`,
+        message: 'This secret key is already defined',
+      });
+    }
+
+    seen.add(key);
+  }
+
+  return true;
 }

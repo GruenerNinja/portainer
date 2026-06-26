@@ -71,3 +71,37 @@ func TestResolveVaultSecret_KV1(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "p@ss", value)
 }
+
+func TestResolveVaultSecretValues_KV2(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "/v1/secret/data/app", r.URL.Path)
+
+		err := json.NewEncoder(w).Encode(map[string]any{
+			"data": map[string]any{
+				"data": map[string]any{
+					"password": "p@ss",
+					"port":     5432,
+				},
+			},
+		})
+		require.NoError(t, err)
+	}))
+	t.Cleanup(server.Close)
+
+	values, err := ResolveVaultSecretValues(t.Context(), &portainer.VaultConfig{
+		Address:   server.URL,
+		KVVersion: 2,
+		Authentication: portainer.VaultAuthentication{
+			Method: "token",
+			Token:  "token-value",
+		},
+	}, "secret/app")
+
+	require.NoError(t, err)
+	require.Equal(t, map[string]string{
+		"password": "p@ss",
+		"port":     "5432",
+	}, values)
+}

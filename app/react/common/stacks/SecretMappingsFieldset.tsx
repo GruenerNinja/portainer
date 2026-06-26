@@ -202,7 +202,7 @@ function SecretMappingRow({
         <FormControl
           inputId={`secret-key-${index}`}
           label="Secret key"
-          required
+          tooltip="Leave empty to inject every key from the Vault path."
           errors={error?.key}
           size="vertical"
           className="mb-0 w-full"
@@ -211,7 +211,7 @@ function SecretMappingRow({
             id={`secret-key-${index}`}
             className="w-full"
             value={mapping.key}
-            placeholder="password"
+            placeholder="all keys"
             onChange={({ target: { value } }) =>
               onChange({ ...mapping, key: value, name: value })
             }

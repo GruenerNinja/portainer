@@ -62,45 +62,60 @@ func TestVaultConnection(ctx context.Context, config *portainer.VaultConfig) err
 }
 
 func ResolveVaultSecret(ctx context.Context, config *portainer.VaultConfig, secretPath, key string) (string, error) {
+	key = strings.TrimSpace(key)
+	if key == "" {
+		return "", fmt.Errorf("vault secret key is required")
+	}
+
+	values, err := ResolveVaultSecretValues(ctx, config, secretPath)
+	if err != nil {
+		return "", err
+	}
+
+	value, ok := values[key]
+	if !ok {
+		return "", fmt.Errorf("vault secret key %q was not found", key)
+	}
+
+	return value, nil
+}
+
+func ResolveVaultSecretValues(ctx context.Context, config *portainer.VaultConfig, secretPath string) (map[string]string, error) {
 	if config == nil {
-		return "", fmt.Errorf("vault configuration is required")
+		return nil, fmt.Errorf("vault configuration is required")
 	}
 
 	if strings.TrimSpace(secretPath) == "" {
-		return "", fmt.Errorf("vault secret path is required")
-	}
-
-	if strings.TrimSpace(key) == "" {
-		return "", fmt.Errorf("vault secret key is required")
+		return nil, fmt.Errorf("vault secret path is required")
 	}
 
 	apiPath := vaultSecretAPIPath(config.KVVersion, secretPath)
 	endpoint, err := vaultURL(config.Address, apiPath)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	applyVaultHeaders(req, config)
 
 	resp, err := NewVaultClient(config.TLSSkipVerify).httpClient.Do(req)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return "", fmt.Errorf("vault secret read failed with status %d", resp.StatusCode)
+		return nil, fmt.Errorf("vault secret read failed with status %d", resp.StatusCode)
 	}
 
 	var payload struct {
 		Data map[string]any `json:"data"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
-		return "", err
+		return nil, err
 	}
 
 	values := payload.Data
@@ -110,17 +125,17 @@ func ResolveVaultSecret(ctx context.Context, config *portainer.VaultConfig, secr
 		}
 	}
 
-	value, ok := values[key]
-	if !ok {
-		return "", fmt.Errorf("vault secret key %q was not found", key)
+	resolved := make(map[string]string, len(values))
+	for key, value := range values {
+		switch v := value.(type) {
+		case string:
+			resolved[key] = v
+		default:
+			resolved[key] = fmt.Sprint(v)
+		}
 	}
 
-	switch v := value.(type) {
-	case string:
-		return v, nil
-	default:
-		return fmt.Sprint(v), nil
-	}
+	return resolved, nil
 }
 
 func vaultURL(address, apiPath string) (string, error) {

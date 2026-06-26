@@ -334,7 +334,7 @@ describe('CreateStackForm', () => {
     });
   });
 
-  it('should submit git form with Vault secret mappings', async () => {
+  it('should submit git form with path-only Vault secret mappings', async () => {
     let requestBody: unknown;
     server.use(
       http.get('/api/gitops/sources', ({ request }) => {
@@ -449,13 +449,6 @@ describe('CreateStackForm', () => {
     await user.click(secretPathField);
     await user.paste('secret/app');
 
-    const secretKeyField = screen.getByRole('textbox', {
-      name: /secret key/i,
-    });
-    await user.clear(secretKeyField);
-    await user.click(secretKeyField);
-    await user.paste('password');
-
     await waitFor(() => {
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     });
@@ -474,10 +467,10 @@ describe('CreateStackForm', () => {
         sourceId: 1,
         secretMappings: [
           {
-            name: 'password',
+            name: '',
             sourceId: 3,
             path: 'secret/app',
-            key: 'password',
+            key: '',
           },
         ],
       });

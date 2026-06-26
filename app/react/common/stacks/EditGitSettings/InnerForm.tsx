@@ -22,7 +22,7 @@ import { StackEnvironmentVariablesPanel } from '@@/form-components/EnvironmentVa
 import { PruneField } from '../PruneField';
 
 import { FormValues } from './types';
-import { SecretMappingsFieldset } from './SecretMappingsFieldset';
+import { SecretMappingsFieldset } from '../SecretMappingsFieldset';
 
 export function InnerForm({
   stackName,

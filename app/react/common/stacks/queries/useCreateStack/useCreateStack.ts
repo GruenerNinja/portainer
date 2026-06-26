@@ -12,6 +12,7 @@ import PortainerError from '@/portainer/error';
 import { withError, withInvalidate } from '@/react-tools/react-query';
 import { transformAutoUpdateViewModel } from '@/react/portainer/gitops/AutoUpdateFieldset/utils';
 import { RegistryId } from '@/react/portainer/registries/types/registry';
+import { StackSecretMapping } from '@/react/common/stacks/types';
 
 import { queryKeys } from '../query-keys';
 
@@ -78,6 +79,7 @@ export type SwarmCreatePayload =
       payload: SwarmBasePayload & {
         git: GitFormModel;
         relativePathSettings?: RelativePathModel;
+        secretMappings?: StackSecretMapping[];
         fromAppTemplate?: boolean;
         webhook?: string;
       };
@@ -108,6 +110,7 @@ type StandaloneCreatePayload =
       payload: DockerBasePayload & {
         git: GitFormModel;
         relativePathSettings?: RelativePathModel;
+        secretMappings?: StackSecretMapping[];
         fromAppTemplate?: boolean;
         webhook?: string;
       };
@@ -203,6 +206,7 @@ function createSwarmStack({ method, payload }: SwarmCreatePayload) {
           payload.git.AutoUpdate,
           payload.webhook
         ),
+        secretMappings: mapSecretMappings(payload.secretMappings),
         environmentId: payload.environmentId,
         swarmID: payload.swarmId,
         additionalFiles: payload.git.AdditionalFiles,
@@ -250,6 +254,7 @@ function createStandaloneStack({ method, payload }: StandaloneCreatePayload) {
           payload.git.AutoUpdate,
           payload.webhook
         ),
+        secretMappings: mapSecretMappings(payload.secretMappings),
         environmentId: payload.environmentId,
         additionalFiles: payload.git.AdditionalFiles,
         fromAppTemplate: payload.fromAppTemplate,
@@ -268,6 +273,13 @@ function createStandaloneStack({ method, payload }: StandaloneCreatePayload) {
     default:
       throw new Error('Invalid method');
   }
+}
+
+function mapSecretMappings(secretMappings?: StackSecretMapping[]) {
+  return secretMappings?.map((mapping) => ({
+    ...mapping,
+    name: mapping.key,
+  }));
 }
 
 function createKubernetesStack({ method, payload }: KubernetesCreatePayload) {

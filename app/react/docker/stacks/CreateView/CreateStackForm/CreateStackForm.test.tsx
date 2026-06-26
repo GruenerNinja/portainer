@@ -9,6 +9,7 @@ import { withTestQueryProvider } from '@/react/test-utils/withTestQuery';
 import { withTestRouter } from '@/react/test-utils/withRouter';
 import { withUserProvider } from '@/react/test-utils/withUserProvider';
 import { server } from '@/setup-tests/server';
+import { Source } from '@/react/portainer/gitops/sources/types';
 
 import { CreateStackForm } from './CreateStackForm';
 
@@ -330,6 +331,156 @@ describe('CreateStackForm', () => {
           composeFile: 'docker-compose.yml',
         })
       );
+    });
+  });
+
+  it('should submit git form with Vault secret mappings', async () => {
+    let requestBody: unknown;
+    server.use(
+      http.get('/api/gitops/sources', ({ request }) => {
+        const sourceType = new URL(request.url).searchParams.get('type');
+
+        if (sourceType === 'vault') {
+          const vaultSources: Source[] = [
+            {
+              id: 2,
+              name: 'team-vault',
+              type: 'vault',
+              url: 'https://vault.example.com',
+              status: 'healthy',
+              usedBy: 0,
+              environments: 0,
+              lastSync: 0,
+            },
+            {
+              id: 3,
+              name: 'prod-vault',
+              type: 'vault',
+              url: 'https://prod-vault.example.com',
+              status: 'healthy',
+              usedBy: 0,
+              environments: 0,
+              lastSync: 0,
+            },
+          ];
+
+          return HttpResponse.json(vaultSources, {
+            headers: {
+              'x-total-count': '2',
+              'x-total-available': '2',
+            },
+          });
+        }
+
+        const gitSources: SourcesSource[] = [
+          {
+            id: 1,
+            name: 'my-source',
+            type: 'git',
+            url: 'https://github.com/test/repo',
+            status: 'healthy',
+          },
+        ];
+
+        return HttpResponse.json(gitSources, {
+          headers: {
+            'x-total-count': '1',
+            'x-total-available': '1',
+          },
+        });
+      }),
+      http.post(
+        '/api/stacks/create/standalone/repository',
+        async ({ request }) => {
+          requestBody = await request.json();
+          return HttpResponse.json({
+            Id: 123,
+            Name: 'test-stack',
+            ResourceControl: { Id: 1 },
+          });
+        }
+      ),
+      http.put('/api/resource_controls/:id', () =>
+        HttpResponse.json({ success: true })
+      ),
+      http.post('/api/gitops/repo/refs', () => HttpResponse.json([])),
+      http.post('/api/gitops/repo/files/search', () =>
+        HttpResponse.json(['docker-compose.yml'])
+      )
+    );
+
+    const user = userEvent.setup();
+    renderComponent();
+
+    await user.click(await screen.findByRole('radio', { name: /repository/i }));
+
+    const nameInput = screen.getByRole('textbox', { name: /name/i });
+    await user.clear(nameInput);
+    await user.paste('test-stack');
+
+    const sourceInput = await screen.findByRole('combobox', {
+      name: /source/i,
+    });
+    await user.click(sourceInput);
+    await user.click(await screen.findByRole('option', { name: 'my-source' }));
+
+    const refsField = screen.getByLabelText(/reference/i);
+    await user.clear(refsField);
+    await user.paste('refs/heads/main');
+
+    const configFileField = screen.getByLabelText(/compose path/i);
+    await user.clear(configFileField);
+    await user.paste('docker-compose.yml');
+
+    await user.click(
+      await screen.findByRole('button', { name: /add mapping/i })
+    );
+
+    const providerInput = await screen.findByRole('combobox', {
+      name: /vault provider/i,
+    });
+    await user.click(providerInput);
+    await user.click(await screen.findByRole('option', { name: 'prod-vault' }));
+
+    const secretPathField = screen.getByRole('textbox', {
+      name: /secret path/i,
+    });
+    await user.clear(secretPathField);
+    await user.click(secretPathField);
+    await user.paste('secret/app');
+
+    const secretKeyField = screen.getByRole('textbox', {
+      name: /secret key/i,
+    });
+    await user.clear(secretKeyField);
+    await user.click(secretKeyField);
+    await user.paste('password');
+
+    await waitFor(() => {
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+
+    const submitButton = screen.getByRole('button', {
+      name: /deploy the stack/i,
+    });
+
+    expect(submitButton).toBeEnabled();
+
+    await user.click(submitButton);
+
+    await waitFor(() => {
+      expect(requestBody).toMatchObject({
+        name: 'test-stack',
+        sourceId: 1,
+        secretMappings: [
+          {
+            name: 'password',
+            sourceId: 3,
+            path: 'secret/app',
+            key: 'password',
+          },
+        ],
+      });
     });
   });
 

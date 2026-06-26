@@ -3,6 +3,7 @@ import { Pair } from '@/react/portainer/settings/types';
 import { AutoUpdateResponse } from '@/react/portainer/gitops/types';
 import { EnvironmentId } from '@/react/portainer/environments/types';
 import { RegistryId } from '@/react/portainer/registries/types/registry';
+import { StackSecretMapping } from '@/react/common/stacks/types';
 
 import { Stack } from '../../types';
 
@@ -30,6 +31,9 @@ export type SwarmGitRepositoryPayload = {
 
   /** Optional GitOps update configuration */
   autoUpdate?: AutoUpdateResponse | null;
+
+  /** Vault secret mappings resolved during deployment */
+  secretMappings?: StackSecretMapping[];
 
   /** Whether the stack supports relative path volume */
   supportRelativePath?: boolean;

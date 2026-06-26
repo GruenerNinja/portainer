@@ -3,10 +3,12 @@ import { KeyRound, Plus, Trash2 } from 'lucide-react';
 
 import { StackSecretMapping } from '@/react/common/stacks/types';
 import { useSources } from '@/react/portainer/gitops/sources/queries/useSources';
+import { Source } from '@/react/portainer/gitops/sources/types';
 
 import { Button } from '@@/buttons';
 import { FormControl } from '@@/form-components/FormControl';
 import { Input } from '@@/form-components/Input';
+import { Select } from '@@/form-components/ReactSelect';
 
 type MappingError = {
   name?: string;
@@ -30,7 +32,9 @@ const emptyMapping: StackSecretMapping = {
 
 export function SecretMappingsFieldset({ values, onChange, errors }: Props) {
   const sourcesQuery = useSources({ type: 'vault' });
-  const sources = sourcesQuery.data?.data ?? [];
+  const sources = (sourcesQuery.data?.data ?? []).filter(
+    (source) => source.type === 'vault'
+  );
   const defaultSourceId = sources[0]?.id ?? 0;
 
   useEffect(() => {
@@ -83,6 +87,8 @@ export function SecretMappingsFieldset({ values, onChange, errors }: Props) {
               // Rows do not have a stable database ID.
               key={index}
               mapping={mapping}
+              sources={sources}
+              isLoadingSources={sourcesQuery.isLoading}
               index={index}
               error={getRowError(errors, index)}
               providerError={
@@ -118,6 +124,8 @@ function getRowError(
 
 function SecretMappingRow({
   mapping,
+  sources,
+  isLoadingSources,
   index,
   error,
   providerError,
@@ -125,15 +133,46 @@ function SecretMappingRow({
   onRemove,
 }: {
   mapping: StackSecretMapping;
+  sources: Source[];
+  isLoadingSources: boolean;
   index: number;
   error?: MappingError;
   providerError?: string;
   onChange(value: StackSecretMapping): void;
   onRemove(): void;
 }) {
+  const selectedSource = sources.find(
+    (source) => source.id === mapping.sourceId
+  );
+
   return (
     <div className="rounded border border-solid border-gray-5 bg-gray-1 p-4 th-dark:border-gray-7 th-dark:bg-gray-10">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto] md:items-start">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)_auto] md:items-start">
+        <FormControl
+          inputId={`secret-provider-${index}`}
+          label="Vault provider"
+          required
+          errors={error?.sourceId}
+          size="vertical"
+          className="mb-0"
+        >
+          <Select<Source>
+            inputId={`secret-provider-${index}`}
+            value={selectedSource ?? null}
+            options={sources}
+            getOptionLabel={(source) => source.name}
+            getOptionValue={(source) => String(source.id)}
+            onChange={(source) =>
+              onChange({ ...mapping, sourceId: source?.id ?? 0 })
+            }
+            isLoading={isLoadingSources}
+            isClearable
+            noOptionsMessage={() => 'No Vault providers available'}
+            placeholder="Select provider"
+            data-cy="secret-mapping-provider-select"
+          />
+        </FormControl>
+
         <FormControl
           inputId={`secret-path-${index}`}
           label={
@@ -186,9 +225,9 @@ function SecretMappingRow({
           data-cy="remove-secret-mapping-button"
         />
       </div>
-      {(providerError || error?.sourceId || error?.name) && (
+      {(providerError || error?.name) && (
         <p className="small text-danger mb-0 mt-3" role="alert">
-          {providerError || error?.sourceId || error?.name}
+          {providerError || error?.name}
         </p>
       )}
     </div>

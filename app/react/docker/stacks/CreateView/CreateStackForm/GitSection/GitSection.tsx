@@ -2,6 +2,7 @@ import { useFormikContext } from 'formik';
 
 import { GitForm } from '@/react/portainer/gitops/GitForm';
 import { baseStackWebhookUrl } from '@/portainer/helpers/webhookHelper';
+import { SecretMappingsFieldset } from '@/react/common/stacks/SecretMappingsFieldset';
 
 import { FormValues } from '../types';
 
@@ -13,7 +14,8 @@ interface Props {
 }
 
 export function GitSection({ webhookId, isDockerStandalone = false }: Props) {
-  const { values, errors, setValues } = useFormikContext<FormValues>();
+  const { values, errors, setFieldValue, setValues } =
+    useFormikContext<FormValues>();
 
   return (
     <>
@@ -38,6 +40,16 @@ export function GitSection({ webhookId, isDockerStandalone = false }: Props) {
         webhookId={webhookId}
       />
       <StackRelativePathFieldset isDockerStandalone={isDockerStandalone} />
+      <SecretMappingsFieldset
+        values={values.secretMappings}
+        onChange={(value) => setFieldValue('secretMappings', value)}
+        errors={
+          Array.isArray(errors.secretMappings) ||
+          typeof errors.secretMappings === 'string'
+            ? errors.secretMappings
+            : undefined
+        }
+      />
     </>
   );
 }

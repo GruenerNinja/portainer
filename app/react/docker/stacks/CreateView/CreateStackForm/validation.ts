@@ -1,4 +1,4 @@
-import { object, array, number, mixed, SchemaOf, bool } from 'yup';
+import { object, array, number, mixed, SchemaOf, bool, string } from 'yup';
 
 import { accessControlFormValidation } from '@/react/portainer/access-control/AccessControlForm';
 import { EnvironmentId } from '@/react/portainer/environments/types';
@@ -6,6 +6,7 @@ import { nameValidation } from '@/react/docker/stacks/common/NameField';
 import { Stack } from '@/react/common/stacks/types';
 
 import { envVarValidation } from '@@/form-components/EnvironmentVariablesFieldset';
+import { buildUniquenessTest } from '@@/form-components/validate-unique';
 
 import { BaseFormValues, FormValues } from './types';
 import { getEditorValidationSchema } from './EditorSection/validation';
@@ -67,6 +68,20 @@ function getBaseValidationSchema({
       'Stack name is required'
     ),
     env: envVarValidation(),
+    secretMappings: array(
+      object({
+        name: string().default(''),
+        sourceId: number()
+          .min(1, 'Vault provider is required')
+          .required('Vault provider is required'),
+        path: string().required('Secret path is required'),
+        key: string().required('Secret key is required'),
+      })
+    ).test(
+      'unique',
+      'This secret key is already defined',
+      buildUniquenessTest(() => 'This secret key is already defined', 'key')
+    ),
     accessControl: accessControlFormValidation(isAdmin),
     enableWebhook: bool().default(false),
     registries: array(number().required()).default([]),

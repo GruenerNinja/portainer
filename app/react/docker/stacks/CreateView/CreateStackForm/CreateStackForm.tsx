@@ -54,6 +54,7 @@ export function CreateStackForm({ environmentId, isSwarm, swarmId }: Props) {
       variables: [],
     },
     env: [],
+    secretMappings: [],
     enableWebhook: false,
     registries: [],
     accessControl: defaultValues(isAdmin, user.Id),
@@ -181,6 +182,7 @@ function buildCreateStackPayload({
             webhook: webhookId,
             swarmId,
             git: values.git,
+            secretMappings: values.secretMappings,
             relativePathSettings: values.git.SupportRelativePath
               ? {
                   SupportRelativePath: true,
@@ -200,6 +202,7 @@ function buildCreateStackPayload({
         payload: {
           ...basePayload,
           git: values.git,
+          secretMappings: values.secretMappings,
           webhook: webhookId,
           relativePathSettings: values.git.SupportRelativePath
             ? {

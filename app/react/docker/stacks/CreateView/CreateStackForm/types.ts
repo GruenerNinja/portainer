@@ -1,5 +1,6 @@
 import { RegistryId } from '@/react/portainer/registries/types/registry';
 import { AccessControlFormData } from '@/react/portainer/access-control/types';
+import { StackSecretMapping } from '@/react/common/stacks/types';
 
 import { EnvVarValues } from '@@/form-components/EnvironmentVariablesFieldset';
 
@@ -14,6 +15,7 @@ export interface BaseFormValues {
   method: BuildMethod;
   name: string;
   env: EnvVarValues;
+  secretMappings: StackSecretMapping[];
   accessControl: AccessControlFormData;
   enableWebhook: boolean;
   registries: Array<RegistryId>;

@@ -147,17 +147,18 @@ function SecretMappingRow({
 
   return (
     <div className="rounded border border-solid border-gray-5 bg-gray-1 p-4 th-dark:border-gray-7 th-dark:bg-gray-10">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)_auto] md:items-start">
+      <div className="flex w-full flex-col gap-4">
         <FormControl
           inputId={`secret-provider-${index}`}
           label="Vault provider"
           required
           errors={error?.sourceId}
           size="vertical"
-          className="mb-0"
+          className="mb-0 w-full"
         >
           <Select<Source>
             inputId={`secret-provider-${index}`}
+            className="w-full"
             value={selectedSource ?? null}
             options={sources}
             getOptionLabel={(source) => source.name}
@@ -184,10 +185,11 @@ function SecretMappingRow({
           required
           errors={error?.path}
           size="vertical"
-          className="mb-0"
+          className="mb-0 w-full"
         >
           <Input
             id={`secret-path-${index}`}
+            className="w-full"
             value={mapping.path}
             placeholder="secret/app"
             onChange={({ target: { value } }) =>
@@ -203,10 +205,11 @@ function SecretMappingRow({
           required
           errors={error?.key}
           size="vertical"
-          className="mb-0"
+          className="mb-0 w-full"
         >
           <Input
             id={`secret-key-${index}`}
+            className="w-full"
             value={mapping.key}
             placeholder="password"
             onChange={({ target: { value } }) =>
@@ -216,14 +219,15 @@ function SecretMappingRow({
           />
         </FormControl>
 
-        <Button
-          type="button"
-          color="dangerlight"
-          icon={Trash2}
-          className="mt-0 md:mt-7"
-          onClick={onRemove}
-          data-cy="remove-secret-mapping-button"
-        />
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            color="dangerlight"
+            icon={Trash2}
+            onClick={onRemove}
+            data-cy="remove-secret-mapping-button"
+          />
+        </div>
       </div>
       {(providerError || error?.name) && (
         <p className="small text-danger mb-0 mt-3" role="alert">

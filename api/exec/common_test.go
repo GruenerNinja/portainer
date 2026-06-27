@@ -5,6 +5,7 @@ import (
 
 	portainer "github.com/portainer/portainer/api"
 	"github.com/portainer/portainer/api/http/proxy"
+	"github.com/portainer/portainer/api/http/proxy/factory"
 	"github.com/stretchr/testify/require"
 )
 
@@ -28,5 +29,22 @@ func TestFetchEndpointProxy(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "tcp://10.0.0.5:2376", url)
 		require.Nil(t, proxyServer)
+	})
+}
+
+func TestDockerCliTLSConfig(t *testing.T) {
+	tlsConfig := portainer.TLSConfiguration{
+		TLS:           true,
+		TLSSkipVerify: true,
+		TLSCACertPath: "/tmp/ca.pem",
+	}
+	endpoint := &portainer.Endpoint{TLSConfig: tlsConfig}
+
+	t.Run("direct endpoint keeps tls", func(t *testing.T) {
+		require.Equal(t, tlsConfig, dockerCliTLSConfig(endpoint, nil))
+	})
+
+	t.Run("local proxy clears tls", func(t *testing.T) {
+		require.Equal(t, portainer.TLSConfiguration{}, dockerCliTLSConfig(endpoint, &factory.ProxyServer{}))
 	})
 }

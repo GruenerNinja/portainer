@@ -41,6 +41,14 @@ func fetchEndpointProxy(proxyManager *proxy.Manager, endpoint *portainer.Endpoin
 	return fmt.Sprintf("tcp://127.0.0.1:%d", proxy.Port), proxy, nil
 }
 
+func dockerCliTLSConfig(endpoint *portainer.Endpoint, proxy *factory.ProxyServer) portainer.TLSConfiguration {
+	if proxy != nil {
+		return portainer.TLSConfiguration{}
+	}
+
+	return endpoint.TLSConfig
+}
+
 // portainerRegistriesToAuthConfigs converts registries to Docker auth configs.
 // Callers must ensure ECR tokens are valid before calling this function (e.g. via
 // registryutils.RefreshAndPersistECRTokens with a real DataStoreTx). This function

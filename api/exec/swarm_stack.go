@@ -60,7 +60,7 @@ func (manager *SwarmStackManager) Deploy(
 	options := swarm.Options{
 		ProjectName: stack.Name,
 		Host:        url,
-		TLSConfig:   endpoint.TLSConfig,
+		TLSConfig:   dockerCliTLSConfig(endpoint, proxy),
 		Env:         env,
 		WorkingDir:  stack.ProjectPath,
 		Registries:  portainerRegistriesToAuthConfigs(registries),
@@ -104,7 +104,7 @@ func (manager *SwarmStackManager) Remove(
 	return manager.deployer.Remove(context.TODO(), stack.Name, swarm.RemoveOptions{
 		Options: swarm.Options{
 			Host:      url,
-			TLSConfig: endpoint.TLSConfig,
+			TLSConfig: dockerCliTLSConfig(endpoint, proxy),
 		},
 	})
 }

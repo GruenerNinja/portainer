@@ -5,18 +5,21 @@ import (
 	"fmt"
 	"sync"
 
+	portainer "github.com/portainer/portainer/api"
 	"github.com/portainer/portainer/api/logs"
 
 	"github.com/docker/cli/cli/command"
 	configtypes "github.com/docker/cli/cli/config/types"
 	"github.com/docker/cli/cli/flags"
 	"github.com/docker/docker/registry"
+	"github.com/docker/go-connections/tlsconfig"
 	"github.com/rs/zerolog/log"
 )
 
 // DockerCliOptions holds the settings required to initialise a DockerCli.
 type DockerCliOptions struct {
 	Host       string
+	TLSConfig  portainer.TLSConfiguration
 	Registries []configtypes.AuthConfig
 }
 
@@ -42,6 +45,7 @@ func WithCli(
 	if options.Host != "" {
 		opts.Hosts = []string{options.Host}
 	}
+	applyTLSOptions(opts, options.TLSConfig)
 
 	mu.Lock()
 	if err := cli.Initialize(opts); err != nil {
@@ -83,4 +87,19 @@ func WithCli(
 	}
 
 	return cliFn(ctx, cli)
+}
+
+func applyTLSOptions(opts *flags.ClientOptions, tlsCfg portainer.TLSConfiguration) {
+	if !tlsCfg.TLS && !tlsCfg.TLSSkipVerify {
+		return
+	}
+
+	opts.TLS = true
+	opts.TLSVerify = !tlsCfg.TLSSkipVerify
+	opts.TLSOptions = &tlsconfig.Options{
+		CAFile:             tlsCfg.TLSCACertPath,
+		CertFile:           tlsCfg.TLSCertPath,
+		KeyFile:            tlsCfg.TLSKeyPath,
+		InsecureSkipVerify: tlsCfg.TLSSkipVerify,
+	}
 }

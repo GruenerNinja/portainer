@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	portainer "github.com/portainer/portainer/api"
 	"github.com/portainer/portainer/api/filesystem"
 	"github.com/portainer/portainer/pkg/libstack"
 
@@ -36,6 +37,7 @@ import (
 type Options struct {
 	ProjectName string
 	Host        string
+	TLSConfig   portainer.TLSConfiguration
 	Env         []string
 	WorkingDir  string
 	Registries  []configtypes.AuthConfig
@@ -81,7 +83,7 @@ func (d *SwarmDeployer) Deploy(ctx context.Context, filePaths []string, options 
 
 	return libstack.WithCli(
 		ctx,
-		libstack.DockerCliOptions{Host: options.Host, Registries: options.Registries},
+		libstack.DockerCliOptions{Host: options.Host, TLSConfig: options.TLSConfig, Registries: options.Registries},
 		func(_ context.Context, dockerCLI *command.DockerCli) error {
 			return deployStack(callerCtx, dockerCLI, filePaths, options)
 		})
@@ -101,7 +103,7 @@ func (d *SwarmDeployer) Remove(ctx context.Context, projectName string, options 
 
 	return libstack.WithCli(
 		ctx,
-		libstack.DockerCliOptions{Host: options.Host, Registries: options.Registries},
+		libstack.DockerCliOptions{Host: options.Host, TLSConfig: options.TLSConfig, Registries: options.Registries},
 		func(_ context.Context, dockerCLI *command.DockerCli) error {
 			apiClient := dockerCLI.Client()
 
@@ -741,7 +743,7 @@ func (d *SwarmDeployer) WaitForStatus(
 
 	err := libstack.WithCli(
 		ctx,
-		libstack.DockerCliOptions{Host: options.Host, Registries: options.Registries},
+		libstack.DockerCliOptions{Host: options.Host, TLSConfig: options.TLSConfig, Registries: options.Registries},
 		func(_ context.Context, dockerCLI *command.DockerCli) error {
 			apiClient := dockerCLI.Client()
 

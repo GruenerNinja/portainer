@@ -85,6 +85,7 @@ type Options struct {
 	// WorkingDir is the working directory for the command execution
 	WorkingDir  string
 	Host        string
+	TLSConfig   portainer.TLSConfiguration
 	ProjectName string
 	// EnvFilePath is the path to a .env file
 	EnvFilePath string

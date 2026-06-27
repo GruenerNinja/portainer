@@ -55,6 +55,7 @@ func (manager *ComposeStackManager) Up(ctx context.Context, stack *portainer.Sta
 			WorkingDir:  stack.ProjectPath,
 			EnvFilePath: envFilePath,
 			Host:        url,
+			TLSConfig:   endpoint.TLSConfig,
 			ProjectName: stack.Name,
 			Registries:  portainerRegistriesToAuthConfigs(options.Registries),
 		},
@@ -89,6 +90,7 @@ func (manager *ComposeStackManager) Run(ctx context.Context, stack *portainer.St
 			WorkingDir:  stack.ProjectPath,
 			EnvFilePath: envFilePath,
 			Host:        url,
+			TLSConfig:   endpoint.TLSConfig,
 			ProjectName: stack.Name,
 			Registries:  portainerRegistriesToAuthConfigs(options.Registries),
 		},
@@ -114,6 +116,7 @@ func (manager *ComposeStackManager) Down(ctx context.Context, stack *portainer.S
 		Options: libstack.Options{
 			WorkingDir: "",
 			Host:       url,
+			TLSConfig:  endpoint.TLSConfig,
 		},
 	}); err != nil {
 		return fmt.Errorf("failed to remove a stack: %w", err)
@@ -141,6 +144,7 @@ func (manager *ComposeStackManager) Pull(ctx context.Context, stack *portainer.S
 		WorkingDir:  stack.ProjectPath,
 		EnvFilePath: envFilePath,
 		Host:        url,
+		TLSConfig:   endpoint.TLSConfig,
 		ProjectName: stack.Name,
 		Registries:  portainerRegistriesToAuthConfigs(options.Registries),
 	}); err != nil {

@@ -42,7 +42,7 @@ func (c *ComposeDeployer) withComposeService(
 	composeFn func(api.Compose, *types.Project) error,
 ) error {
 	return libstack.WithCli(ctx,
-		libstack.DockerCliOptions{Host: options.Host, Registries: options.Registries},
+		libstack.DockerCliOptions{Host: options.Host, TLSConfig: options.TLSConfig, Registries: options.Registries},
 		func(ctx context.Context, cli *command.DockerCli) error {
 			composeService := c.createComposeServiceFn(cli)
 
@@ -153,7 +153,7 @@ func (c *ComposeDeployer) Run(ctx context.Context, filePaths []string, serviceNa
 // Remove stops and removes containers
 func (c *ComposeDeployer) Remove(ctx context.Context, projectName string, filePaths []string, options libstack.RemoveOptions) error {
 	if err := libstack.WithCli(ctx,
-		libstack.DockerCliOptions{Host: options.Host, Registries: options.Registries},
+		libstack.DockerCliOptions{Host: options.Host, TLSConfig: options.TLSConfig, Registries: options.Registries},
 		func(ctx context.Context, cli *command.DockerCli) error {
 			composeService := compose.NewComposeService(cli)
 

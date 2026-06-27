@@ -8,6 +8,7 @@ import (
 	portainer "github.com/portainer/portainer/api"
 	"github.com/portainer/portainer/api/http/proxy"
 	"github.com/portainer/portainer/api/http/proxy/factory"
+	"github.com/portainer/portainer/api/internal/endpointutils"
 	"github.com/portainer/portainer/api/internal/registryutils"
 
 	"github.com/docker/cli/cli/config/types"
@@ -26,6 +27,10 @@ func normalizeStackName(name string) string {
 func fetchEndpointProxy(proxyManager *proxy.Manager, endpoint *portainer.Endpoint) (string, *factory.ProxyServer, error) {
 	if strings.HasPrefix(endpoint.URL, "unix://") || strings.HasPrefix(endpoint.URL, "npipe://") {
 		return "", nil, nil
+	}
+
+	if !endpointutils.IsAgentEndpoint(endpoint) {
+		return endpoint.URL, nil, nil
 	}
 
 	proxy, err := proxyManager.CreateAgentProxyServer(endpoint)

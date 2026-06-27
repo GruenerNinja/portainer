@@ -672,6 +672,32 @@ func Test_MaxConcurrency(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func Test_WithComposeServiceCanDisableBuildKit(t *testing.T) {
+	const composeFileContent = `services:
+  service-1:
+    image: alpine:latest`
+
+	w := ComposeDeployer{
+		createComposeServiceFn: func(cli command.Cli, _ ...compose.Option) api.Compose {
+			enabled, err := cli.BuildKitEnabled()
+			require.NoError(t, err)
+			require.False(t, enabled)
+
+			return &mockComposeService{}
+		},
+	}
+
+	composeFilepath := createFile(t, t.TempDir(), "docker-compose.yml", composeFileContent)
+
+	err := w.withComposeService(t.Context(), []string{composeFilepath}, libstack.Options{
+		ProjectName:     "compose_disable_buildkit_test",
+		DisableBuildKit: true,
+	}, func(api.Compose, *types.Project) error {
+		return nil
+	})
+	require.NoError(t, err)
+}
+
 func Test_createProject(t *testing.T) {
 	dir := t.TempDir()
 	projectName := "create-project-test"

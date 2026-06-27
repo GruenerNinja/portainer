@@ -44,7 +44,12 @@ func (c *ComposeDeployer) withComposeService(
 	return libstack.WithCli(ctx,
 		libstack.DockerCliOptions{Host: options.Host, TLSConfig: options.TLSConfig, Registries: options.Registries},
 		func(ctx context.Context, cli *command.DockerCli) error {
-			composeService := c.createComposeServiceFn(cli)
+			var composeCli command.Cli = cli
+			if options.DisableBuildKit {
+				composeCli = buildKitDisabledCli{Cli: composeCli}
+			}
+
+			composeService := c.createComposeServiceFn(composeCli)
 
 			if len(filePaths) == 0 {
 				return composeFn(composeService, nil)

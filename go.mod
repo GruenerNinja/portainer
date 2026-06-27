@@ -23,6 +23,7 @@ require (
 	github.com/docker/cli v28.5.1+incompatible
 	github.com/docker/compose/v2 v2.40.3
 	github.com/docker/docker v28.5.2+incompatible
+	github.com/docker/go-connections v0.6.0
 	github.com/fvbommel/sortorder v1.1.0
 	github.com/g07cha/defender v0.0.0-20180505193036-5665c627c814
 	github.com/go-git/go-billy/v5 v5.9.0
@@ -145,7 +146,6 @@ require (
 	github.com/docker/buildx v0.29.1 // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.9.3 // indirect
-	github.com/docker/go-connections v0.6.0 // indirect
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
 	github.com/docker/go-metrics v0.0.1 // indirect
 	github.com/docker/go-units v0.5.0 // indirect

@@ -83,10 +83,14 @@ type WaitResult struct {
 
 type Options struct {
 	// WorkingDir is the working directory for the command execution
-	WorkingDir  string
-	Host        string
-	TLSConfig   portainer.TLSConfiguration
-	ProjectName string
+	WorkingDir string
+	Host       string
+	TLSConfig  portainer.TLSConfiguration
+	// DisableBuildKit forces compose builds through the classic Docker builder.
+	// This is needed when the Docker host is an HTTP proxy that cannot carry
+	// BuildKit's gRPC session traffic.
+	DisableBuildKit bool
+	ProjectName     string
 	// EnvFilePath is the path to a .env file
 	EnvFilePath string
 	// Env is a list of environment variables to pass to the command, example: "FOO=bar"

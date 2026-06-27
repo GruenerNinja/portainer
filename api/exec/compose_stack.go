@@ -52,12 +52,13 @@ func (manager *ComposeStackManager) Up(ctx context.Context, stack *portainer.Sta
 	filePaths := stackutils.GetStackFilePaths(stack, true)
 	if err = manager.deployer.Deploy(ctx, filePaths, libstack.DeployOptions{
 		Options: libstack.Options{
-			WorkingDir:  stack.ProjectPath,
-			EnvFilePath: envFilePath,
-			Host:        url,
-			TLSConfig:   endpoint.TLSConfig,
-			ProjectName: stack.Name,
-			Registries:  portainerRegistriesToAuthConfigs(options.Registries),
+			WorkingDir:      stack.ProjectPath,
+			EnvFilePath:     envFilePath,
+			Host:            url,
+			TLSConfig:       endpoint.TLSConfig,
+			DisableBuildKit: proxy != nil,
+			ProjectName:     stack.Name,
+			Registries:      portainerRegistriesToAuthConfigs(options.Registries),
 		},
 		ForceRecreate:        options.ForceRecreate,
 		AbortOnContainerExit: options.AbortOnContainerExit,

@@ -33,6 +33,21 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// ManagerOperationHeader forces the Portainer agent to route requests to a swarm
+// manager node. Swarm-scoped operations (e.g. network create/remove) fail on worker
+// nodes without it. This constant is originally defined in the agent, see package/agent/README.md.
+const ManagerOperationHeader = "X-PortainerAgent-ManagerOperation"
+
+// cliOptions builds the Docker CLI options for swarm operations, always setting the
+// manager-operation header so requests proxied through an agent target a manager node.
+func cliOptions(host string, registries []configtypes.AuthConfig) libstack.DockerCliOptions {
+	return libstack.DockerCliOptions{
+		Host:       host,
+		Registries: registries,
+		Headers:    map[string]string{ManagerOperationHeader: "1"},
+	}
+}
+
 // Options holds connection and credential settings for swarm operations.
 type Options struct {
 	ProjectName string
@@ -83,7 +98,7 @@ func (d *SwarmDeployer) Deploy(ctx context.Context, filePaths []string, options 
 
 	return libstack.WithCli(
 		ctx,
-		libstack.DockerCliOptions{Host: options.Host, TLSConfig: options.TLSConfig, Registries: options.Registries},
+		libstack.DockerCliOptions{Host: options.Host, Registries: options.Registries},
 		func(_ context.Context, dockerCLI *command.DockerCli) error {
 			return deployStack(callerCtx, dockerCLI, filePaths, options)
 		})
@@ -103,7 +118,7 @@ func (d *SwarmDeployer) Remove(ctx context.Context, projectName string, options 
 
 	return libstack.WithCli(
 		ctx,
-		libstack.DockerCliOptions{Host: options.Host, TLSConfig: options.TLSConfig, Registries: options.Registries},
+		libstack.DockerCliOptions{Host: options.Host, Registries: options.Registries},
 		func(_ context.Context, dockerCLI *command.DockerCli) error {
 			apiClient := dockerCLI.Client()
 
@@ -226,10 +241,12 @@ func deployStack(ctx context.Context, dockerCLI *command.DockerCli, filePaths []
 		return err
 	}
 
+	registries := normalizeRegistryServerAddresses(options.Registries)
+
 	return deployServices(
 		ctx,
 		dockerCLI.Client(),
-		options.Registries,
+		registries,
 		services,
 		namespace,
 		options.PullImage,
@@ -381,6 +398,23 @@ func createConfigs(ctx context.Context, apiClient client.APIClient, configs []sw
 	}
 
 	return nil
+}
+
+// normalizeRegistryServerAddresses returns a copy of registries with each ServerAddress
+// rewritten so it matches the domain encodeRegistryAuth resolves for docker.io images
+// (dockerregistry.IndexServer).
+func normalizeRegistryServerAddresses(registries []configtypes.AuthConfig) []configtypes.AuthConfig {
+	normalized := make([]configtypes.AuthConfig, len(registries))
+
+	for i, r := range registries {
+		if r.ServerAddress == "" || r.ServerAddress == dockerregistry.DefaultNamespace {
+			r.ServerAddress = dockerregistry.IndexServer
+		}
+
+		normalized[i] = r
+	}
+
+	return normalized
 }
 
 // encodeRegistryAuth finds the registry credentials for the given image and returns
@@ -653,7 +687,7 @@ func getConfigDetails(filePaths []string, workingDir string, env []string) (comp
 		return details, errors.New("at least one compose file must be specified")
 	}
 
-	details.WorkingDir = workingDir
+	details.WorkingDir = filepath.Dir(filePaths[0])
 
 	details.ConfigFiles = make([]composetypes.ConfigFile, 0, len(filePaths))
 	for _, fp := range filePaths {
@@ -667,7 +701,23 @@ func getConfigDetails(filePaths []string, workingDir string, env []string) (comp
 			return details, err
 		}
 
-		resolveEnvFilePaths(config, workingDir)
+		// env_file paths are authored relative to the compose file's directory, but are resolved
+		// under the git repo / project root (workingDir) so they can reference sibling directories
+		// within the root (e.g. an edge-config directory) while staying clamped to it. composeDirRel
+		// is the compose file's directory relative to that root. When no root is provided, fall back
+		// to resolving against the compose file's own directory.
+		composeDir := filepath.Dir(fp)
+		root := workingDir
+		var composeDirRel string
+		if root == "" {
+			root = composeDir
+		} else if rel, err := filepath.Rel(root, composeDir); err == nil {
+			composeDirRel = rel
+		} else {
+			root = composeDir
+		}
+
+		resolveRelativePaths(config, root, composeDirRel)
 
 		details.ConfigFiles = append(details.ConfigFiles, composetypes.ConfigFile{
 			Filename: fp,
@@ -698,7 +748,21 @@ func getConfigDetails(filePaths []string, workingDir string, env []string) (comp
 	return details, nil
 }
 
-func resolveEnvFilePaths(rawConfig map[string]any, workingDir string) {
+// resolveRelativePaths rewrites the on-disk paths a compose file references (service env_file
+// entries and secret/config file entries) to absolute paths clamped under root, so that a relative
+// "../" can reach a sibling directory within the project root but can never escape above it.
+func resolveRelativePaths(rawConfig map[string]any, root, composeDirRel string) {
+	resolveEnvFilePaths(rawConfig, root, composeDirRel)
+	resolveFileObjectPaths(rawConfig, "secrets", root, composeDirRel)
+	resolveFileObjectPaths(rawConfig, "configs", root, composeDirRel)
+}
+
+// resolveEnvFilePaths rewrites each service's relative env_file to an absolute path. Paths are
+// authored relative to the compose file's directory (composeDirRel, relative to root) and are
+// resolved under root via filesystem.JoinPaths. Because JoinPaths keeps the result clamped to root,
+// a "../" can traverse into a sibling directory within the root (e.g. an edge-config directory) but
+// can never escape above it.
+func resolveEnvFilePaths(rawConfig map[string]any, root, composeDirRel string) {
 	services, ok := rawConfig["services"].(map[string]any)
 	if !ok {
 		return
@@ -715,14 +779,38 @@ func resolveEnvFilePaths(rawConfig map[string]any, workingDir string) {
 		switch ef := envFileAny.(type) {
 		case string:
 			if !filepath.IsAbs(ef) {
-				svc["env_file"] = filesystem.JoinPaths(workingDir, ef)
+				svc["env_file"] = filesystem.JoinPaths(root, composeDirRel, ef)
 			}
 		case []any:
 			for i, v := range ef {
 				if s, ok := v.(string); ok && !filepath.IsAbs(s) {
-					ef[i] = filesystem.JoinPaths(workingDir, s)
+					ef[i] = filesystem.JoinPaths(root, composeDirRel, s)
 				}
 			}
+		}
+	}
+}
+
+// resolveFileObjectPaths rewrites relative file entries under a top-level section (secrets or
+// configs) to absolute paths clamped under root via filesystem.JoinPaths, using the same semantics
+// as resolveEnvFilePaths. External and driver-based secrets/configs carry no file key and are
+// skipped. Unlike env_file, the file field is always a single string.
+func resolveFileObjectPaths(rawConfig map[string]any, section, root, composeDirRel string) {
+	objs, ok := rawConfig[section].(map[string]any)
+	if !ok {
+		return
+	}
+	for _, objAny := range objs {
+		obj, ok := objAny.(map[string]any)
+		if !ok {
+			continue
+		}
+		fileAny, ok := obj["file"]
+		if !ok {
+			continue
+		}
+		if s, ok := fileAny.(string); ok && !filepath.IsAbs(s) {
+			obj["file"] = filesystem.JoinPaths(root, composeDirRel, s)
 		}
 	}
 }
@@ -743,7 +831,7 @@ func (d *SwarmDeployer) WaitForStatus(
 
 	err := libstack.WithCli(
 		ctx,
-		libstack.DockerCliOptions{Host: options.Host, TLSConfig: options.TLSConfig, Registries: options.Registries},
+		libstack.DockerCliOptions{Host: options.Host, Registries: options.Registries},
 		func(_ context.Context, dockerCLI *command.DockerCli) error {
 			apiClient := dockerCLI.Client()
 

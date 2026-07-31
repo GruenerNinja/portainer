@@ -40,7 +40,7 @@ export function ConnectionTest() {
 
   if (!settled) {
     return (
-      <Alert color="info" title="Testing connection...">
+      <Alert color="info" title="Testing connection..." className="mt-4">
         Checking that Portainer can reach the source.
       </Alert>
     );
@@ -48,7 +48,7 @@ export function ConnectionTest() {
 
   if (query.isError) {
     return (
-      <Alert color="error" title="Connection failed">
+      <Alert color="error" title="Connection failed" className="mt-4">
         Unable to test the connection. Please try again.
       </Alert>
     );
@@ -56,14 +56,14 @@ export function ConnectionTest() {
 
   if (query.data?.success) {
     return (
-      <Alert color="success" title="Connection successful">
+      <Alert color="success" title="Connection successful" className="mt-4">
         Portainer reached the source with these details.
       </Alert>
     );
   }
 
   return (
-    <Alert color="error" title="Connection failed">
+    <Alert color="error" title="Connection failed" className="mt-4">
       {query.data?.error || 'Unable to reach the source.'}
     </Alert>
   );

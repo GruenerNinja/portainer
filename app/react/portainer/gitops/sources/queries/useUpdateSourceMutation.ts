@@ -22,9 +22,8 @@ export type VaultSourceUpdatePayload = {
   };
 };
 
-export type UpdateSourcePayload =
-  | (SourcesGitSourceUpdatePayload & { type?: 'git' })
-  | (VaultSourceUpdatePayload & { type?: 'vault' });
+export type UpdateSourcePayload = SourcesGitSourceUpdatePayload &
+  VaultSourceUpdatePayload & { type?: 'git' | 'vault' };
 
 async function updateSource(
   id: Source['id'],

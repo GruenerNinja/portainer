@@ -50,6 +50,8 @@ type (
 	// AutoUpdateSettings represents the git auto sync config for stack deployment
 	AutoUpdateSettings struct {
 		// Auto update interval
+		// Deprecated: polling interval now lives on the associated Source (Source.Interval).
+		// Kept for DB backwards-compatibility only; new code must not read or write this field.
 		Interval string `example:"1m30s"`
 		// A UUID generated from client
 		Webhook string `example:"05de31a2-79fa-4644-9c12-faa67e5c49f0"`
@@ -667,6 +669,26 @@ type (
 		Charts          []PolicyChartSummary `json:"charts"`
 		Bundles         []PolicyChartBundle  `json:"bundles,omitempty"`
 		RestoreSettings *RestoreSettings     `json:"restoreSettings,omitempty"`
+	}
+
+	// ResourcePatchConfig is the Config payload for resource-patch-k8s PolicyDesiredState entries:
+	// a policy-agnostic set of field patches the agent applies authoritatively and reverses on detach.
+	ResourcePatchConfig struct {
+		Patches []ResourcePatchOperation `json:"patches"`
+	}
+
+	// ResourcePatchOperation is the patcher operation details for the agent to apply.
+	ResourcePatchOperation struct {
+		APIVersion       string                     `json:"apiVersion"`
+		Kind             string                     `json:"kind"`
+		Resource         string                     `json:"resource"`
+		Name             string                     `json:"name"`
+		Namespace        string                     `json:"namespace,omitempty"`
+		FieldPath        []string                   `json:"fieldPath"`
+		Values           map[string]json.RawMessage `json:"values"`
+		OwnedKeyPrefixes []string                   `json:"ownedKeyPrefixes"`
+		Exclusive        bool                       `json:"exclusive,omitempty"`
+		CreateIfMissing  bool                       `json:"createIfMissing,omitempty"`
 	}
 
 	// PolicyType represents the type of policy
@@ -1352,21 +1374,26 @@ type (
 
 	// Source represents a GitOps source that can be referenced by stacks or deployments.
 	Source struct {
-		ID       SourceID             `json:"id" example:"1"`
-		Name     string               `json:"name" example:"my-source"`
-		LastSync int64                `json:"lastSync,omitempty" example:"1587399600"`
-		Type     SourceType           `json:"type" example:"1"`
-		Git      *gittypes.RepoConfig `json:"git,omitempty"`
-		Registry *Registry            `json:"registry,omitempty"`
-		Helm     *HelmConfig          `json:"helm,omitempty"`
+		ID       SourceID            `json:"id" example:"1"`
+		Name     string              `json:"name" example:"my-source"`
+		LastSync int64               `json:"lastSync,omitempty" example:"1587399600"`
+		Type     SourceType          `json:"type" example:"1"`
+		Git      *gittypes.GitSource `json:"git,omitempty"`
+		Registry *Registry           `json:"registry,omitempty"`
+		Helm     *HelmConfig         `json:"helm,omitempty"`
 		Vault    *VaultConfig         `json:"vault,omitempty"`
 
-		Public             bool     `json:"public"`
-		AdministratorsOnly bool     `json:"administratorsOnly"`
-		UserAccesses       []UserID `json:"userAccesses"`
-		TeamAccesses       []TeamID `json:"teamAccesses"`
-		OwnerID            UserID   `json:"ownerID,omitempty"`
+		Public             bool         `json:"public"`
+		AdministratorsOnly bool         `json:"administratorsOnly"`
+		UserAccesses       []UserID     `json:"userAccesses"`
+		TeamAccesses       []TeamID     `json:"teamAccesses"`
+		OwnerID            UserID       `json:"ownerID,omitempty"`
+		Status             SourceStatus `json:"status,omitempty"`
+		StatusError        string       `json:"statusError,omitempty"`
+		Interval           string       `json:"interval,omitempty" example:"5m"`
 	}
+
+	SourceStatus int
 
 	// SourceID represents a source identifier
 	SourceID int
@@ -1403,6 +1430,8 @@ type (
 		ID TeamID `json:"Id" example:"1"`
 		// Team name
 		Name string `json:"Name" example:"developers"`
+		// Whether members of this team are denied access to Portainer itself (EE only)
+		DenyPortainerAccess bool `json:"DenyPortainerAccess" example:"false"`
 	}
 
 	// TeamAccessPolicies represent the association of an access policy and a team
@@ -1665,10 +1694,14 @@ type (
 
 	// ArtifactFile represents one file within an artifact, tied to a specific source and location within it
 	ArtifactFile struct {
-		SourceID SourceID `json:"sourceId"`
-		Path     string   `json:"path,omitempty" example:"portainer.yaml"`
-		Ref      string   `json:"ref,omitempty" example:"refs/heads/main"`
-		Hash     string   `json:"hash,omitempty" example:"abc123"`
+		SourceID   SourceID     `json:"sourceId"`
+		Path       string       `json:"path,omitempty" example:"portainer.yaml"`
+		Ref        string       `json:"ref,omitempty" example:"refs/heads/main"`
+		Hash       string       `json:"hash,omitempty" example:"abc123"`
+		RefStatus  SourceStatus `json:"refStatus,omitempty"`
+		RefError   string       `json:"refError,omitempty"`
+		PathStatus SourceStatus `json:"pathStatus,omitempty"`
+		PathError  string       `json:"pathError,omitempty"`
 	}
 
 	// Workflow represents a GitOps workflow
@@ -1988,6 +2021,8 @@ type (
 		RemoveImagePullSecretFromServiceAccount(namespace, serviceAccountName, secretName string) error
 		UpdateServiceAccountImagePullSecrets(namespace, name string, secretNames []string) error
 		SetupUserServiceAccount(int, []int, bool) error
+		RemoveUserServiceAccountBindings(userID int) error
+		RemoveUserServiceAccount(userID int) error
 		GetPortainerUserServiceAccount(tokendata *TokenData) (*corev1.ServiceAccount, error)
 		GetServiceAccountBearerToken(userID int) (string, error)
 
@@ -2088,7 +2123,7 @@ type (
 
 const (
 	// APIVersion is the version number of the Portainer API
-	APIVersion = "2.43.0"
+	APIVersion = "2.44.0"
 	// Support annotation for the API version ("STS" for Short-Term Support or "LTS" for Long-Term Support)
 	APIVersionSupport = "STS"
 	// Edition is what this edition of Portainer is called
@@ -2144,6 +2179,8 @@ const (
 	AuthCookieKey = "portainer_api_key"
 	// PortainerCacheHeader is used to enabled FE caching for Kubernetes resources
 	PortainerCacheHeader = "X-Portainer-Cache"
+	// APIKeyHeader is the name of the header used for API key authentication
+	APIKeyHeader = "X-API-KEY"
 	// KubectlShellImageEnvVar is the environment variable used to override the default kubectl shell image
 	KubectlShellImageEnvVar = "KUBECTL_SHELL_IMAGE"
 	// PullLimitCheckDisabledEnvVar is the environment variable used to disable the pull limit check
@@ -2165,6 +2202,8 @@ const (
 	NoSetupTokenEnvVar = "PORTAINER_NO_SETUP_TOKEN"
 	// SetupTokenEnvVar is the environment variable used to provide a custom setup token for admin initialization and restore on an uninitialized instance
 	SetupTokenEnvVar = "PORTAINER_SETUP_TOKEN"
+	// CSRFAllowNoOriginEnvVar is the environment variable used to allow unsafe cookie-authenticated requests that carry no Origin or Sec-Fetch-Site header, reverting the CSRF protection to fail open for such requests
+	CSRFAllowNoOriginEnvVar = "CSRF_ALLOW_NO_ORIGIN"
 )
 
 // List of supported features
@@ -2332,6 +2371,15 @@ const (
 	SourceTypeRegistry
 	SourceTypeHelm
 	SourceTypeVault
+)
+
+const (
+	// SourceStatusUnknown means the check has not been performed yet
+	SourceStatusUnknown SourceStatus = iota
+	// SourceStatusHealthy means the last check succeeded
+	SourceStatusHealthy
+	// SourceStatusError means the last check failed
+	SourceStatusError
 )
 
 const (
@@ -2692,18 +2740,22 @@ const (
 
 const (
 	// PolicyType constants
-	RbacK8s            PolicyType = "rbac-k8s"
-	SecurityK8s        PolicyType = "security-k8s"
-	SetupK8s           PolicyType = "setup-k8s"
-	RegistryK8s        PolicyType = "registry-k8s"
-	RbacDocker         PolicyType = "rbac-docker"
-	SecurityDocker     PolicyType = "security-docker"
-	SetupDocker        PolicyType = "setup-docker"
-	RegistryDocker     PolicyType = "registry-docker"
-	ChangeConfirmation PolicyType = "change-confirmation"
-	CleanupDocker      PolicyType = "cleanup-docker"
-	ObservabilityK8s   PolicyType = "observability-k8s"
+	RbacK8s                 PolicyType = "rbac-k8s"
+	SecurityK8s             PolicyType = "security-k8s"
+	SetupK8s                PolicyType = "setup-k8s"
+	RegistryK8s             PolicyType = "registry-k8s"
+	RbacDocker              PolicyType = "rbac-docker"
+	SecurityDocker          PolicyType = "security-docker"
+	SetupDocker             PolicyType = "setup-docker"
+	RegistryDocker          PolicyType = "registry-docker"
+	ChangeConfirmation      PolicyType = "change-confirmation"
+	CleanupDocker           PolicyType = "cleanup-docker"
+	ObservabilityK8s        PolicyType = "observability-k8s"
+	PodSecurityStandardsK8s PolicyType = "pod-security-standards-k8s"
+	NetworkSecurityK8s      PolicyType = "network-security-k8s"
 )
+
+const ResourcePatchAgentType = "resource-patch-k8s"
 
 type HelmInstallStatus string
 

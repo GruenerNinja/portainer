@@ -6,6 +6,7 @@ import (
 	"github.com/portainer/portainer/api/dataservices/source"
 	gittypes "github.com/portainer/portainer/api/git/types"
 	"github.com/portainer/portainer/api/gitops/workflows"
+	"github.com/portainer/portainer/api/http/security"
 )
 
 // stackResponse extends a Stack response with the git source identifier.
@@ -45,6 +46,12 @@ func saveStackGitConfig(tx dataservices.DataStoreTx, userContext source.UserCont
 	return workflows.SaveWorkflowGitConfig(tx, userContext, workflowID, matchArtifact, oldSourceID, cfg)
 }
 
+func persistSourceSyncError(tx dataservices.DataStoreTx, securityContext *security.RestrictedRequestContext, sourceID portainer.SourceID, syncErr error) error {
+	userContext := source.NewUserContext(securityContext.User, securityContext.UserMemberships)
+
+	return workflows.SaveSourceStatus(tx, userContext, sourceID, syncErr)
+}
+
 // newStackResponse fills stack.GitConfig and returns a response that also includes GitSourceId.
 func newStackResponse(tx dataservices.DataStoreTx, userContext source.UserContext, stack *portainer.Stack) (*stackResponse, error) {
 	if stack.WorkflowID == 0 {
@@ -57,6 +64,7 @@ func newStackResponse(tx dataservices.DataStoreTx, userContext source.UserContex
 	}
 
 	stack.GitConfig = gittypes.SanitizeRepoConfig(gitConfig)
+	fillAutoUpdateInterval(tx, userContext, stack)
 
 	return &stackResponse{Stack: *stack, GitSourceId: gitSourceID}, nil
 }
@@ -73,6 +81,23 @@ func fillStackGitConfig(tx dataservices.DataStoreTx, userContext source.UserCont
 	}
 
 	stack.GitConfig = gittypes.SanitizeRepoConfig(gitConfig)
+	fillAutoUpdateInterval(tx, userContext, stack)
 
 	return nil
+}
+
+// fillAutoUpdateInterval restores the deprecated AutoUpdate.Interval field on API responses
+// from the linked Source, so old API clients keep seeing polling intervals set through the GitOps
+// Sources UI.
+func fillAutoUpdateInterval(tx dataservices.DataStoreTx, userContext source.UserContext, stack *portainer.Stack) {
+	src, _, err := workflows.GitSourceAndArtifactForStack(tx, userContext, stack.WorkflowID, stack.ID)
+	if err != nil || src == nil || src.Interval == "" {
+		return
+	}
+
+	if stack.AutoUpdate == nil {
+		stack.AutoUpdate = &portainer.AutoUpdateSettings{}
+	}
+
+	stack.AutoUpdate.Interval = src.Interval
 }

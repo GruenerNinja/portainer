@@ -1,7 +1,7 @@
 import { defineConfig } from '@hey-api/openapi-ts';
 
 export default defineConfig({
-  input: './dist/docs/openapi.yaml',
+  input: './api/docs/openapi.yaml',
   output: {
     path: 'app/react/portainer/generated-api/portainer',
     clean: true,
@@ -22,7 +22,7 @@ export default defineConfig({
     },
     {
       name: '@hey-api/sdk',
-      // validator: true, TODO revert in BE-13103
+      validator: true,
     },
     {
       name: '@hey-api/client-axios',

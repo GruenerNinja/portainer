@@ -155,7 +155,7 @@ type createKubernetesStackResponse struct {
 // @produce json
 // @param body body kubernetesStringDeploymentPayload true "stack config"
 // @param endpointId query int true "Identifier of the environment that will be used to deploy the stack"
-// @success 200 {object} portainer.Stack
+// @success 200 {object} createKubernetesStackResponse
 // @failure 400 "Invalid request"
 // @failure 500 "Server error"
 // @router /stacks/create/kubernetes/string [post]
@@ -192,7 +192,7 @@ func (handler *Handler) createKubernetesStackFromFileContent(w http.ResponseWrit
 		}
 	}
 
-	if _, err := stackbuilders.Build(r.Context(), handler.DataStore, k8sStackBuilder, &stackPayload, endpoint, userID); err != nil {
+	if _, err := stackbuilders.BuildAndDeploy(r.Context(), handler.DataStore, k8sStackBuilder, &stackPayload, endpoint, userID); err != nil {
 		return err
 	}
 
@@ -213,7 +213,7 @@ func (handler *Handler) createKubernetesStackFromFileContent(w http.ResponseWrit
 // @produce json
 // @param body body kubernetesGitDeploymentPayload true "stack config"
 // @param endpointId query int true "Identifier of the environment that will be used to deploy the stack"
-// @success 200 {object} portainer.Stack
+// @success 200 {object} createKubernetesStackResponse
 // @failure 400 "Invalid request"
 // @failure 409 "Stack name or webhook ID already exists"
 // @failure 500 "Server error"
@@ -272,12 +272,12 @@ func (handler *Handler) createKubernetesStackFromGitRepository(w http.ResponseWr
 	k8sStackBuilder := stackbuilders.CreateKubernetesStackGitBuilder(handler.DataStore,
 		handler.FileService,
 		handler.GitService,
-		handler.Scheduler,
+		handler.SourceScheduler,
 		handler.StackDeployer,
 		handler.KubernetesDeployer,
 		user)
 
-	if _, err := stackbuilders.Build(r.Context(), handler.DataStore, k8sStackBuilder, &stackPayload, endpoint, userID); err != nil {
+	if _, err := stackbuilders.BuildAndDeploy(r.Context(), handler.DataStore, k8sStackBuilder, &stackPayload, endpoint, userID); err != nil {
 		return err
 	}
 
@@ -296,7 +296,7 @@ func (handler *Handler) createKubernetesStackFromGitRepository(w http.ResponseWr
 // @produce json
 // @param body body kubernetesManifestURLDeploymentPayload true "stack config"
 // @param endpointId query int true "Identifier of the environment that will be used to deploy the stack"
-// @success 200 {object} portainer.Stack
+// @success 200 {object} createKubernetesStackResponse
 // @failure 400 "Invalid request"
 // @failure 500 "Server error"
 // @router /stacks/create/kubernetes/url [post]
@@ -322,7 +322,7 @@ func (handler *Handler) createKubernetesStackFromManifestURL(w http.ResponseWrit
 		handler.KubernetesDeployer,
 		user)
 
-	if _, err := stackbuilders.Build(r.Context(), handler.DataStore, k8sStackBuilder, &stackPayload, endpoint, userID); err != nil {
+	if _, err := stackbuilders.BuildAndDeploy(r.Context(), handler.DataStore, k8sStackBuilder, &stackPayload, endpoint, userID); err != nil {
 		return err
 	}
 

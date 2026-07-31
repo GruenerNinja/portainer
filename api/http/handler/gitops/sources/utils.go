@@ -1,11 +1,15 @@
 package sources
 
 import (
-	"context"
+	"errors"
+	"time"
 
 	portainer "github.com/portainer/portainer/api"
+	"github.com/portainer/portainer/api/dataservices"
+	sourceDS "github.com/portainer/portainer/api/dataservices/source"
 	gittypes "github.com/portainer/portainer/api/git/types"
 	ce "github.com/portainer/portainer/api/gitops/workflows"
+	httperror "github.com/portainer/portainer/pkg/libhttp/error"
 )
 
 func (h *Handler) buildSource(ctx context.Context, src *portainer.Source, stats ce.SourceStats) Source {
@@ -15,11 +19,24 @@ func (h *Handler) buildSource(ctx context.Context, src *portainer.Source, stats 
 		phase, _ := ce.ComputeGitPhasesForConfig(ctx, h.gitService, src.Git)
 		status = phase.Status
 		sourceErr = phase.Error
-	} else if src.Vault != nil {
-		status = ce.StatusUnknown
 	} else {
 		status = ce.StatusUnknown
 	}
+
+	d, err := time.ParseDuration(interval)
+	if err != nil {
+		return errors.New("invalid interval format")
+	}
+
+	if d < minPollingInterval {
+		return errors.New("interval must be at least 1 minute")
+	}
+
+	return nil
+}
+
+func (h *Handler) buildSourceBase(src *portainer.Source) SourceBase {
+	phase := ce.SourceStatusToPhase(src.Status, src.StatusError)
 
 	url := ""
 	if src.Git != nil {
@@ -28,21 +45,48 @@ func (h *Handler) buildSource(ctx context.Context, src *portainer.Source, stats 
 		url = src.Vault.Address
 	}
 
-	return Source{
-		ID:           src.ID,
-		Name:         src.Name,
-		Type:         sourceTypeString(src.Type),
-		URL:          url,
-		Status:       status,
-		Error:        sourceErr,
-		UsedBy:       stats.WorkflowCount,
-		Environments: len(stats.EndpointIDs),
-		LastSync:     stats.LastSync,
+	return SourceBase{
+		ID:       src.ID,
+		Name:     src.Name,
+		Type:     sourceTypeString(src.Type),
+		URL:      url,
+		Status:   phase.Status,
+		Error:    phase.Error,
+		LastSync: src.LastSync,
+		Interval: src.Interval,
 	}
 }
 
-func redactWorkflowCredentials(wfs []ce.Workflow) []ce.Workflow {
-	redacted := make([]ce.Workflow, len(wfs))
+func (h *Handler) buildSource(src *portainer.Source, stats ce.SourceStats) Source {
+	return Source{
+		SourceBase:   h.buildSourceBase(src),
+		UsedBy:       stats.WorkflowCount,
+		Environments: len(stats.EndpointIDs),
+	}
+}
+
+// sourceStore is the minimal intersection of CE and EE DataStoreTx
+type sourceStore interface {
+	Source() dataservices.SourceService
+}
+
+// ReadSource reads a source by ID
+func ReadSource(tx sourceStore, userContext sourceDS.UserContext, sourceID portainer.SourceID) (*portainer.Source, *httperror.HandlerError) {
+	source, err := tx.Source().Read(userContext, sourceID)
+	if dataservices.IsErrObjectNotFound(err) {
+		return nil, httperror.NotFound("Source not found", err)
+	} else if errors.Is(err, sourceDS.ErrNotEnoughPermission) {
+		return nil, httperror.Forbidden("Not enough permissions to retrieve source", err)
+	} else if err != nil {
+		return nil, httperror.InternalServerError("Unable to retrieve source", err)
+	}
+
+	return source, nil
+}
+
+// RedactWorkflowCredentials returns a copy of wfs with each git credential's password cleared.
+func RedactWorkflowCredentials(wfs []Workflow) []Workflow {
+	redacted := make([]Workflow, len(wfs))
 	for i, wf := range wfs {
 		redacted[i] = wf
 		if wf.GitConfig != nil && wf.GitConfig.Authentication != nil {

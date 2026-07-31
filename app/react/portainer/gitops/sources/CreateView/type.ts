@@ -18,6 +18,10 @@ type GitFormValues = {
     password?: string;
   };
   tlsSkipVerify?: boolean;
+  polling: {
+    enabled: boolean;
+    interval: string;
+  };
   /** Mirrors the connection-test result; not sent in the create payload. */
   connectionOk: boolean;
 };
@@ -61,16 +65,11 @@ export type FormValues = AccessControlFormData & {
 };
 
 export function formValuesToCreatePayload(
-  values: FormValues
-): CreateSourcePayload {
-  const {
-    name,
-    type,
-    authorizedTeams,
-    authorizedUsers,
-    ownership,
-  } = values;
-
+  values: FormValues & { type: 'git' }
+): Extract<CreateSourcePayload, { type: 'git' }>;
+export function formValuesToCreatePayload(values: FormValues): CreateSourcePayload;
+export function formValuesToCreatePayload(values: FormValues): CreateSourcePayload {
+  const { name, type, authorizedTeams, authorizedUsers, ownership } = values;
   const accessControl = {
     administratorsOnly: ownership === ResourceControlOwnership.ADMINISTRATORS,
     public: ownership === ResourceControlOwnership.PUBLIC,
@@ -88,8 +87,7 @@ export function formValuesToCreatePayload(
     };
   }
 
-  const { authentication, tlsSkipVerify, url } = values.git;
-
+  const { authentication, tlsSkipVerify, url, polling } = values.git;
   return {
     type: 'git',
     git: {
@@ -98,6 +96,7 @@ export function formValuesToCreatePayload(
       url,
       authentication: buildAuthPayload(authentication),
       ...accessControl,
+      interval: polling.enabled ? polling.interval : '',
     },
   };
 }

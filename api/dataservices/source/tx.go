@@ -1,6 +1,9 @@
 package source
 
 import (
+	"slices"
+	"time"
+
 	portainer "github.com/portainer/portainer/api"
 	"github.com/portainer/portainer/api/dataservices"
 	gittypes "github.com/portainer/portainer/api/git/types"
@@ -117,6 +120,31 @@ func (service ServiceTx) Update(context UserContext, ID portainer.SourceID, sour
 	return service.base.Update(ID, source)
 }
 
+// UpdateSyncStatus updates only the status fields (Status, StatusError, LastSync) of a source.
+func (service ServiceTx) UpdateSyncStatus(context UserContext, ID portainer.SourceID, status portainer.SourceStatus, statusError string) error {
+	if err := validateUserContext(context); err != nil {
+		return err
+	}
+
+	source, err := service.base.Read(ID)
+	if err != nil {
+		return err
+	}
+
+	if err := enforceUserPermissions(context, source, actionRead); err != nil {
+		return err
+	}
+
+	source.Status = status
+	source.StatusError = statusError
+
+	if status == portainer.SourceStatusHealthy {
+		source.LastSync = time.Now().Unix()
+	}
+
+	return service.base.Update(ID, source)
+}
+
 // Delete deletes a source
 // It validates that the user has access to the source, and has enough permissions to perform the action
 func (service ServiceTx) Delete(context UserContext, ID portainer.SourceID) error {
@@ -174,7 +202,12 @@ func (service ServiceTx) FindOrCreateGitSource(context UserContext, src *portain
 
 		// give user access to the first source if he doesn't have access
 		// to any of the sources that have the same url+auth
-		existing[0].UserAccesses = append(existing[0].UserAccesses, context.ID())
+		if !slices.Contains(existing[0].UserAccesses, context.ID()) {
+			existing[0].UserAccesses = append(existing[0].UserAccesses, context.ID())
+		}
+		// AdministratorsOnly is a hard enforcement that would defeat the grant, and
+		// a source shared with a non-admin is factually no longer admins-only.
+		existing[0].AdministratorsOnly = false
 		if err := service.base.Update(existing[0].ID, &existing[0]); err != nil {
 			return nil, err
 		}
@@ -184,7 +217,7 @@ func (service ServiceTx) FindOrCreateGitSource(context UserContext, src *portain
 	toCreate := &portainer.Source{
 		Name: src.Name,
 		Type: portainer.SourceTypeGit,
-		Git: &gittypes.RepoConfig{
+		Git: &gittypes.GitSource{
 			URL:            src.Git.URL,
 			Authentication: src.Git.Authentication,
 			TLSSkipVerify:  src.Git.TLSSkipVerify,

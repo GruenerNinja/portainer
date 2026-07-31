@@ -33,7 +33,7 @@ func TestStackFile_GitPendingRedeploy_Returns409(t *testing.T) {
 	fileService, err := filesystem.NewService(tempDir, "")
 	require.NoError(t, err)
 
-	handler := NewHandler(testhelpers.NewTestRequestBouncer())
+	handler := NewHandler(testhelpers.NewTestRequestBouncer(), nil)
 	handler.FileService = fileService
 	handler.DataStore = store
 
@@ -41,9 +41,8 @@ func TestStackFile_GitPendingRedeploy_Returns409(t *testing.T) {
 
 	src := &portainer.Source{
 		Type: portainer.SourceTypeGit,
-		Git: &gittypes.RepoConfig{
-			URL:            "https://github.com/portainer/portainer.git",
-			ConfigFilePath: "docker-compose.yml",
+		Git: &gittypes.GitSource{
+			URL: "https://github.com/portainer/portainer.git",
 		},
 	}
 	require.NoError(t, store.Source().Create(source.InsecureNewAdminContext(), src))
@@ -91,7 +90,7 @@ func TestStackFile_MatchingGitSettings_ReturnsFileContent(t *testing.T) {
 	fileService, err := filesystem.NewService(tempDir, "")
 	require.NoError(t, err)
 
-	handler := NewHandler(testhelpers.NewTestRequestBouncer())
+	handler := NewHandler(testhelpers.NewTestRequestBouncer(), nil)
 	handler.FileService = fileService
 	handler.DataStore = store
 

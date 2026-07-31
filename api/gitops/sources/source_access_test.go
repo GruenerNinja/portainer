@@ -11,13 +11,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestValidateSourceForStack_ValidGitSource_ReturnsNil(t *testing.T) {
+func TestValidateSourceForStack_ValidGitSource_ReturnsNoError(t *testing.T) {
 	t.Parallel()
 	_, store := datastore.MustNewTestStore(t, false, false)
 
 	src := &portainer.Source{
 		Type: portainer.SourceTypeGit,
-		Git:  &gittypes.RepoConfig{URL: "https://github.com/org/repo"},
+		Git:  &gittypes.GitSource{URL: "https://github.com/org/repo"},
 	}
 	require.NoError(t, store.Source().Create(adminUserContext, src))
 

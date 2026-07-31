@@ -31,7 +31,7 @@ func GitSourceAndArtifactForStack(tx gitSourceStore, userContext source.UserCont
 		return nil, nil, err
 	}
 
-	sourceMap, err := loadWorkflowSources(tx, userContext, wf)
+	sourceMap, err := LoadWorkflowSources(tx, userContext, wf)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -68,7 +68,7 @@ func GitSourceAndArtifactForEdgeStack(tx gitSourceStore, userContext source.User
 		return nil, nil, err
 	}
 
-	sourceMap, err := loadWorkflowSources(tx, userContext, wf)
+	sourceMap, err := LoadWorkflowSources(tx, userContext, wf)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -167,6 +167,66 @@ func UpdateArtifactFileForEdgeStack(tx gitSourceStore, workflowID portainer.Work
 	return nil
 }
 
+func UpdateSourceSyncStatus(tx gitSourceStore, userContext source.UserContext, sourceID portainer.SourceID, status portainer.SourceStatus, statusError string) error {
+	if sourceID == 0 {
+		return nil
+	}
+
+	return tx.Source().UpdateSyncStatus(userContext, sourceID, status, statusError)
+}
+
+func checkResultStatus(checkErr error) (portainer.SourceStatus, string) {
+	if checkErr != nil {
+		return portainer.SourceStatusError, checkErr.Error()
+	}
+
+	return portainer.SourceStatusHealthy, ""
+}
+
+func SaveSourceStatus(tx gitSourceStore, userContext source.UserContext, sourceID portainer.SourceID, checkErr error) error {
+	status, statusError := checkResultStatus(checkErr)
+
+	return UpdateSourceSyncStatus(tx, userContext, sourceID, status, statusError)
+}
+
+func SaveStackStatus(tx gitSourceStore, userContext source.UserContext, workflowID portainer.WorkflowID, stackID portainer.StackID, sourceID portainer.SourceID, checkErr error) error {
+	if workflowID == 0 {
+		return nil
+	}
+
+	status, statusError := checkResultStatus(checkErr)
+
+	if err := UpdateArtifactFileForStack(tx, workflowID, stackID, sourceID, func(a *portainer.ArtifactFile) {
+		a.RefStatus = status
+		a.RefError = statusError
+		a.PathStatus = status
+		a.PathError = statusError
+	}); err != nil {
+		return err
+	}
+
+	return UpdateSourceSyncStatus(tx, userContext, sourceID, status, statusError)
+}
+
+func SaveEdgeStackStatus(tx gitSourceStore, userContext source.UserContext, workflowID portainer.WorkflowID, edgeStackID portainer.EdgeStackID, sourceID portainer.SourceID, checkErr error) error {
+	if workflowID == 0 {
+		return nil
+	}
+
+	status, statusError := checkResultStatus(checkErr)
+
+	if err := UpdateArtifactFileForEdgeStack(tx, workflowID, edgeStackID, sourceID, func(a *portainer.ArtifactFile) {
+		a.RefStatus = status
+		a.RefError = statusError
+		a.PathStatus = status
+		a.PathError = statusError
+	}); err != nil {
+		return err
+	}
+
+	return UpdateSourceSyncStatus(tx, userContext, sourceID, status, statusError)
+}
+
 // FindOrCreateGitSource returns an existing Source whose URL and authentication match cfg,
 // or creates a new one. Only URL, authentication, and TLSSkipVerify are stored on the Source;
 // per-stack fields (ReferenceName, ConfigFilePath, ConfigHash) belong in the Artifact.
@@ -193,14 +253,18 @@ func SaveWorkflowGitConfig(tx gitSourceStore, userContext source.UserContext, wo
 		newSrc, err := FindOrCreateGitSource(tx, userContext, &portainer.Source{
 			Name: gittypes.RepoName(cfg.URL),
 			Type: portainer.SourceTypeGit,
-			Git:  cfg,
+			Git: &gittypes.GitSource{
+				URL:            cfg.URL,
+				Authentication: cfg.Authentication,
+				TLSSkipVerify:  cfg.TLSSkipVerify,
+			},
 		})
 		if err != nil {
 			return fmt.Errorf("failed to find or create source: %w", err)
 		}
 
 		newSourceID = newSrc.ID
-	} else {
+	} else if !gitAuthEqual(cfg.Authentication, src.Git.Authentication) || cfg.TLSSkipVerify != src.Git.TLSSkipVerify {
 		src.Git.Authentication = cfg.Authentication
 		src.Git.TLSSkipVerify = cfg.TLSSkipVerify
 
@@ -215,6 +279,14 @@ func SaveWorkflowGitConfig(tx gitSourceStore, userContext source.UserContext, wo
 		Path:     cfg.ConfigFilePath,
 		Hash:     cfg.ConfigHash,
 	})
+}
+
+func gitAuthEqual(a, b *gittypes.GitAuthentication) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+
+	return *a == *b
 }
 
 // SaveWorkflowArtifact replaces the ArtifactFile referencing oldSourceID on the Artifact matched by
@@ -242,6 +314,10 @@ func SaveWorkflowArtifact(tx gitSourceStore, workflowID portainer.WorkflowID, ma
 			f.Ref = update.Ref
 			f.Path = update.Path
 			f.Hash = update.Hash
+			f.RefStatus = portainer.SourceStatusUnknown
+			f.RefError = ""
+			f.PathStatus = portainer.SourceStatusUnknown
+			f.PathError = ""
 
 			break
 		}
@@ -266,35 +342,9 @@ func LoadWorkflowMap(tx gitSourceStore, ids set.Set[portainer.WorkflowID]) (map[
 	return result, nil
 }
 
-// LoadWorkflowAndSourceMaps fetches workflows by their IDs and the sources they reference,
-// collecting source IDs in a single pass over the workflows.
-func LoadWorkflowAndSourceMaps(tx gitSourceStore, userContext source.UserContext, ids set.Set[portainer.WorkflowID]) (map[portainer.WorkflowID]portainer.Workflow, map[portainer.SourceID]portainer.Source, error) {
-	wfMap := make(map[portainer.WorkflowID]portainer.Workflow, len(ids))
-	sourceIDs := make(set.Set[portainer.SourceID])
-	for id := range ids {
-		wf, err := tx.Workflow().Read(id)
-		if err != nil {
-			return nil, nil, err
-		}
-		wfMap[id] = *wf
-		for _, as := range wf.Artifacts {
-			for _, f := range as.Files {
-				sourceIDs.Add(f.SourceID)
-			}
-		}
-	}
-
-	srcMap, err := loadSourceMap(tx, userContext, sourceIDs)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return wfMap, srcMap, nil
-}
-
-// loadWorkflowSources collects all unique SourceIDs referenced by wf and returns them as a map.
+// LoadWorkflowSources collects all unique SourceIDs referenced by wf and returns them as a map.
 // This avoids reading the same Source record more than once when files share a SourceID.
-func loadWorkflowSources(tx gitSourceStore, userContext source.UserContext, wf *portainer.Workflow) (map[portainer.SourceID]portainer.Source, error) {
+func LoadWorkflowSources(tx gitSourceStore, userContext source.UserContext, wf *portainer.Workflow) (map[portainer.SourceID]portainer.Source, error) {
 	ids := make(set.Set[portainer.SourceID])
 	for _, as := range wf.Artifacts {
 		for _, f := range as.Files {
@@ -302,11 +352,11 @@ func loadWorkflowSources(tx gitSourceStore, userContext source.UserContext, wf *
 		}
 	}
 
-	return loadSourceMap(tx, userContext, ids)
+	return LoadSourceMap(tx, userContext, ids)
 }
 
-// loadSourceMap fetches sources by their IDs and returns them keyed by ID.
-func loadSourceMap(tx gitSourceStore, userContext source.UserContext, ids set.Set[portainer.SourceID]) (map[portainer.SourceID]portainer.Source, error) {
+// LoadSourceMap fetches sources by their IDs and returns them keyed by ID.
+func LoadSourceMap(tx gitSourceStore, userContext source.UserContext, ids set.Set[portainer.SourceID]) (map[portainer.SourceID]portainer.Source, error) {
 	sources, err := tx.Source().ReadAll(userContext, func(s portainer.Source) bool {
 		return ids.Contains(s.ID)
 	})

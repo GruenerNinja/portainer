@@ -203,29 +203,33 @@ func Test_redeployWhenChanged_DoesNothingWhenNoGitChanges(t *testing.T) {
 
 	src := &portainer.Source{
 		Type: portainer.SourceTypeGit,
-		Git: &gittypes.RepoConfig{
-			URL:           "url",
-			ReferenceName: "ref",
-			ConfigHash:    "oldHash",
+		Git: &gittypes.GitSource{
+			URL: "url",
 		},
 	}
 	err = store.Source().Create(adminUserContext, src)
 	require.NoError(t, err, "failed to create source")
 
-	wf := &portainer.Workflow{Artifacts: []portainer.Artifact{{Files: []portainer.ArtifactFile{{SourceID: src.ID}}}}}
+	wf := &portainer.Workflow{Artifacts: []portainer.Artifact{{StackID: 2, Files: []portainer.ArtifactFile{{SourceID: src.ID}}}}}
 	err = store.Workflow().Create(wf)
 	require.NoError(t, err, "failed to create workflow")
 
 	err = store.Stack().Create(&portainer.Stack{
-		ID:          1,
+		ID:          2,
 		CreatedBy:   "admin",
 		ProjectPath: tmpDir,
 		WorkflowID:  wf.ID,
 	})
 	require.NoError(t, err, "failed to create a test stack")
 
-	err = RedeployWhenChanged(t.Context(), 1, nil, store, testhelpers.NewGitService(nil, "oldHash"))
+	err = RedeployWhenChanged(t.Context(), 2, nil, store, testhelpers.NewGitService(nil, "oldHash"))
 	require.NoError(t, err)
+
+	updatedSrc, err := store.Source().Read(adminUserContext, src.ID)
+	require.NoError(t, err)
+	require.Equal(t, portainer.SourceStatusHealthy, updatedSrc.Status)
+	require.Empty(t, updatedSrc.StatusError)
+	require.NotZero(t, updatedSrc.LastSync)
 }
 
 func Test_redeployWhenChanged_FailsWhenCannotClone(t *testing.T) {
@@ -250,35 +254,39 @@ func Test_redeployWhenChanged_FailsWhenCannotClone(t *testing.T) {
 
 	src := &portainer.Source{
 		Type: portainer.SourceTypeGit,
-		Git: &gittypes.RepoConfig{
-			URL:           "url",
-			ReferenceName: "ref",
-			ConfigHash:    "oldHash",
+		Git: &gittypes.GitSource{
+			URL: "url",
 		},
 	}
 	err = store.Source().Create(adminUserContext, src)
 	require.NoError(t, err, "failed to create source")
 
 	wf := &portainer.Workflow{Artifacts: []portainer.Artifact{{
-		StackID: 1,
+		StackID: 3,
 		Files:   []portainer.ArtifactFile{{SourceID: src.ID}},
 	}}}
 	err = store.Workflow().Create(wf)
 	require.NoError(t, err, "failed to create workflow")
 
 	err = store.Stack().Create(&portainer.Stack{
-		ID:         1,
+		ID:         3,
 		CreatedBy:  "admin",
 		WorkflowID: wf.ID,
 	})
 	require.NoError(t, err, "failed to create a test stack")
 
-	err = RedeployWhenChanged(t.Context(), 1, nil, store, testhelpers.NewGitService(cloneErr, "newHash"))
+	err = RedeployWhenChanged(t.Context(), 3, nil, store, testhelpers.NewGitService(cloneErr, "newHash"))
 	require.Error(t, err)
 	require.ErrorIs(t, err, cloneErr, "should failed to clone but didn't, check test setup")
+
+	updatedSrc, err := store.Source().Read(adminUserContext, src.ID)
+	require.NoError(t, err)
+	require.Equal(t, portainer.SourceStatusError, updatedSrc.Status)
+	require.Contains(t, updatedSrc.StatusError, cloneErr.Error())
+	require.Zero(t, updatedSrc.LastSync)
 }
 
-func setupRedeployStore(t *testing.T, stackType portainer.StackType) (dataservices.DataStore, portainer.StackID) {
+func setupRedeployStore(t *testing.T, stackType portainer.StackType, stackID portainer.StackID) (dataservices.DataStore, portainer.StackID) {
 	t.Helper()
 
 	_, store := datastore.MustNewTestStore(t, false, true)
@@ -293,20 +301,16 @@ func setupRedeployStore(t *testing.T, stackType portainer.StackType) (dataservic
 
 	src := &portainer.Source{
 		Type: portainer.SourceTypeGit,
-		Git: &gittypes.RepoConfig{
-			URL:           "url",
-			ReferenceName: "ref",
-			ConfigHash:    "oldHash",
+		Git: &gittypes.GitSource{
+			URL: "url",
 		},
 	}
 	err = store.Source().Create(adminUserContext, src)
 	require.NoError(t, err, "failed to create source")
 
-	wf := &portainer.Workflow{Artifacts: []portainer.Artifact{{Files: []portainer.ArtifactFile{{SourceID: src.ID}}}}}
+	wf := &portainer.Workflow{Artifacts: []portainer.Artifact{{StackID: stackID, Files: []portainer.ArtifactFile{{SourceID: src.ID}}}}}
 	err = store.Workflow().Create(wf)
 	require.NoError(t, err, "failed to create workflow")
-
-	const stackID portainer.StackID = 1
 
 	err = store.Stack().Create(&portainer.Stack{
 		ID:          stackID,
@@ -324,7 +328,7 @@ func setupRedeployStore(t *testing.T, stackType portainer.StackType) (dataservic
 func Test_redeployWhenChanged_DockerComposeStack(t *testing.T) {
 	t.Parallel()
 
-	store, stackID := setupRedeployStore(t, portainer.DockerComposeStack)
+	store, stackID := setupRedeployStore(t, portainer.DockerComposeStack, 4)
 
 	err := RedeployWhenChanged(t.Context(), stackID, noopDeployer{}, store, testhelpers.NewGitService(nil, "newHash"))
 	require.NoError(t, err)
@@ -333,7 +337,7 @@ func Test_redeployWhenChanged_DockerComposeStack(t *testing.T) {
 func Test_redeployWhenChanged_DockerSwarmStack(t *testing.T) {
 	t.Parallel()
 
-	store, stackID := setupRedeployStore(t, portainer.DockerSwarmStack)
+	store, stackID := setupRedeployStore(t, portainer.DockerSwarmStack, 5)
 
 	err := RedeployWhenChanged(t.Context(), stackID, noopDeployer{}, store, testhelpers.NewGitService(nil, "newHash"))
 	require.NoError(t, err)
@@ -342,10 +346,46 @@ func Test_redeployWhenChanged_DockerSwarmStack(t *testing.T) {
 func Test_redeployWhenChanged_KubernetesStack(t *testing.T) {
 	t.Parallel()
 
-	store, stackID := setupRedeployStore(t, portainer.KubernetesStack)
+	store, stackID := setupRedeployStore(t, portainer.KubernetesStack, 6)
 
 	err := RedeployWhenChanged(t.Context(), stackID, noopDeployer{}, store, testhelpers.NewGitService(nil, "newHash"))
 	require.NoError(t, err)
+}
+
+type failingDeployer struct {
+	noopDeployer
+	deployErr error
+}
+
+func (f failingDeployer) DeployKubernetesStack(_ context.Context, stack *portainer.Stack, endpoint *portainer.Endpoint, user *portainer.User) error {
+	return f.deployErr
+}
+
+func Test_redeployWhenChanged_KubernetesStack_DeployFailure_DoesNotAdvanceArtifactHash(t *testing.T) {
+	t.Parallel()
+
+	store, stackID := setupRedeployStore(t, portainer.KubernetesStack, 7)
+	deployErr := errors.New("failed to apply resources")
+
+	err := RedeployWhenChanged(t.Context(), stackID, failingDeployer{deployErr: deployErr}, store, testhelpers.NewGitService(nil, "newHash"))
+	require.NoError(t, err, "a failed deploy is recorded on the stack, not returned as a scheduler error")
+
+	var updated *portainer.Stack
+	err = store.ViewTx(func(tx dataservices.DataStoreTx) error {
+		var rerr error
+		updated, rerr = tx.Stack().Read(stackID)
+		return rerr
+	})
+	require.NoError(t, err)
+	assert.Equal(t, portainer.StackStatusError, updated.Status)
+	assert.Nil(t, updated.CurrentDeploymentInfo, "CurrentDeploymentInfo should stay at its pre-attempt value (nil here) since nothing was actually deployed")
+
+	workflows, err := store.Workflow().ReadAll()
+	require.NoError(t, err)
+	require.Len(t, workflows, 1)
+	require.Len(t, workflows[0].Artifacts, 1)
+	require.Len(t, workflows[0].Artifacts[0].Files, 1)
+	assert.Empty(t, workflows[0].Artifacts[0].Files[0].Hash, "artifact hash should stay at its old value (empty, in this fixture) since the deploy failed - the UI's git banner reads this field")
 }
 
 func Test_getUserRegistries(t *testing.T) {

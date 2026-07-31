@@ -2,8 +2,6 @@ package stackbuilders
 
 import (
 	"context"
-	"os"
-	"path/filepath"
 	"testing"
 
 	portainer "github.com/portainer/portainer/api"
@@ -99,7 +97,7 @@ func TestGitMethodStackBuilder_WithSourceID_ReferencesExistingSource(t *testing.
 	src := &portainer.Source{
 		Name: "my-repo",
 		Type: portainer.SourceTypeGit,
-		Git: &gittypes.RepoConfig{
+		Git: &gittypes.GitSource{
 			URL: "https://github.com/org/private-repo",
 			Authentication: &gittypes.GitAuthentication{
 				Username: "git-user",
@@ -136,6 +134,107 @@ func TestGitMethodStackBuilder_WithSourceID_ReferencesExistingSource(t *testing.
 	assert.Equal(t, "refs/heads/main", merged.ReferenceName)
 	require.NotNil(t, merged.Authentication)
 	assert.Equal(t, "git-user", merged.Authentication.Username)
+}
+
+func TestGitMethodStackBuilder_WithSourceID_PersistsHealthyStatusOnSuccess(t *testing.T) {
+	t.Parallel()
+	builder := newGitMethodBuilder(t, "abc123")
+	builder.stack.ID = 1
+
+	src := &portainer.Source{
+		Name: "my-repo",
+		Type: portainer.SourceTypeGit,
+		Git:  &gittypes.GitSource{URL: "https://github.com/org/private-repo"},
+	}
+	require.NoError(t, builder.dataStore.Source().Create(adminUserContext, src))
+
+	payload := &StackPayload{
+		RepositoryConfigPayload: RepositoryConfigPayload{
+			SourceID:      src.ID,
+			ReferenceName: "refs/heads/main",
+		},
+	}
+
+	err := builder.prepare(t.Context(), payload, portainer.UserID(1))
+	require.NoError(t, err)
+
+	updatedSrc, err := builder.dataStore.Source().Read(adminUserContext, src.ID)
+	require.NoError(t, err)
+	assert.Equal(t, portainer.SourceStatusHealthy, updatedSrc.Status)
+	assert.NotZero(t, updatedSrc.LastSync)
+}
+
+func TestGitMethodStackBuilder_StandardUserWithReadAccessCanDeployFromAdminSource(t *testing.T) {
+	t.Parallel()
+	builder := newGitMethodBuilder(t, "abc123")
+
+	standardUser := &portainer.User{Username: "standarduser", Role: portainer.StandardUserRole}
+	require.NoError(t, builder.dataStore.User().Create(standardUser))
+
+	publicSrc := &portainer.Source{
+		Name:   "public-repo",
+		Type:   portainer.SourceTypeGit,
+		Git:    &gittypes.GitSource{URL: "https://github.com/org/public-repo"},
+		Public: true,
+	}
+	require.NoError(t, builder.dataStore.Source().Create(adminUserContext, publicSrc))
+
+	restrictedSrc := &portainer.Source{
+		Name:         "restricted-repo",
+		Type:         portainer.SourceTypeGit,
+		Git:          &gittypes.GitSource{URL: "https://github.com/org/restricted-repo"},
+		UserAccesses: []portainer.UserID{standardUser.ID},
+	}
+	require.NoError(t, builder.dataStore.Source().Create(adminUserContext, restrictedSrc))
+
+	for i, src := range []*portainer.Source{publicSrc, restrictedSrc} {
+		builder.stack.ID = portainer.StackID(10 + i)
+		payload := &StackPayload{
+			RepositoryConfigPayload: RepositoryConfigPayload{
+				SourceID:      src.ID,
+				ReferenceName: "refs/heads/main",
+			},
+		}
+
+		err := builder.prepare(t.Context(), payload, standardUser.ID)
+		require.NoError(t, err)
+
+		updatedSrc, err := builder.dataStore.Source().Read(adminUserContext, src.ID)
+		require.NoError(t, err)
+		assert.Equal(t, portainer.SourceStatusHealthy, updatedSrc.Status)
+		assert.NotZero(t, updatedSrc.LastSync)
+	}
+}
+
+func TestGitMethodStackBuilder_WithSourceID_PersistsErrorStatusOnCloneFailure(t *testing.T) {
+	t.Parallel()
+	builder := newGitMethodBuilder(t, "abc123")
+	cloneErr := errors.New("failed to clone")
+	builder.gitService = testhelpers.NewGitService(cloneErr, "abc123")
+	builder.stack.ID = 1
+
+	src := &portainer.Source{
+		Name: "my-repo",
+		Type: portainer.SourceTypeGit,
+		Git:  &gittypes.GitSource{URL: "https://github.com/org/private-repo"},
+	}
+	require.NoError(t, builder.dataStore.Source().Create(adminUserContext, src))
+
+	payload := &StackPayload{
+		RepositoryConfigPayload: RepositoryConfigPayload{
+			SourceID:      src.ID,
+			ReferenceName: "refs/heads/main",
+		},
+	}
+
+	err := builder.prepare(t.Context(), payload, portainer.UserID(1))
+	require.Error(t, err)
+
+	updatedSrc, err := builder.dataStore.Source().Read(adminUserContext, src.ID)
+	require.NoError(t, err)
+	assert.Equal(t, portainer.SourceStatusError, updatedSrc.Status)
+	assert.Contains(t, updatedSrc.StatusError, cloneErr.Error())
+	assert.Zero(t, updatedSrc.LastSync)
 }
 
 func TestGitMethodStackBuilder_WithMissingSourceID_ReturnsError(t *testing.T) {

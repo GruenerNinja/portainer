@@ -1,5 +1,7 @@
 import { boolean as yupBoolean, number, object, string } from 'yup';
 
+import { intervalValidation } from '../../../components/IntervalField';
+
 export interface SettingsFormValues {
   type: 'git' | 'vault';
   name: string;
@@ -11,6 +13,8 @@ export interface SettingsFormValues {
   namespace: string;
   kvVersion: number;
   token: string;
+  pollingEnabled: boolean;
+  interval: string;
 }
 
 export const validationSchema = object({
@@ -31,4 +35,11 @@ export const validationSchema = object({
     then: (schema) => schema.required('KV version is required'),
   }),
   token: string().optional(),
+  pollingEnabled: yupBoolean().defined(),
+  interval: string()
+    .default('')
+    .when('pollingEnabled', {
+      is: true,
+      then: () => intervalValidation(),
+    }),
 });

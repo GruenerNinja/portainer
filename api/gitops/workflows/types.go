@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	portainer "github.com/portainer/portainer/api"
-	gittypes "github.com/portainer/portainer/api/git/types"
+	"github.com/portainer/portainer/api/gitops/sources"
 )
 
 type Status string
@@ -65,7 +65,6 @@ type Target struct {
 }
 
 // WorkflowPhaseStatus represents the status of one phase (source, artifact, or target) of a workflow.
-// All three phases share the Status type; source and artifact only ever emit healthy, error, or unknown.
 type WorkflowPhaseStatus struct {
 	Status Status `json:"status"`
 	Error  string `json:"error,omitempty"`
@@ -78,17 +77,14 @@ type WorkflowStatusObject struct {
 	Target   WorkflowPhaseStatus `json:"target"`
 }
 
+// Workflow is the API representation of a workflow, used by both the list and detail endpoints.
 type Workflow struct {
-	ID           int                           `json:"id" validate:"required"`
-	Name         string                        `json:"name" validate:"required"`
-	Type         Type                          `json:"type" validate:"required"`
-	Platform     DeploymentPlatform            `json:"platform" validate:"required"`
-	Status       WorkflowStatusObject          `json:"status" validate:"required"`
-	GitConfig    *gittypes.RepoConfig          `json:"gitConfig,omitempty"`
-	AutoUpdate   *portainer.AutoUpdateSettings `json:"autoUpdate,omitempty"`
-	Target       Target                        `json:"target" validate:"required"`
-	CreationDate int64                         `json:"creationDate"`
-	LastSyncDate int64                         `json:"lastSyncDate"`
+	ID           portainer.WorkflowID `json:"id" validate:"required"`
+	Name         string               `json:"name" validate:"required"`
+	Status       WorkflowStatusObject `json:"status" validate:"required"`
+	Artifacts    []ArtifactDetail     `json:"artifacts"`
+	CreationDate int64                `json:"creationDate"`
+	LastSyncDate int64                `json:"lastSyncDate"`
 }
 
 type StatusSummary struct {
@@ -97,4 +93,19 @@ type StatusSummary struct {
 	Error   int `json:"error"`
 	Paused  int `json:"paused"`
 	Unknown int `json:"unknown"`
+}
+
+// ArtifactDetail describes one Artifact's backing Stack or EdgeStack.
+type ArtifactDetail struct {
+	ID int `json:"id" validate:"required"`
+	WorkflowMappingFields
+	Files []ArtifactFileDetail `json:"files"`
+}
+
+// ArtifactFileDetail describe the representation of portainer.ArtifactFile used in API responses.
+type ArtifactFileDetail struct {
+	portainer.ArtifactFile
+
+	RefStatus  sources.Status `json:"refStatus,omitempty"`
+	PathStatus sources.Status `json:"pathStatus,omitempty"`
 }

@@ -12,9 +12,8 @@ import (
 	"github.com/portainer/portainer/api/dataservices/source"
 	"github.com/portainer/portainer/api/filesystem"
 	gittypes "github.com/portainer/portainer/api/git/types"
+	"github.com/portainer/portainer/api/gitops/scheduling"
 	"github.com/portainer/portainer/api/gitops/workflows"
-	"github.com/portainer/portainer/api/scheduler"
-	"github.com/portainer/portainer/api/stacks/deployments"
 	"github.com/portainer/portainer/api/stacks/stackutils"
 	httperror "github.com/portainer/portainer/pkg/libhttp/error"
 	"github.com/portainer/portainer/pkg/libhttp/ssrf"
@@ -22,8 +21,9 @@ import (
 
 type GitMethodStackBuilder struct {
 	StackBuilder
-	gitService portainer.GitService
-	scheduler  *scheduler.Scheduler
+	gitService       portainer.GitService
+	sourceScheduler  *scheduling.SourceScheduler
+	resolvedSourceID portainer.SourceID
 }
 
 func (b *GitMethodStackBuilder) prepare(ctx context.Context, payload *StackPayload, userID portainer.UserID) error {
@@ -108,6 +108,12 @@ func (b *GitMethodStackBuilder) prepare(ctx context.Context, payload *StackPaylo
 
 	commitHash, err := stackutils.DownloadGitRepository(ctx, repoConfig, b.gitService, getProjectPath)
 	if err != nil {
+		if txErr := b.dataStore.UpdateTx(func(tx dataservices.DataStoreTx) error {
+			return workflows.SaveSourceStatus(tx, userContext, sourceID, err)
+		}); txErr != nil {
+			return fmt.Errorf("failed to download git repository: %w (and failed to persist status: %w)", err, txErr)
+		}
+
 		return fmt.Errorf("failed to download git repository: %w", err)
 	}
 
@@ -122,26 +128,45 @@ func (b *GitMethodStackBuilder) prepare(ctx context.Context, payload *StackPaylo
 
 	if err := b.dataStore.UpdateTx(func(tx dataservices.DataStoreTx) error {
 		file := portainer.ArtifactFile{
-			Path: repoConfig.ConfigFilePath,
-			Ref:  repoConfig.ReferenceName,
-			Hash: repoConfig.ConfigHash,
+			Path:       repoConfig.ConfigFilePath,
+			Ref:        repoConfig.ReferenceName,
+			Hash:       repoConfig.ConfigHash,
+			RefStatus:  portainer.SourceStatusHealthy,
+			PathStatus: portainer.SourceStatusHealthy,
 		}
 
+		var resolvedSrc *portainer.Source
+
 		if sourceID != 0 {
-			file.SourceID = sourceID
+			s, err := tx.Source().Read(userContext, sourceID)
+			if err != nil {
+				return fmt.Errorf("failed to read source: %w", err)
+			}
+
+			file.SourceID = s.ID
+			resolvedSrc = s
 		} else {
 			repoConfig.URL = gittypes.SanitizeURL(repoConfig.URL)
 
 			src, err := workflows.FindOrCreateGitSource(tx, userContext, &portainer.Source{
 				Name: gittypes.RepoName(repoConfig.URL),
 				Type: portainer.SourceTypeGit,
-				Git:  &repoConfig,
+				Git: &gittypes.GitSource{
+					URL:            repoConfig.URL,
+					Authentication: repoConfig.Authentication,
+					TLSSkipVerify:  repoConfig.TLSSkipVerify,
+				},
 			})
 			if err != nil {
 				return fmt.Errorf("failed to find or create source: %w", err)
 			}
 
 			file.SourceID = src.ID
+			resolvedSrc = src
+		}
+
+		if err := workflows.SaveSourceStatus(tx, userContext, file.SourceID, nil); err != nil {
+			return fmt.Errorf("failed to persist source sync status: %w", err)
 		}
 
 		wf := &portainer.Workflow{
@@ -156,6 +181,7 @@ func (b *GitMethodStackBuilder) prepare(ctx context.Context, payload *StackPaylo
 		}
 
 		workflowID = wf.ID
+		b.resolvedSourceID = resolvedSrc.ID
 
 		return nil
 	}); err != nil {
@@ -165,53 +191,6 @@ func (b *GitMethodStackBuilder) prepare(ctx context.Context, payload *StackPaylo
 	b.stack.WorkflowID = workflowID
 
 	return nil
-}
-
-func (b *GitMethodStackBuilder) applyPortainerStackConfig(repoConfig *gittypes.RepoConfig) error {
-	config, found, err := stackutils.LoadPortainerStackConfigForFile(b.stack.ProjectPath, repoConfig.ConfigFilePath)
-	if err != nil {
-		return err
-	}
-
-	if !found {
-		if b.stack.SupportRelativePath {
-			return fmt.Errorf("%s is required when relative path volumes are enabled", stackutils.PortainerStackConfigFile)
-		}
-
-		return nil
-	}
-
-	if config.HasDeployConfig() && b.stack.SupportRelativePath {
-		if strings.TrimSpace(b.stack.FilesystemPath) == "" {
-			return fmt.Errorf("%s deploy config requires a filesystem path when relative path volumes are enabled", stackutils.PortainerStackConfigFile)
-		}
-
-		if config.Deploy.TargetName != "" {
-			b.stack.FilesystemPath = portainerTargetFilesystemPath(b.stack.FilesystemPath, config.Deploy.TargetName)
-		}
-	}
-
-	if len(config.Compose.Files) > 0 {
-		repoConfig.ConfigFilePath = config.Compose.Files[0]
-		b.stack.EntryPoint = config.Compose.Files[0]
-		b.stack.AdditionalFiles = append([]string{}, config.Compose.Files[1:]...)
-	}
-
-	return nil
-}
-
-func portainerTargetFilesystemPath(filesystemPath string, targetName string) string {
-	destination := strings.TrimSpace(filesystemPath)
-	if strings.TrimSpace(targetName) == "" {
-		return destination
-	}
-
-	destination = filepath.Clean(destination)
-	if filepath.Base(destination) == targetName {
-		return destination
-	}
-
-	return filesystem.JoinPaths(destination, targetName)
 }
 
 // postDeploy enables the auto-update scheduler job for the stack if configured,

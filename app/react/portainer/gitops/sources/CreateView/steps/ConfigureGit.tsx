@@ -4,6 +4,7 @@ import { Input } from '@@/form-components/Input';
 import { FormControl } from '@@/form-components/FormControl';
 import { SwitchField } from '@@/form-components/SwitchField';
 
+import { IntervalField } from '../../components/IntervalField';
 import { FormValues } from '../type';
 
 import { Authentication } from './Authentication';
@@ -46,6 +47,26 @@ export function ConfigureGit() {
       />
 
       <Authentication />
+
+      <SwitchField
+        label="Enable polling"
+        labelClass="col-sm-3 col-lg-2"
+        name="polling-enabled"
+        checked={values.git.polling.enabled}
+        onChange={(value) => setFieldValue('git.polling.enabled', value)}
+        tooltip="When enabled, Portainer periodically fetches this repository to detect changes."
+        data-cy="source-polling-switch"
+      />
+
+      {values.git.polling.enabled && (
+        <div className="mb-0 mt-4">
+          <IntervalField
+            value={values.git.polling.interval}
+            onChange={(value) => setFieldValue('git.polling.interval', value)}
+            errors={errors.git?.polling?.interval}
+          />
+        </div>
+      )}
 
       <ConnectionTest />
     </div>

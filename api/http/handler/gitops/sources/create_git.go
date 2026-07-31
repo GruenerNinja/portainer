@@ -14,6 +14,8 @@ import (
 	"github.com/portainer/portainer/pkg/libhttp/request"
 	"github.com/portainer/portainer/pkg/libhttp/response"
 	"github.com/portainer/portainer/pkg/validate"
+
+	"github.com/rs/zerolog/log"
 )
 
 // GitAuthenticationPayload holds authentication parameters for a git source
@@ -36,6 +38,7 @@ type GitSourceCreatePayload struct {
 	URL            string                    `json:"url" validate:"required"`
 	TLSSkipVerify  bool                      `json:"tlsSkipVerify"`
 	Authentication *GitAuthenticationPayload `json:"authentication"`
+	Interval       string                    `json:"interval"`
 }
 
 // Validate implements the portainer.Validatable interface
@@ -44,7 +47,7 @@ func (payload *GitSourceCreatePayload) Validate(_ *http.Request) error {
 		return errors.New("invalid repository URL. Must correspond to a valid URL format")
 	}
 
-	return nil
+	return validateInterval(payload.Interval)
 }
 
 // @id GitOpsSourcesCreateGit
@@ -80,8 +83,9 @@ func (h *Handler) gitSourceCreate(w http.ResponseWriter, r *http.Request) *httpe
 		return httperror.BadRequest("Invalid request payload", err)
 	}
 
+	userContext := source.NewUserContext(securityContext.User, securityContext.UserMemberships)
+
 	if err := h.dataStore.UpdateTx(func(tx dataservices.DataStoreTx) error {
-		userContext := source.NewUserContext(securityContext.User, securityContext.UserMemberships)
 		return tx.Source().Create(userContext, src)
 	}); errors.Is(err, source.ErrDuplicateSource) {
 		return httperror.Conflict("A source with this URL and credentials already exists", err)
@@ -89,7 +93,15 @@ func (h *Handler) gitSourceCreate(w http.ResponseWriter, r *http.Request) *httpe
 		return httperror.InternalServerError("Unable to create source", err)
 	}
 
-	src.Git = gittypes.SanitizeRepoConfig(src.Git)
+	if src, err = h.testAndSaveSourceConnection(r.Context(), userContext, src); err != nil {
+		return httperror.InternalServerError("Unable to persist source status", err)
+	}
+
+	if err := h.sourceScheduler.Reconcile(src.ID); err != nil {
+		log.Warn().Err(err).Int("source_id", int(src.ID)).Msg("source scheduler reconcile failed after source creation")
+	}
+
+	src.Git = gittypes.SanitizeGitSource(src.Git)
 
 	return response.JSONWithStatus(w, src, http.StatusCreated)
 }
@@ -112,7 +124,7 @@ func BuildBaseGitSource(payload GitSourceCreatePayload) *portainer.Source {
 	return &portainer.Source{
 		Name: name,
 		Type: portainer.SourceTypeGit,
-		Git: &gittypes.RepoConfig{
+		Git: &gittypes.GitSource{
 			URL:           payload.URL,
 			TLSSkipVerify: payload.TLSSkipVerify,
 		},
@@ -120,6 +132,7 @@ func BuildBaseGitSource(payload GitSourceCreatePayload) *portainer.Source {
 		TeamAccesses:       payload.TeamAccesses,
 		Public:             payload.Public,
 		AdministratorsOnly: payload.AdministratorsOnly,
+		Interval:           payload.Interval,
 	}
 }
 

@@ -5,6 +5,8 @@ import { stringEnumValues } from '@/types';
 
 import { isValidUrl } from '@@/form-components/validate-url';
 
+import { intervalValidation } from '../components/IntervalField';
+
 import { FormValues, FormValueTypes } from './type';
 
 export function validationSchema() {
@@ -71,6 +73,13 @@ function validateGit() {
           )
       ),
     tlsSkipVerify: bool(),
+    polling: object({
+      enabled: bool().required().default(false),
+      interval: string().default('').when('enabled', {
+        is: true,
+        then: intervalValidation(),
+      }),
+    }),
     connectionOk: bool()
       .oneOf([true], 'The connection test must succeed before continuing.')
       .required(),

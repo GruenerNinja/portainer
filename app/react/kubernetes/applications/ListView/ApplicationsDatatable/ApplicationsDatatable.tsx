@@ -34,7 +34,6 @@ import { Application, ApplicationRowData, ConfigKind } from './types';
 import { useColumns } from './useColumns';
 import { getPublishedUrls } from './PublishedPorts';
 import { SubRow } from './SubRow';
-import { HelmInsightsBox } from './HelmInsightsBox';
 
 export function ApplicationsDatatable({
   tableState,
@@ -59,7 +58,7 @@ export function ApplicationsDatatable({
     false
   );
   const applicationsQuery = useApplications(environmentId, {
-    refetchInterval: tableState.autoRefreshRate * 1000,
+    refetchInterval: tableState.autoRefreshRateMS,
     namespace: tableState.namespace,
   });
   const ingressesQuery = useIngresses(environmentId);
@@ -139,9 +138,6 @@ export function ApplicationsDatatable({
             <SystemResourceDescription
               showSystemResources={tableState.showSystemResources}
             />
-            <div className="w-fit">
-              <HelmInsightsBox />
-            </div>
           </div>
         </div>
       }

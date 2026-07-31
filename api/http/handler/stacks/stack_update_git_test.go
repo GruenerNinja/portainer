@@ -41,7 +41,7 @@ func TestStackUpdateGitWebhookUniqueness(t *testing.T) {
 
 	sharedSrc := &portainer.Source{
 		Type: portainer.SourceTypeGit,
-		Git:  &gittypes.RepoConfig{URL: "https://github.com/portainer/portainer.git"},
+		Git:  &gittypes.GitSource{URL: "https://github.com/portainer/portainer.git"},
 	}
 	err = store.Source().Create(source.InsecureNewAdminContext(), sharedSrc)
 	require.NoError(t, err)
@@ -80,7 +80,7 @@ func TestStackUpdateGitWebhookUniqueness(t *testing.T) {
 	err = store.Stack().Create(&stack2)
 	require.NoError(t, err)
 
-	handler := NewHandler(testhelpers.NewTestRequestBouncer())
+	handler := NewHandler(testhelpers.NewTestRequestBouncer(), nil)
 	handler.DataStore = store
 
 	payload := &stackGitUpdatePayload{
@@ -191,10 +191,7 @@ func setupStackUpdateGitRelativePathTest(t *testing.T) (*Handler, *datastore.Sto
 	stackID := portainer.StackID(456)
 	src := &portainer.Source{
 		Type: portainer.SourceTypeGit,
-		Git: &gittypes.RepoConfig{
-			URL:           "https://github.com/portainer/portainer.git",
-			ReferenceName: "refs/heads/main",
-		},
+		Git:  &gittypes.GitSource{URL: "https://github.com/portainer/portainer.git"},
 	}
 	require.NoError(t, store.Source().Create(source.InsecureNewAdminContext(), src))
 
@@ -227,7 +224,7 @@ func setupStackUpdateGitRelativePathTest(t *testing.T) (*Handler, *datastore.Sto
 	}
 	require.NoError(t, store.ResourceControl().Create(resourceControl))
 
-	handler := NewHandler(testhelpers.NewTestRequestBouncer())
+	handler := NewHandler(testhelpers.NewTestRequestBouncer(), nil)
 	handler.DataStore = store
 
 	return handler, store, stack, endpoint, user

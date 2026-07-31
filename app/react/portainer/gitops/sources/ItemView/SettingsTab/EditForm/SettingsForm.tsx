@@ -13,6 +13,7 @@ import { useUpdateSourceMutation } from '../../../queries/useUpdateSourceMutatio
 
 import { EditConnectionDetailsWidget } from './EditConnectionDetailsWidget';
 import { EditAuthWidget } from './EditAuthWidget';
+import { EditPollingWidget } from './EditPollingWidget';
 import { TestConnectionWidget } from './TestConnectionWidget';
 import { SettingsFormValues, validationSchema } from './types';
 import { buildUpdatePayload } from './payload';
@@ -39,6 +40,8 @@ export function SettingsForm({ source, onCancel }: Props) {
     namespace: source.connection.vault?.namespace ?? '',
     kvVersion: source.connection.vault?.kvVersion ?? 2,
     token: '',
+    pollingEnabled: !!source.interval,
+    interval: source.interval ?? '',
   };
 
   return (
@@ -67,6 +70,7 @@ export function SettingsForm({ source, onCancel }: Props) {
           >
             <EditConnectionDetailsWidget />
             <EditAuthWidget />
+            {source.type !== 'vault' && <EditPollingWidget />}
             <TestConnectionWidget sourceId={source.id} />
             <StickyFooter className="gap-4">
               <Button

@@ -2,7 +2,7 @@ import { SourceDetail } from '../../queries/useSource';
 
 import { ConnectionDetailsWidget } from './ConnectionDetailsWidget';
 import { AuthWidget } from './AuthWidget';
-import { AutoUpdateWidget } from './AutoUpdateWidget';
+import { PollingWidget } from './PollingWidget';
 import { SyncStatusWidget } from './SyncStatusWidget';
 import { SettingsForm } from './EditForm/SettingsForm';
 
@@ -26,7 +26,7 @@ export function SettingsTab({ source, isEditing, onEditingChange }: Props) {
         auth={source?.connection.authentication}
         vault={source?.connection.vault}
       />
-      <AutoUpdateWidget autoUpdate={source.autoUpdate} />
+      {source.type !== 'vault' && <PollingWidget interval={source.interval} />}
       <SyncStatusWidget source={source} />
     </>
   );

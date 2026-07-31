@@ -27,10 +27,10 @@ func mustCreateGitWorkflow(t *testing.T, tx dataservices.DataStoreTx, stack *por
 
 	cfg := stack.GitConfig
 
-	src := &portainer.Source{Type: portainer.SourceTypeGit, Git: cfg}
+	src := &portainer.Source{Type: portainer.SourceTypeGit, Git: &gittypes.GitSource{URL: cfg.URL, Authentication: cfg.Authentication, TLSSkipVerify: cfg.TLSSkipVerify}}
 	require.NoError(t, tx.Source().Create(adminUserContext, src))
 
-	wf := &portainer.Workflow{Artifacts: []portainer.Artifact{{
+	wf := &portainer.Workflow{Name: stack.Name, Artifacts: []portainer.Artifact{{
 		StackID: stack.ID,
 		Files:   []portainer.ArtifactFile{{SourceID: src.ID}},
 	}}}
@@ -46,7 +46,7 @@ func TestAddSourceStats_NoOp(t *testing.T) {
 	t.Parallel()
 
 	result := make(map[portainer.SourceID]SourceStats)
-	addSourceStats(result, nil, nil, 0)
+	addSourceStats(result, nil, nil)
 
 	require.Empty(t, result)
 }
@@ -55,8 +55,8 @@ func TestAddSourceStats_AccumulatesWorkflowCount(t *testing.T) {
 	t.Parallel()
 
 	result := make(map[portainer.SourceID]SourceStats)
-	addSourceStats(result, []portainer.SourceID{1}, nil, 0)
-	addSourceStats(result, []portainer.SourceID{1}, nil, 0)
+	addSourceStats(result, []portainer.SourceID{1}, nil)
+	addSourceStats(result, []portainer.SourceID{1}, nil)
 
 	require.Equal(t, 2, result[1].WorkflowCount)
 }
@@ -65,8 +65,8 @@ func TestAddSourceStats_CollectsUniqueEndpointIDs(t *testing.T) {
 	t.Parallel()
 
 	result := make(map[portainer.SourceID]SourceStats)
-	addSourceStats(result, []portainer.SourceID{1}, []portainer.EndpointID{10, 20}, 0)
-	addSourceStats(result, []portainer.SourceID{1}, []portainer.EndpointID{20, 30}, 0)
+	addSourceStats(result, []portainer.SourceID{1}, []portainer.EndpointID{10, 20})
+	addSourceStats(result, []portainer.SourceID{1}, []portainer.EndpointID{20, 30})
 
 	require.Len(t, result[1].EndpointIDs, 3)
 	require.True(t, result[1].EndpointIDs[10])
@@ -74,22 +74,11 @@ func TestAddSourceStats_CollectsUniqueEndpointIDs(t *testing.T) {
 	require.True(t, result[1].EndpointIDs[30])
 }
 
-func TestAddSourceStats_MaxLastSync(t *testing.T) {
-	t.Parallel()
-
-	result := make(map[portainer.SourceID]SourceStats)
-	addSourceStats(result, []portainer.SourceID{1}, nil, 100)
-	addSourceStats(result, []portainer.SourceID{1}, nil, 500)
-	addSourceStats(result, []portainer.SourceID{1}, nil, 200)
-
-	require.Equal(t, int64(500), result[1].LastSync)
-}
-
 func TestAddSourceStats_MultipleSourceIDs(t *testing.T) {
 	t.Parallel()
 
 	result := make(map[portainer.SourceID]SourceStats)
-	addSourceStats(result, []portainer.SourceID{1, 2}, []portainer.EndpointID{10}, 100)
+	addSourceStats(result, []portainer.SourceID{1, 2}, []portainer.EndpointID{10})
 
 	require.Equal(t, 1, result[1].WorkflowCount)
 	require.Equal(t, 1, result[2].WorkflowCount)
@@ -115,7 +104,7 @@ func TestFetchWorkflows_ReturnsOnlyGitopsStacks(t *testing.T) {
 	var items []Workflow
 	require.NoError(t, store.ViewTx(func(tx dataservices.DataStoreTx) error {
 		var err error
-		items, err = FetchWorkflows(t.Context(), tx, nil, nil, adminContext(), nil)
+		items, err = FetchWorkflows(tx, nil, adminContext(), nil)
 		return err
 	}))
 	require.Len(t, items, 1)
@@ -142,7 +131,7 @@ func TestFetchWorkflows_FiltersByEndpointID(t *testing.T) {
 	var items []Workflow
 	require.NoError(t, store.ViewTx(func(tx dataservices.DataStoreTx) error {
 		var err error
-		items, err = FetchWorkflows(t.Context(), tx, nil, nil, adminContext(), set.ToSet([]portainer.EndpointID{1, 2}))
+		items, err = FetchWorkflows(tx, nil, adminContext(), set.ToSet([]portainer.EndpointID{1, 2}))
 		return err
 	}))
 	require.Len(t, items, 2)
@@ -166,7 +155,7 @@ func TestFetchWorkflows_EmptyWhenNoGitopsStacks(t *testing.T) {
 	var items []Workflow
 	require.NoError(t, store.ViewTx(func(tx dataservices.DataStoreTx) error {
 		var err error
-		items, err = FetchWorkflows(t.Context(), tx, nil, nil, adminContext(), nil)
+		items, err = FetchWorkflows(tx, nil, adminContext(), nil)
 		return err
 	}))
 	require.Empty(t, items)
@@ -192,32 +181,113 @@ func TestFetchWorkflows_NilEndpointSetReturnsAll(t *testing.T) {
 	var items []Workflow
 	require.NoError(t, store.ViewTx(func(tx dataservices.DataStoreTx) error {
 		var err error
-		items, err = FetchWorkflows(t.Context(), tx, nil, nil, adminContext(), nil)
+		items, err = FetchWorkflows(tx, nil, adminContext(), nil)
 		return err
 	}))
 	require.Len(t, items, 3)
 }
 
-func TestFetchSourceStats_ReturnsAllSources(t *testing.T) {
+func TestFetchWorkflows_GroupsMultipleArtifactsUnderOneWorkflow(t *testing.T) {
 	t.Parallel()
 	_, store := datastore.MustNewTestStore(t, false, true)
 
 	require.NoError(t, store.UpdateTx(func(tx dataservices.DataStoreTx) error {
-		require.NoError(t, tx.Source().Create(adminUserContext, &portainer.Source{Name: "source-1", Type: portainer.SourceTypeGit, Git: &gittypes.RepoConfig{URL: "http://github.com/org/repo1"}}))
-		require.NoError(t, tx.Source().Create(adminUserContext, &portainer.Source{Name: "source-2", Type: portainer.SourceTypeGit, Git: &gittypes.RepoConfig{URL: "http://github.com/org/repo2"}}))
+		src := &portainer.Source{Type: portainer.SourceTypeGit, Git: &gittypes.GitSource{URL: "https://github.com/x/repo"}}
+		require.NoError(t, tx.Source().Create(adminUserContext, src))
+
+		wf := &portainer.Workflow{Name: "multi", Artifacts: []portainer.Artifact{
+			{StackID: 1, Files: []portainer.ArtifactFile{{SourceID: src.ID}}},
+			{StackID: 2, Files: []portainer.ArtifactFile{{SourceID: src.ID}}},
+		}}
+		require.NoError(t, tx.Workflow().Create(wf))
+
+		require.NoError(t, tx.Stack().Create(&portainer.Stack{ID: 1, Name: "stack-a", WorkflowID: wf.ID}))
+		require.NoError(t, tx.Stack().Create(&portainer.Stack{ID: 2, Name: "stack-b", WorkflowID: wf.ID}))
 
 		return tx.User().Create(&portainer.User{ID: 1, Role: portainer.AdministratorRole})
 	}))
 
-	var sources []portainer.Source
+	var items []Workflow
 	require.NoError(t, store.ViewTx(func(tx dataservices.DataStoreTx) error {
 		var err error
-		sources, _, err = FetchSourceStats(tx, nil, adminContext())
-
+		items, err = FetchWorkflows(tx, nil, adminContext(), nil)
 		return err
 	}))
 
-	require.Len(t, sources, 2)
+	require.Len(t, items, 1)
+	require.Equal(t, "multi", items[0].Name)
+	require.Len(t, items[0].Artifacts, 2)
+
+	names := []string{items[0].Artifacts[0].Name, items[0].Artifacts[1].Name}
+	require.Contains(t, names, "stack-a")
+	require.Contains(t, names, "stack-b")
+}
+
+func TestFetchWorkflows_ShowsWorkflowWithNoArtifacts(t *testing.T) {
+	t.Parallel()
+	_, store := datastore.MustNewTestStore(t, false, true)
+
+	require.NoError(t, store.UpdateTx(func(tx dataservices.DataStoreTx) error {
+		require.NoError(t, tx.Workflow().Create(&portainer.Workflow{Name: "empty"}))
+
+		return tx.User().Create(&portainer.User{ID: 1, Role: portainer.AdministratorRole})
+	}))
+
+	var items []Workflow
+	require.NoError(t, store.ViewTx(func(tx dataservices.DataStoreTx) error {
+		var err error
+		items, err = FetchWorkflows(tx, nil, adminContext(), nil)
+		return err
+	}))
+
+	require.Len(t, items, 1)
+	require.Equal(t, "empty", items[0].Name)
+	require.Empty(t, items[0].Artifacts)
+}
+
+func TestFetchWorkflows_HidesWorkflowWhenAllArtifactsFiltered(t *testing.T) {
+	t.Parallel()
+	_, store := datastore.MustNewTestStore(t, false, true)
+
+	require.NoError(t, store.UpdateTx(func(tx dataservices.DataStoreTx) error {
+		// A workflow whose only artifact references a stack that does not exist:
+		// the artifact is filtered out, so the workflow must be hidden.
+		wf := &portainer.Workflow{Name: "dangling", Artifacts: []portainer.Artifact{
+			{StackID: 999, Files: []portainer.ArtifactFile{{SourceID: 1}}},
+		}}
+		require.NoError(t, tx.Workflow().Create(wf))
+
+		return tx.User().Create(&portainer.User{ID: 1, Role: portainer.AdministratorRole})
+	}))
+
+	var items []Workflow
+	require.NoError(t, store.ViewTx(func(tx dataservices.DataStoreTx) error {
+		var err error
+		items, err = FetchWorkflows(tx, nil, adminContext(), nil)
+		return err
+	}))
+
+	require.Empty(t, items)
+}
+
+func TestFetchWorkflows_HidesEmptyWorkflowWhenEndpointFilterActive(t *testing.T) {
+	t.Parallel()
+	_, store := datastore.MustNewTestStore(t, false, true)
+
+	require.NoError(t, store.UpdateTx(func(tx dataservices.DataStoreTx) error {
+		require.NoError(t, tx.Workflow().Create(&portainer.Workflow{Name: "empty"}))
+
+		return tx.User().Create(&portainer.User{ID: 1, Role: portainer.AdministratorRole})
+	}))
+
+	var items []Workflow
+	require.NoError(t, store.ViewTx(func(tx dataservices.DataStoreTx) error {
+		var err error
+		items, err = FetchWorkflows(tx, nil, adminContext(), set.ToSet([]portainer.EndpointID{1}))
+		return err
+	}))
+
+	require.Empty(t, items)
 }
 
 func TestFetchSourceStats_TracksWorkflowCountAndEndpoints(t *testing.T) {
@@ -227,7 +297,7 @@ func TestFetchSourceStats_TracksWorkflowCountAndEndpoints(t *testing.T) {
 	var srcID portainer.SourceID
 
 	require.NoError(t, store.UpdateTx(func(tx dataservices.DataStoreTx) error {
-		src := &portainer.Source{Name: "shared", Type: portainer.SourceTypeGit, Git: &gittypes.RepoConfig{URL: "http://github.com/org/repo"}}
+		src := &portainer.Source{Name: "shared", Type: portainer.SourceTypeGit, Git: &gittypes.GitSource{URL: "http://github.com/org/repo"}}
 		require.NoError(t, tx.Source().Create(adminUserContext, src))
 		srcID = src.ID
 
@@ -248,7 +318,7 @@ func TestFetchSourceStats_TracksWorkflowCountAndEndpoints(t *testing.T) {
 	var stats map[portainer.SourceID]SourceStats
 	require.NoError(t, store.ViewTx(func(tx dataservices.DataStoreTx) error {
 		var err error
-		_, stats, err = FetchSourceStats(tx, nil, adminContext())
+		stats, err = FetchSourceStats(tx, nil, adminContext())
 
 		return err
 	}))
@@ -265,7 +335,7 @@ func TestFetchSourceStats_UnusedSourceHasZeroStats(t *testing.T) {
 	var unusedID portainer.SourceID
 
 	require.NoError(t, store.UpdateTx(func(tx dataservices.DataStoreTx) error {
-		src := &portainer.Source{Name: "unused", Type: portainer.SourceTypeGit, Git: &gittypes.RepoConfig{URL: "http://github.com/org/repo"}}
+		src := &portainer.Source{Name: "unused", Type: portainer.SourceTypeGit, Git: &gittypes.GitSource{URL: "http://github.com/org/repo"}}
 		require.NoError(t, tx.Source().Create(adminUserContext, src))
 		unusedID = src.ID
 
@@ -275,7 +345,7 @@ func TestFetchSourceStats_UnusedSourceHasZeroStats(t *testing.T) {
 	var stats map[portainer.SourceID]SourceStats
 	require.NoError(t, store.ViewTx(func(tx dataservices.DataStoreTx) error {
 		var err error
-		_, stats, err = FetchSourceStats(tx, nil, adminContext())
+		stats, err = FetchSourceStats(tx, nil, adminContext())
 
 		return err
 	}))

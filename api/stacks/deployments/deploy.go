@@ -44,6 +44,10 @@ func RedeployWhenChanged(ctx context.Context, stackID portainer.StackID, deploye
 		return errors.WithMessagef(err, "failed to get the stack %v", stackID)
 	}
 
+	if stack.Status == portainer.StackStatusInactive {
+		return nil
+	}
+
 	// Webhook
 	if stack.AutoUpdate != nil && stack.AutoUpdate.Webhook != "" {
 		return redeployWhenChanged(ctx, stack, deployer, datastore, gitService, true)
@@ -148,7 +152,19 @@ func redeployWhenChangedSecondStage(
 	if !stack.FromAppTemplate {
 		updated, newHash, err := update.UpdateGitObject(ctx, gitService, fmt.Sprintf("stack:%d", stack.ID), gitConfig, false, stack.ProjectPath)
 		if err != nil {
+			if txErr := datastore.UpdateTx(func(tx dataservices.DataStoreTx) error {
+				return workflows.SaveStackStatus(tx, userContext, stack.WorkflowID, stack.ID, gitSrc.ID, err)
+			}); txErr != nil {
+				return fmt.Errorf("git check failed for stack %d: %w (and failed to persist status: %w)", stack.ID, err, txErr)
+			}
+
 			return err
+		}
+
+		if txErr := datastore.UpdateTx(func(tx dataservices.DataStoreTx) error {
+			return workflows.SaveStackStatus(tx, userContext, stack.WorkflowID, stack.ID, gitSrc.ID, nil)
+		}); txErr != nil {
+			return fmt.Errorf("failed to persist git sync status for stack %d: %w", stack.ID, txErr)
 		}
 
 		if updated {
@@ -173,6 +189,8 @@ func redeployWhenChangedSecondStage(
 	}); err != nil {
 		return errors.WithMessagef(err, "failed to set the deploying status for stack %v", stack.ID)
 	}
+
+	previousDeploymentInfo := stack.CurrentDeploymentInfo
 
 	stack.CurrentDeploymentInfo = &portainer.StackDeploymentInfo{
 		RepositoryURL:   gitConfig.URL,
@@ -226,6 +244,9 @@ func redeployWhenChangedSecondStage(
 	}
 
 	deployErr := redeployStack(stack)
+	if deployErr != nil {
+		stack.CurrentDeploymentInfo = previousDeploymentInfo
+	}
 
 	if err := datastore.UpdateTx(func(tx dataservices.DataStoreTx) error {
 		stack.UpdateDate = time.Now().Unix()
@@ -235,10 +256,18 @@ func redeployWhenChangedSecondStage(
 			return err
 		}
 
+		if deployErr != nil {
+			return nil
+		}
+
 		newHash := gitConfig.ConfigHash
 
 		return workflows.UpdateArtifactFileForStack(tx, stack.WorkflowID, stack.ID, gitSrc.ID, func(a *portainer.ArtifactFile) {
 			a.Hash = newHash
+			a.RefStatus = portainer.SourceStatusHealthy
+			a.RefError = ""
+			a.PathStatus = portainer.SourceStatusHealthy
+			a.PathError = ""
 		})
 	}); err != nil {
 		return errors.WithMessagef(err, "failed to update the stack %v", stack.ID)

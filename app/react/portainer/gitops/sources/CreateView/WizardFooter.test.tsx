@@ -52,6 +52,7 @@ const initialFormValues: FormValues = {
     url: '',
     connectionOk: false,
     authentication: { authEnabled: false },
+    polling: { enabled: false, interval: '' },
   },
   vault: {
     address: '',
@@ -76,6 +77,7 @@ const validFormValues: FormValues = {
     url: 'https://github.com/org/repo.git',
     connectionOk: true,
     authentication: { authEnabled: false },
+    polling: { enabled: false, interval: '' },
   },
   vault: initialFormValues.vault,
   authorizedTeams: [],

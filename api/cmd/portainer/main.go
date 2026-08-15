@@ -67,6 +67,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const swarmStackStatusCheckInterval = time.Minute
+
 func initCLI() *portainer.CLIFlags {
 	cliService := cli.Service{}
 
@@ -273,6 +275,8 @@ func updateSettingsFromFlags(dataStore dataservices.DataStore, flags *portainer.
 	settings.SnapshotInterval = cmp.Or(*flags.SnapshotInterval, settings.SnapshotInterval)
 	settings.LogoURL = cmp.Or(*flags.Logo, settings.LogoURL)
 	settings.EnableEdgeComputeFeatures = cmp.Or(*flags.EnableEdgeComputeFeatures, settings.EnableEdgeComputeFeatures)
+	settings.EdgePortainerURL = cmp.Or(*flags.EdgePortainerURL, settings.EdgePortainerURL)
+	settings.TrustOnFirstConnect = cmp.Or(*flags.EdgeTrustOnFirstConnect, settings.TrustOnFirstConnect)
 	settings.TemplatesURL = cmp.Or(*flags.Templates, settings.TemplatesURL)
 
 	if flags.KubectlShellImageSet {
@@ -580,6 +584,10 @@ func buildServer(flags *portainer.CLIFlags, shutdownCtx context.Context, shutdow
 	if err := sourceScheduler.ReconcileAll(); err != nil {
 		log.Fatal().Err(err).Msg("failed to start source scheduler")
 	}
+
+	sched.StartJobEvery(swarmStackStatusCheckInterval, func() error {
+		return deployments.ReconcileSwarmStackStatus(shutdownCtx, dataStore, swarmStackManager)
+	})
 
 	sslDBSettings, err := dataStore.SSLSettings().Settings()
 	if err != nil {

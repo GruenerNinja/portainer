@@ -91,13 +91,7 @@ func (h *Handler) getSource(w http.ResponseWriter, r *http.Request) *httperror.H
 	})
 }
 
-func BuildSourceDetail(baseSource Source, cfg *gittypes.RepoConfig, sourceWfs []workflows.Workflow, access SourceAccess) SourceDetail {
-	var autoUpdate *AutoUpdateInfo
-	if len(sourceWfs) > 0 {
-		autoUpdate = BuildAutoUpdateInfo(sourceWfs[0].AutoUpdate)
-	}
-
-func BuildSourceDetail(baseSource SourceBase, cfg *gittypes.GitSource, access SourceAccess) SourceDetail {
+func BuildSourceDetail(baseSource SourceBase, src *portainer.Source, access SourceAccess) SourceDetail {
 	return SourceDetail{
 		SourceBase: baseSource,
 		Connection: buildConnectionInfo(src),

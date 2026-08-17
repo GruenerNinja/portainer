@@ -12,15 +12,11 @@ import (
 	httperror "github.com/portainer/portainer/pkg/libhttp/error"
 )
 
-func (h *Handler) buildSource(ctx context.Context, src *portainer.Source, stats ce.SourceStats) Source {
-	var status ce.Status
-	var sourceErr string
-	if src.Git != nil {
-		phase, _ := ce.ComputeGitPhasesForConfig(ctx, h.gitService, src.Git)
-		status = phase.Status
-		sourceErr = phase.Error
-	} else {
-		status = ce.StatusUnknown
+const minPollingInterval = time.Minute
+
+func validateInterval(interval string) error {
+	if interval == "" {
+		return nil
 	}
 
 	d, err := time.ParseDuration(interval)

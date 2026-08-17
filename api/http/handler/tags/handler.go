@@ -12,6 +12,7 @@ import (
 
 // Handler is the HTTP handler used to handle tag operations.
 type Handler struct {
+	// Embedding gives Handler the methods of mux.Router, similar to delegation in Java.
 	*mux.Router
 	DataStore dataservices.DataStore
 }
@@ -21,6 +22,7 @@ func NewHandler(bouncer security.BouncerService) *Handler {
 	h := &Handler{
 		Router: mux.NewRouter(),
 	}
+	// The bouncer wraps each endpoint with its access rule before the route is registered.
 	h.Handle("/tags",
 		bouncer.AdminAccess(httperror.LoggerHandler(h.tagCreate))).Methods(http.MethodPost)
 	h.Handle("/tags",

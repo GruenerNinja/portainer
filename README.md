@@ -25,6 +25,7 @@ Portainer CE is updated regularly. We aim to do an update release every couple o
 - [Contribute to the project](https://docs.portainer.io/contribute/contribute)
 - [Build Portainer locally](./docs/build-guide.md)
 - [Set up a local development environment](./docs/development-setup.md)
+- [Learn Go by exploring this project](./docs/learning-go-and-portainer.md)
 
 ## Features & Functions
 

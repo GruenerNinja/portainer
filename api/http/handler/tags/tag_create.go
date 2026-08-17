@@ -12,9 +12,11 @@ import (
 )
 
 type tagCreatePayload struct {
+	// Struct tags are metadata read by validation and documentation tools.
 	Name string `validate:"required" example:"org/acme"`
 }
 
+// Validate lets the shared request decoder apply feature-specific checks.
 func (payload *tagCreatePayload) Validate(r *http.Request) error {
 	if len(payload.Name) == 0 {
 		return errors.New("invalid tag name")
@@ -38,6 +40,7 @@ func (payload *tagCreatePayload) Validate(r *http.Request) error {
 // @failure 500 "Server error"
 // @router /tags [post]
 func (handler *Handler) tagCreate(w http.ResponseWriter, r *http.Request) *httperror.HandlerError {
+	// Decode JSON from the request body into a typed Go value, then validate it.
 	var payload tagCreatePayload
 	if err := request.DecodeAndValidateJSONPayload(r, &payload); err != nil {
 		return httperror.BadRequest("Invalid request payload", err)
@@ -45,6 +48,8 @@ func (handler *Handler) tagCreate(w http.ResponseWriter, r *http.Request) *httpe
 
 	var tag *portainer.Tag
 	var err error
+	// All reads and writes in this callback share one database transaction. A
+	// returned error causes the transaction to roll back.
 	err = handler.DataStore.UpdateTx(func(tx dataservices.DataStoreTx) error {
 		tag, err = createTag(tx, payload)
 		return err
@@ -54,6 +59,7 @@ func (handler *Handler) tagCreate(w http.ResponseWriter, r *http.Request) *httpe
 }
 
 func createTag(tx dataservices.DataStoreTx, payload tagCreatePayload) (*portainer.Tag, error) {
+	// Check the business rule before writing: tag names must be unique.
 	tags, err := tx.Tag().ReadAll()
 	if err != nil {
 		return nil, httperror.InternalServerError("Unable to retrieve tags from the database", err)
@@ -65,6 +71,8 @@ func createTag(tx dataservices.DataStoreTx, payload tagCreatePayload) (*portaine
 		}
 	}
 
+	// & creates a pointer to the new value. Go commonly passes pointers when a
+	// function must fill fields such as the database-generated ID.
 	tag := &portainer.Tag{
 		Name:           payload.Name,
 		EndpointGroups: map[portainer.EndpointGroupID]bool{},

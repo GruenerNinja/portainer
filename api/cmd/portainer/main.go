@@ -69,6 +69,8 @@ import (
 
 const swarmStackStatusCheckInterval = time.Minute
 
+// initCLI reads and validates the command-line options. It is similar to turning
+// Java command-line arguments into a typed configuration object.
 func initCLI() *portainer.CLIFlags {
 	cliService := cli.Service{}
 
@@ -93,6 +95,8 @@ func initFileService(dataStorePath string) portainer.FileService {
 	return fileService
 }
 
+// initDataStore opens the database, creates a new schema when needed, and runs
+// migrations for an existing database.
 func initDataStore(flags *portainer.CLIFlags, secretKey []byte, fileService portainer.FileService, shutdownCtx context.Context) dataservices.DataStore {
 	connection, err := database.NewDatabase("boltdb", *flags.Data, secretKey, *flags.CompactDB)
 	if err != nil {
@@ -373,6 +377,9 @@ func loadEncryptionSecretKey(keyfilename string) []byte {
 	return hash[:]
 }
 
+// buildServer is the application's "composition root": it creates the services
+// and connects their dependencies before returning the HTTP server. In a Java
+// application, a dependency-injection framework often performs this job.
 func buildServer(flags *portainer.CLIFlags, shutdownCtx context.Context, shutdownTrigger context.CancelFunc) portainer.Server {
 	if flags.FeatureFlags != nil {
 		featureflags.Parse(*flags.FeatureFlags, portainer.SupportedFeatureFlags)
@@ -675,6 +682,7 @@ func buildServer(flags *portainer.CLIFlags, shutdownCtx context.Context, shutdow
 }
 
 func main() {
+	// Go starts this function automatically because this file belongs to package main.
 	logs.ConfigureLogger()
 	logs.SetLoggingMode("PRETTY")
 
@@ -683,7 +691,11 @@ func main() {
 	logs.SetLoggingLevel(*flags.LogLevel)
 	logs.SetLoggingMode(*flags.LogMode)
 
+	// The loop lets Portainer rebuild and restart its server after an internal
+	// shutdown request, such as restoring a database backup.
 	for {
+		// A context is Go's standard way to tell related work to stop. Calling
+		// shutdownTrigger cancels shutdownCtx and begins graceful shutdown.
 		shutdownCtx, shutdownTrigger := context.WithCancel(context.Background())
 		server := buildServer(flags, shutdownCtx, shutdownTrigger)
 
@@ -697,6 +709,8 @@ func main() {
 			Str("go_version", build.GoVersion).
 			Msg("starting Portainer")
 
+		// Start blocks while the HTTPS server is running, much like ServerSocket.accept
+		// keeps a Java server alive. It returns when the server stops or fails.
 		err := server.Start(shutdownCtx)
 
 		log.Info().Err(err).Msg("HTTP server exited")

@@ -4,6 +4,7 @@ import { Tag, TagId } from './types';
 
 export async function getTags() {
   try {
+    // Axios adds the shared /api base URL and authentication configuration.
     const { data } = await axios.get<Tag[]>(buildUrl());
     return data;
   } catch (err) {
@@ -13,6 +14,7 @@ export async function getTags() {
 
 export async function createTag(name: string) {
   try {
+    // The object becomes the JSON body expected by Go's tagCreatePayload.
     const { data: tag } = await axios.post<Tag>(buildUrl(), { name });
     return tag;
   } catch (err) {

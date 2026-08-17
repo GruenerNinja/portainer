@@ -10,6 +10,8 @@ const BucketName = "tags"
 
 // Service represents a service for managing environment(endpoint) data.
 type Service struct {
+	// Embedding the generic base service supplies Read, ReadAll, Update, and Delete
+	// for Tag values, similar to extending a generic repository in Java.
 	dataservices.BaseDataService[portainer.Tag, portainer.TagID]
 }
 
@@ -29,6 +31,8 @@ func NewService(connection portainer.Connection) (*Service, error) {
 }
 
 func (service *Service) Tx(tx portainer.Transaction) ServiceTx {
+	// The transaction-scoped service reuses the caller's transaction instead of
+	// opening and committing a separate one.
 	return ServiceTx{
 		BaseDataServiceTx: dataservices.BaseDataServiceTx[portainer.Tag, portainer.TagID]{
 			Bucket:     BucketName,
@@ -40,6 +44,8 @@ func (service *Service) Tx(tx portainer.Transaction) ServiceTx {
 
 // CreateTag creates a new tag.
 func (service *Service) Create(tag *portainer.Tag) error {
+	// CreateObject allocates the numeric ID; the callback stores it on the tag and
+	// returns the key/value pair that should be persisted.
 	return service.Connection.CreateObject(
 		BucketName,
 		func(id uint64) (int, any) {

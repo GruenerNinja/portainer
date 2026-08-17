@@ -73,7 +73,9 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Server implements the portainer.Server interface
+// Server holds the dependencies needed by the HTTP layer. These fields are
+// filled in by buildServer; this is manual dependency injection.
+// Server implements the portainer.Server interface.
 type Server struct {
 	AuthorizationService        *authorization.Service
 	BindAddress                 string
@@ -121,6 +123,7 @@ type Server struct {
 func (server *Server) Start(ctx context.Context) error {
 	kubernetesTokenCacheManager := server.KubernetesTokenCacheManager
 
+	// Shared security helpers are created once and passed to every route group.
 	requestBouncer := security.NewRequestBouncer(ctx, server.DataStore, server.JWTService, server.APIKeyService)
 	if !server.CSP {
 		requestBouncer.DisableCSP()
@@ -302,6 +305,7 @@ func (server *Server) Start(ctx context.Context) error {
 	webhookHandler.DataStore = server.DataStore
 	webhookHandler.DockerClientFactory = server.DockerClientFactory
 
+	// The top-level handler combines all feature routers into one http.Handler.
 	server.Handler = &handler.Handler{
 		RoleHandler:            roleHandler,
 		AuthHandler:            authHandler,
@@ -341,6 +345,8 @@ func (server *Server) Start(ctx context.Context) error {
 
 	errorLogger := NewHTTPLogger()
 
+	// Middleware wraps the handler like nested decorators in Java. A request goes
+	// through the outermost wrapper first, then reaches the feature router.
 	handler := adminMonitor.WithRedirect(offlineGate.WaitingMiddleware(time.Minute, server.Handler))
 
 	handler = middlewares.WithPanicLogger(middlewares.WithSlowRequestsLogger(handler))
@@ -350,6 +356,7 @@ func (server *Server) Start(ctx context.Context) error {
 		return errors.Wrap(err, "failed to create CSRF middleware")
 	}
 
+	// HTTP is optional and runs in a goroutine so setup can continue to HTTPS.
 	if server.HTTPEnabled {
 		go func() {
 			log.Info().Str("bind_address", server.BindAddress).Msg("starting HTTP server")
@@ -384,10 +391,13 @@ func (server *Server) Start(ctx context.Context) error {
 	go shutdown(ctx, httpsServer)
 	go snapshot.NewBackgroundSnapshotter(server.DataStore, server.ReverseTunnelService)
 
+	// This call blocks until shutdown or an error. The certificate is supplied by
+	// TLSConfig.GetCertificate above, so the filename arguments can be empty.
 	return httpsServer.ListenAndServeTLS("", "")
 }
 
 func shutdown(shutdownCtx context.Context, httpServer *http.Server) {
+	// Reading from Done blocks until another part of the program cancels the context.
 	<-shutdownCtx.Done()
 
 	log.Debug().Msg("shutting down the HTTP server")

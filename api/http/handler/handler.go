@@ -39,7 +39,8 @@ import (
 	"github.com/portainer/portainer/api/http/handler/websocket"
 )
 
-// Handler is a collection of all the service handlers.
+// Handler is a collection of all the feature handlers. It acts like a small
+// front controller: every /api request arrives here before being delegated.
 type Handler struct {
 	AuthHandler            *auth.Handler
 	BackupHandler          *backup.Handler
@@ -203,6 +204,8 @@ type Handler struct {
 
 // ServeHTTP delegates a request to the appropriate subhandler.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Go's net/http package calls ServeHTTP for each request. The switch chooses a
+	// feature router from the URL; StripPrefix removes /api before forwarding it.
 	switch {
 	case strings.HasPrefix(r.URL.Path, "/api/endpoints") && strings.Contains(r.URL.Path, "/edge/"):
 		h.EndpointEdgeHandler.ServeHTTP(w, r)

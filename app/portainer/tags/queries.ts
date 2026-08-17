@@ -11,6 +11,7 @@ import { createTag, getTags } from './tags.service';
 import { Tag, TagId } from './types';
 
 export const tagKeys = {
+  // Stable keys let React Query share and invalidate cached tag data.
   all: ['tags'] as const,
   tag: (id: TagId) => [...tagKeys.all, id] as const,
 };
@@ -38,6 +39,7 @@ export function useTagsForEnvironment(environmentId: EnvironmentId) {
 export function useCreateTagMutation() {
   const queryClient = useQueryClient();
 
+  // After a successful create, invalidate the list so the UI fetches fresh tags.
   return useMutation(
     createTag,
     mutationOptions(

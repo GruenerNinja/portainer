@@ -33,7 +33,7 @@ import (
 )
 
 const (
-	defaultUnpackerImage       = "themodcrafttmc/compose-unpacker:2.39.3.2.2"
+	defaultUnpackerImage       = "themodcrafttmc/compose-unpacker:2.39.3.2.3"
 	composeUnpackerImageEnvVar = "COMPOSE_UNPACKER_IMAGE"
 	composePathPrefix          = "portainer-compose-unpacker"
 )
@@ -293,7 +293,8 @@ func (d *stackDeployer) remoteStack(ctx context.Context, userID portainer.UserID
 
 	log.Debug().
 		Str("image", unpackerImg).
-		Str("cmd", strings.Join(cmd, " ")).
+		Str("operation", string(operation)).
+		Int("stack_id", int(stack.ID)).
 		Msg("running unpacker")
 
 	unpackerContainer, err := cli.ContainerCreate(ctx, &container.Config{

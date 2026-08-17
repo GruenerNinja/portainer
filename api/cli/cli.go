@@ -8,6 +8,7 @@ import (
 	"time"
 
 	portainer "github.com/portainer/portainer/api"
+	"github.com/portainer/portainer/api/filesystem"
 	"github.com/portainer/portainer/api/internal/edge"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -48,8 +49,8 @@ func CLIFlags() *portainer.CLIFlags {
 		Templates:                 kingpin.Flag("templates", "URL to the templates definitions.").Short('t').String(),
 		BaseURL:                   kingpin.Flag("base-url", "Base URL parameter such as portainer if running portainer as http://yourdomain.com/portainer/.").Short('b').Default(defaultBaseURL).String(),
 		InitialMmapSize:           kingpin.Flag("initial-mmap-size", "Initial mmap size of the database in bytes").Int(),
-		MaxBatchSize:              kingpin.Flag("max-batch-size", "Maximum size of a batch").Int(),
-		MaxBatchDelay:             kingpin.Flag("max-batch-delay", "Maximum delay before a batch starts").Duration(),
+		MaxBatchSize:              kingpin.Flag("max-batch-size", "Maximum size of a batch").Default(defaultMaxBatchSize).Int(),
+		MaxBatchDelay:             kingpin.Flag("max-batch-delay", "Maximum delay before a batch starts").Default(defaultMaxBatchDelay).Duration(),
 		SecretKeyName:             kingpin.Flag("secret-key-name", "Secret key name for encryption and will be used as /run/secrets/<secret-key-name>.").Default(defaultSecretKeyName).String(),
 		LogLevel:                  kingpin.Flag("log-level", "Set the minimum logging level to show").Default("INFO").Enum("DEBUG", "INFO", "WARN", "ERROR"),
 		LogMode:                   kingpin.Flag("log-mode", "Set the logging output mode").Default("PRETTY").Enum("NOCOLOR", "PRETTY", "JSON"),
@@ -119,7 +120,7 @@ func (Service) ParseFlags(version string) (*portainer.CLIFlags, error) {
 			panic(err)
 		}
 
-		*flags.Assets = filepath.Join(filepath.Dir(ex), *flags.Assets)
+		*flags.Assets = filesystem.JoinPaths(filepath.Dir(ex), *flags.Assets)
 	}
 
 	// If the user didn't provide a tls flag remove the defaults to match previous behaviour

@@ -178,18 +178,7 @@ func (handler *Handler) stackGitRedeploy(w http.ResponseWriter, r *http.Request)
 		stack.Name = payload.StackName
 	}
 
-	repositoryUsername := ""
-	repositoryPassword := ""
-	if payload.RepositoryAuthentication {
-		repositoryPassword = payload.RepositoryPassword
-
-		// When the existing stack is using the custom username/password and the password is not updated,
-		// the stack should keep using the saved username/password
-		if repositoryPassword == "" && gitConfig.Authentication != nil {
-			repositoryPassword = gitConfig.Authentication.Password
-		}
-		repositoryUsername = payload.RepositoryUsername
-	}
+	auth := resolveGitAuthFromRedeployPayload(gitConfig, payload)
 
 	cloneOptions := git.CloneOptions{
 		ProjectPath:   stack.ProjectPath,
@@ -312,9 +301,9 @@ func (handler *Handler) stackGitRedeploy(w http.ResponseWriter, r *http.Request)
 	return response.JSON(w, stack)
 }
 
-func (handler *Handler) deployStack(r *http.Request, stack *portainer.Stack, pullImage bool, endpoint *portainer.Endpoint, gate *deployGate, postDeploy postDeployFunc) *httperror.HandlerError {
-	var deploymentConfiger deployments.StackDeploymentConfiger
-
+// deployStack builds the deployment config without deploying; the caller deploys it (sync for
+// Kubernetes, async for Swarm/Compose).
+func (handler *Handler) deployStack(r *http.Request, stack *portainer.Stack, pullImage bool, endpoint *portainer.Endpoint) (deployments.StackDeploymentConfiger, *httperror.HandlerError) {
 	switch stack.Type {
 	case portainer.DockerSwarmStack:
 		securityContext, err := security.RetrieveRestrictedRequestContext(r)

@@ -1,7 +1,7 @@
 FROM portainer/base:latest AS production
 
 ARG TARGETARCH
-ARG COMPOSE_UNPACKER_IMAGE=themodcrafttmc/compose-unpacker:2.39.3.2.1
+ARG COMPOSE_UNPACKER_IMAGE=themodcrafttmc/compose-unpacker:2.39.3.2.2
 ENV COMPOSE_UNPACKER_IMAGE=${COMPOSE_UNPACKER_IMAGE}
 
 LABEL org.opencontainers.image.title="Portainer" \

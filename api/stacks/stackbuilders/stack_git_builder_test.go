@@ -2,9 +2,13 @@ package stackbuilders
 
 import (
 	"context"
+	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 
 	portainer "github.com/portainer/portainer/api"
+	"github.com/portainer/portainer/api/dataservices"
 	"github.com/portainer/portainer/api/dataservices/source"
 	"github.com/portainer/portainer/api/datastore"
 	gittypes "github.com/portainer/portainer/api/git/types"
@@ -169,7 +173,9 @@ func TestGitMethodStackBuilder_StandardUserWithReadAccessCanDeployFromAdminSourc
 	builder := newGitMethodBuilder(t, "abc123")
 
 	standardUser := &portainer.User{Username: "standarduser", Role: portainer.StandardUserRole}
-	require.NoError(t, builder.dataStore.User().Create(standardUser))
+	require.NoError(t, builder.dataStore.UpdateTx(func(tx dataservices.DataStoreTx) error {
+		return tx.User().Create(standardUser)
+	}))
 
 	publicSrc := &portainer.Source{
 		Name:   "public-repo",

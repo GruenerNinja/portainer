@@ -14,8 +14,28 @@ import (
 	"github.com/portainer/portainer/api/datastore"
 	"github.com/portainer/portainer/api/filesystem"
 	gittypes "github.com/portainer/portainer/api/git/types"
+	"github.com/portainer/portainer/api/http/security"
+	"github.com/portainer/portainer/api/stacks/stackutils"
+	httperror "github.com/portainer/portainer/pkg/libhttp/error"
+	"github.com/stretchr/testify/require"
 )
 
+type stubKubernetesDeployer struct {
+	portainer.KubernetesDeployer
+	deployErr error
+}
+
+func (f *stubKubernetesDeployer) Deploy(_ context.Context, _ portainer.UserID, _ *portainer.Endpoint, _ []string, _ string) (string, error) {
+	return "", f.deployErr
+}
+
+func mockDeployKubernetesStackInlineRequest() *http.Request {
+	req := mockCreateStackRequestWithSecurityContext(http.MethodPut, "/stacks/1/git/redeploy", nil)
+
+	return req.WithContext(security.StoreTokenData(req, &portainer.TokenData{ID: 1, Username: "admin", Role: portainer.AdministratorRole}))
+}
+
+func TestResolveGitAuthFromRedeployPayload(t *testing.T) {
 	t.Parallel()
 
 	existing := &gittypes.GitAuthentication{
@@ -92,7 +112,7 @@ import (
 func setupDeployKubernetesStackInlineTest(t *testing.T, deployErr error, initialStatus portainer.StackStatus) (*Handler, *portainer.Stack, *gittypes.RepoConfig, portainer.SourceID, *security.RestrictedRequestContext) {
 	t.Helper()
 
-	var manifest = `apiVersion: v1
+	manifest := `apiVersion: v1
 kind: ConfigMap
 metadata:
   name: test-config
@@ -100,7 +120,7 @@ metadata:
 data:
   key: value
 `
-	var configHash = "testhash"
+	configHash := "testhash"
 	tempDir := t.TempDir()
 	require.NoError(t, os.WriteFile(filesystem.JoinPaths(tempDir, "manifest.yml"), []byte(manifest), 0o644))
 
@@ -142,17 +162,134 @@ data:
 		stackCreationMutex: &sync.Mutex{},
 	}
 
+	gitConfig := &gittypes.RepoConfig{URL: src.Git.URL, ReferenceName: "refs/heads/main", ConfigHash: configHash}
+	securityContext := &security.RestrictedRequestContext{
+		IsAdmin: true,
+		UserID:  1,
+		User:    &portainer.User{ID: 1, Role: portainer.AdministratorRole},
+	}
 
+	return handler, stack, gitConfig, src.ID, securityContext
 }
 
+func TestDeployKubernetesStackInline(t *testing.T) {
 	t.Parallel()
 
-	t.Parallel()
+	t.Run("successful redeploys persist Active status inline, with no goroutine to wait on, and reset DeploymentStatus on each attempt", func(t *testing.T) {
+		t.Parallel()
 
+		handler, stack, gitConfig, sourceID, securityContext := setupDeployKubernetesStackInlineTest(t, nil, portainer.StackStatusActive)
+		req := mockDeployKubernetesStackInlineRequest()
 
-}
+		var postDeployCalls int
+		postDeploy := func(_ context.Context, _ error) {
+			postDeployCalls++
+		}
 
-	t.Parallel()
+		deployOnce := func() *httperror.HandlerError {
+			stackutils.PrepareStackStatusForDeployment(stack)
+			deploymentConfig, httpErr := handler.deployStack(req, stack, false, &portainer.Endpoint{})
+			require.Nil(t, httpErr)
+			return handler.deployKubernetesStackInline(deploymentConfig, stack, securityContext, gitConfig, sourceID, postDeploy)
+		}
 
+		httpErr := deployOnce()
+		require.Nil(t, httpErr)
 
+		var updated *portainer.Stack
+		require.NoError(t, handler.DataStore.ViewTx(func(tx dataservices.DataStoreTx) error {
+			var err error
+			updated, err = tx.Stack().Read(stack.ID)
+			return err
+		}))
+		require.Equal(t, portainer.StackStatusActive, updated.Status)
+		require.Len(t, updated.DeploymentStatus, 2, "expected a Deploying entry followed by an Active entry")
+		require.Equal(t, portainer.StackStatusActive, updated.DeploymentStatus[1].Status)
+		require.Equal(t, 1, postDeployCalls, "postDeploy should be called after a successful inline deploy")
+
+		httpErr = deployOnce()
+		require.Nil(t, httpErr)
+
+		require.NoError(t, handler.DataStore.ViewTx(func(tx dataservices.DataStoreTx) error {
+			var err error
+			updated, err = tx.Stack().Read(stack.ID)
+			return err
+		}))
+		require.Equal(t, portainer.StackStatusActive, updated.Status)
+		require.Len(t, updated.DeploymentStatus, 2, "DeploymentStatus should be reset on each redeploy, not accumulate across redeploys")
+		require.Equal(t, portainer.StackStatusActive, updated.DeploymentStatus[1].Status)
+		require.Equal(t, 2, postDeployCalls)
+	})
+
+	t.Run("failed deploy returns an error, leaves the stack untouched, and still calls postDeploy with the error", func(t *testing.T) {
+		t.Parallel()
+
+		deployErr := errors.New("failed to apply resources")
+		handler, stack, gitConfig, sourceID, securityContext := setupDeployKubernetesStackInlineTest(t, deployErr, portainer.StackStatusActive)
+		req := mockDeployKubernetesStackInlineRequest()
+
+		var postDeployCalled bool
+		var postDeployErr error
+		postDeploy := func(_ context.Context, err error) {
+			postDeployCalled = true
+			postDeployErr = err
+		}
+
+		stackutils.PrepareStackStatusForDeployment(stack)
+		deploymentConfig, httpErr := handler.deployStack(req, stack, false, &portainer.Endpoint{})
+		require.Nil(t, httpErr)
+
+		httpErr = handler.deployKubernetesStackInline(deploymentConfig, stack, securityContext, gitConfig, sourceID, postDeploy)
+		require.NotNil(t, httpErr)
+
+		var unchanged *portainer.Stack
+		require.NoError(t, handler.DataStore.ViewTx(func(tx dataservices.DataStoreTx) error {
+			var err error
+			unchanged, err = tx.Stack().Read(stack.ID)
+			return err
+		}))
+		require.Equal(t, portainer.StackStatusActive, unchanged.Status, "status should be untouched since nothing should be persisted on deploy failure")
+		require.Empty(t, unchanged.DeploymentStatus, "no deployment status entry should be recorded on failure")
+
+		require.True(t, postDeployCalled, "postDeploy should be called on failure too, consistent with the file-based inline deploy path")
+		require.ErrorIs(t, postDeployErr, deployErr)
+	})
+
+	t.Run("non-owner standard user with granted access can redeploy", func(t *testing.T) {
+		t.Parallel()
+
+		handler, stack, gitConfig, sourceID, _ := setupDeployKubernetesStackInlineTest(t, nil, portainer.StackStatusActive)
+
+		standardUser := &portainer.User{Username: "standarduser", Role: portainer.StandardUserRole}
+		require.NoError(t, handler.DataStore.UpdateTx(func(tx dataservices.DataStoreTx) error {
+			return tx.User().Create(standardUser)
+		}))
+
+		adminUserContext := source.InsecureNewAdminContext()
+		src, err := handler.DataStore.Source().Read(adminUserContext, sourceID)
+		require.NoError(t, err)
+		// AdministratorsOnly is a hard enforcement that defeats a UserAccesses grant, so it
+		// must be cleared for the grant below to actually take effect.
+		src.AdministratorsOnly = false
+		src.UserAccesses = []portainer.UserID{standardUser.ID}
+		require.NoError(t, handler.DataStore.Source().Update(adminUserContext, src.ID, src))
+
+		standardSecurityContext := &security.RestrictedRequestContext{
+			IsAdmin: false,
+			UserID:  standardUser.ID,
+			User:    standardUser,
+		}
+
+		req := mockDeployKubernetesStackInlineRequest()
+		stackutils.PrepareStackStatusForDeployment(stack)
+		deploymentConfig, httpErr := handler.deployStack(req, stack, false, &portainer.Endpoint{})
+		require.Nil(t, httpErr)
+
+		httpErr = handler.deployKubernetesStackInline(deploymentConfig, stack, standardSecurityContext, gitConfig, sourceID, nil)
+		require.Nil(t, httpErr)
+
+		updatedSrc, err := handler.DataStore.Source().Read(adminUserContext, sourceID)
+		require.NoError(t, err)
+		require.Equal(t, portainer.SourceStatusHealthy, updatedSrc.Status)
+	})
 }

@@ -6,6 +6,7 @@ import Quay from '@/assets/ico/vendor/quay.svg?c';
 import Proget from '@/assets/ico/vendor/proget.svg?c';
 import Azure from '@/assets/ico/vendor/azure.svg?c';
 import Gitlab from '@/assets/ico/vendor/gitlab.svg?c';
+import Github from '@/assets/ico/vendor/github.svg?c';
 
 import { RegistryTypes } from '../types/registry';
 
@@ -29,7 +30,7 @@ export const registryIconMap = {
   [RegistryTypes.AZURE]: Azure,
   [RegistryTypes.GITLAB]: Gitlab,
   [RegistryTypes.CUSTOM]: Edit,
-  // github and anonymous don't have an icon
-  [RegistryTypes.GITHUB]: null,
+  [RegistryTypes.GITHUB]: Github,
+  // anonymous doesn't have an icon
   [RegistryTypes.ANONYMOUS]: null,
 };

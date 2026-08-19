@@ -48,6 +48,7 @@ import (
 	"github.com/portainer/portainer/api/http/handler/teams"
 	"github.com/portainer/portainer/api/http/handler/templates"
 	"github.com/portainer/portainer/api/http/handler/upload"
+	"github.com/portainer/portainer/api/http/handler/useractivity"
 	"github.com/portainer/portainer/api/http/handler/users"
 	"github.com/portainer/portainer/api/http/handler/webhooks"
 	"github.com/portainer/portainer/api/http/handler/websocket"
@@ -295,6 +296,8 @@ func (server *Server) Start(ctx context.Context) error {
 	userHandler.AuthorizationService = server.AuthorizationService
 	userHandler.K8sClientFactory = server.KubernetesClientFactory
 
+	var userActivityHandler = useractivity.NewHandler(requestBouncer, server.DataStore)
+
 	var websocketHandler = websocket.NewHandler(server.KubernetesTokenCacheManager, requestBouncer)
 	websocketHandler.DataStore = server.DataStore
 	websocketHandler.SignatureService = server.SignatureService
@@ -339,6 +342,7 @@ func (server *Server) Start(ctx context.Context) error {
 		TemplatesHandler:       templatesHandler,
 		UploadHandler:          uploadHandler,
 		UserHandler:            userHandler,
+		UserActivityHandler:    userActivityHandler,
 		WebSocketHandler:       websocketHandler,
 		WebhookHandler:         webhookHandler,
 	}

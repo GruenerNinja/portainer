@@ -8,9 +8,23 @@ import (
 	"github.com/portainer/portainer/api/dataservices/source"
 	"github.com/portainer/portainer/api/datastore"
 	gittypes "github.com/portainer/portainer/api/git/types"
+	"github.com/portainer/portainer/api/set"
 
 	"github.com/stretchr/testify/require"
 )
+
+func TestLoadWorkflowMapSkipsDeletedWorkflowReferences(t *testing.T) {
+	t.Parallel()
+	_, store := datastore.MustNewTestStore(t, false, true)
+
+	wf := &portainer.Workflow{Name: "existing"}
+	require.NoError(t, store.Workflow().Create(wf))
+
+	workflowMap, err := LoadWorkflowMap(store, set.Set[portainer.WorkflowID]{wf.ID: true, 9999: true})
+	require.NoError(t, err)
+	require.Len(t, workflowMap, 1)
+	require.Equal(t, "existing", workflowMap[wf.ID].Name)
+}
 
 func TestMergeSourceAndFile_NilSourceReturnsNil(t *testing.T) {
 	t.Parallel()

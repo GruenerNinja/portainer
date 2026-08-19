@@ -147,7 +147,7 @@ func (d *stackDeployer) DeployRemoteSwarmStack(
 	return d.remoteStack(ctx, userId, stack, endpoint, OperationSwarmDeploy, unpackerCmdBuilderOptions{
 		pullImage:     pullImage,
 		prune:         prune,
-		forceRecreate: stack.AutoUpdate != nil && stack.AutoUpdate.ForceUpdate,
+		forceRecreate: pullImage || (stack.AutoUpdate != nil && stack.AutoUpdate.ForceUpdate),
 		registries:    registries,
 	})
 }

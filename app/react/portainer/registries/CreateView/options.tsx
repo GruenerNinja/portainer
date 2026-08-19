@@ -19,6 +19,13 @@ export const options = [
     value: String(RegistryTypes.ECR),
   },
   {
+    id: 'registry_github',
+    icon: registryIconMap[RegistryTypes.GITHUB],
+    label: registryLabelMap[RegistryTypes.GITHUB],
+    description: 'GitHub Container Registry (ghcr.io)',
+    value: String(RegistryTypes.GITHUB),
+  },
+  {
     id: 'registry_quay',
     icon: registryIconMap[RegistryTypes.QUAY],
     label: registryLabelMap[RegistryTypes.QUAY],

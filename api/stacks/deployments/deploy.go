@@ -210,12 +210,13 @@ func redeployWhenChangedSecondStage(
 
 	redeployStack := func(stack *portainer.Stack) error {
 		var err error
+		forceRecreate := stack.AutoUpdate != nil && stack.AutoUpdate.ForceUpdate
 		switch stack.Type {
 		case portainer.DockerComposeStack:
 			if stackutils.IsRelativePathStack(stack) {
-				err = deployer.DeployRemoteComposeStack(ctx, user.ID, stack, endpoint, registries, true, true, false)
+				err = deployer.DeployRemoteComposeStack(ctx, user.ID, stack, endpoint, registries, true, true, forceRecreate)
 			} else {
-				err = deployer.DeployComposeStack(ctx, stack, endpoint, registries, true, true, false)
+				err = deployer.DeployComposeStack(ctx, stack, endpoint, registries, true, true, forceRecreate)
 			}
 
 			if err != nil {

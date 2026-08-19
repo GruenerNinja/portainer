@@ -29,6 +29,16 @@ func Test_registryCreatePayload_Validate(t *testing.T) {
 		err := payload.Validate(nil)
 		require.NoError(t, err)
 	})
+	t.Run("Can create a GitHub Container Registry", func(t *testing.T) {
+		payload := basePayload
+		payload.Type = portainer.GithubRegistry
+		payload.URL = "ghcr.io"
+		payload.Authentication = true
+		payload.Username = "octocat"
+		payload.Password = "github_pat"
+		payload.Github = portainer.GithubRegistryData{UseOrganisation: true, OrganisationName: "acme"}
+		require.NoError(t, payload.Validate(nil))
+	})
 	t.Run("Can create a ProGet registry if BaseURL is not empty", func(t *testing.T) {
 		payload := basePayload
 		payload.Type = portainer.ProGetRegistry

@@ -109,6 +109,9 @@ angular.module('portainer.app').factory('RegistryService', [
       } else if (reg.Type === RegistryTypes.QUAY) {
         const name = reg.Quay.UseOrganisation ? reg.Quay.OrganisationName : reg.Username;
         url = reg.URL + '/' + name;
+      } else if (reg.Type === RegistryTypes.GITHUB) {
+        const name = reg.Github.UseOrganisation ? reg.Github.OrganisationName : reg.Username;
+        url = reg.URL + '/' + name;
       }
       return url;
     }

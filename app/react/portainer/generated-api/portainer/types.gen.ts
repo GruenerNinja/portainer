@@ -2105,6 +2105,15 @@ export type PortainerAccessPolicy = {
   RoleId: number;
 };
 
+export type PortainerActivityLog = {
+  action?: string;
+  context?: string;
+  id?: number;
+  payload?: string;
+  timestamp?: number;
+  username?: string;
+};
+
 export type PortainerArtifact = {
   edgeGroups?: Array<number>;
   edgeStackId?: number;
@@ -3113,9 +3122,9 @@ export type PortainerRegistry = {
    */
   TeamAccessPolicies?: PortainerTeamAccessPolicies;
   /**
-   * Registry Type (1 - Quay, 2 - Azure, 3 - Custom, 4 - Gitlab, 5 - ProGet, 6 - DockerHub, 7 - ECR)
+   * Registry Type (1 - Quay, 2 - Azure, 3 - Custom, 4 - Gitlab, 5 - ProGet, 6 - DockerHub, 7 - ECR, 8 - GitHub)
    */
-  Type?: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+  Type?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
   /**
    * URL or IP address of the Docker registry
    */
@@ -3436,6 +3445,7 @@ export type PortainerSource = {
   teamAccesses?: Array<number>;
   type?: PortainerSourceType;
   userAccesses?: Array<number>;
+  vault?: PortainerVaultConfig;
 };
 
 export const PortainerSourceStatus = {
@@ -3473,6 +3483,10 @@ export const PortainerSourceType = {
    * SourceTypeHelm
    */
   SOURCE_TYPE_HELM: 3,
+  /**
+   * SourceTypeVault
+   */
+  SOURCE_TYPE_VAULT: 4,
 } as const;
 
 export type PortainerSourceType =
@@ -3526,6 +3540,11 @@ export type PortainerStack = {
    */
   Env?: Array<PortainerPair>;
   /**
+   * FilesystemPath is the base path on the target environment where Git repository files are cloned
+   * when SupportRelativePath is enabled.
+   */
+  FilesystemPath?: string;
+  /**
    * Whether the stack is from a app template
    */
   FromAppTemplate?: boolean;
@@ -3557,9 +3576,18 @@ export type PortainerStack = {
   ProjectPath?: string;
   ResourceControl?: PortainerResourceControl;
   /**
+   * SecretMappings are resolved at deployment time and injected into the stack environment.
+   */
+  SecretMappings?: Array<PortainerStackSecretMapping>;
+  /**
    * Stack status (1 - active, 2 - inactive, 3 - deploying, 4 - error)
    */
   Status?: PortainerStackStatus;
+  /**
+   * SupportRelativePath indicates whether Git repository files should be cloned on the target environment
+   * so relative bind mounts can resolve against that cloned repository.
+   */
+  SupportRelativePath?: boolean;
   /**
    * Cluster identifier of the Swarm cluster where the stack is deployed
    */
@@ -3635,6 +3663,13 @@ export type PortainerStackOption = {
    * Prune services that are no longer referenced
    */
   Prune?: boolean;
+};
+
+export type PortainerStackSecretMapping = {
+  key?: string;
+  name?: string;
+  path?: string;
+  sourceId?: number;
 };
 
 export const PortainerStackStatus = {
@@ -4027,6 +4062,19 @@ export type PortainerUserThemeSettings = {
   color?: 'dark' | 'light' | 'highcontrast' | 'auto' | '';
 };
 
+export type PortainerVaultAuthentication = {
+  method?: string;
+  token?: string;
+};
+
+export type PortainerVaultConfig = {
+  address?: string;
+  authentication?: PortainerVaultAuthentication;
+  kvVersion?: number;
+  namespace?: string;
+  tlsSkipVerify?: boolean;
+};
+
 export type PortainerWebhook = {
   EndpointId?: number;
   /**
@@ -4108,6 +4156,10 @@ export type RegistriesRegistryCreatePayload = {
    */
   Ecr?: PortainerEcrData;
   /**
+   * GitHub specific details, used when type = 8
+   */
+  Github?: PortainerGithubRegistryData;
+  /**
    * Gitlab specific details, required when type = 4
    */
   Gitlab?: PortainerGitlabRegistryData;
@@ -4128,16 +4180,9 @@ export type RegistriesRegistryCreatePayload = {
    */
   TLS?: boolean;
   /**
-   * Registry Type. Valid values are:
-   * 1 (Quay.io),
-   * 2 (Azure container registry),
-   * 3 (custom registry),
-   * 4 (Gitlab registry),
-   * 5 (ProGet registry),
-   * 6 (DockerHub)
-   * 7 (ECR)
+   * Registry Type. Valid values: 1 (Quay.io), 2 (Azure), 3 (custom), 4 (GitLab), 5 (ProGet), 6 (DockerHub), 7 (ECR), 8 (GitHub container registry).
    */
-  Type: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+  Type: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
   /**
    * URL or IP address of the Docker registry
    */
@@ -4203,6 +4248,10 @@ export type RegistriesRegistryUpdatePayload = {
    * ECR data
    */
   Ecr?: PortainerEcrData;
+  /**
+   * GitHub container registry data
+   */
+  Github?: PortainerGithubRegistryData;
   /**
    * Name that will be used to identify this registry
    */
@@ -4816,6 +4865,10 @@ export const SourcesSourceType = {
    * SourceTypeOCI
    */
   SOURCE_TYPE_OCI: 'oci',
+  /**
+   * SourceTypeVault
+   */
+  SOURCE_TYPE_VAULT: 'vault',
 } as const;
 
 export type SourcesSourceType =
@@ -4838,6 +4891,24 @@ export const SourcesStatus = {
 
 export type SourcesStatus = (typeof SourcesStatus)[keyof typeof SourcesStatus];
 
+export type SourcesVaultAuthenticationPayload = {
+  method?: string;
+  token?: string;
+};
+
+export type SourcesVaultSourceCreatePayload = {
+  address: string;
+  administratorsOnly?: boolean;
+  authentication?: SourcesVaultAuthenticationPayload;
+  kvVersion?: number;
+  name?: string;
+  namespace?: string;
+  public?: boolean;
+  teamAccesses?: Array<number>;
+  tlsSkipVerify?: boolean;
+  userAccesses?: Array<number>;
+};
+
 export type SourcesWorkflow = {
   creationDate?: number;
   gitConfig?: GittypesRepoConfig;
@@ -4854,10 +4925,19 @@ export type SourcesWorkflow = {
 export type SourcesConnectionInfo = {
   authentication?: SourcesGitAuthInfo;
   tlsSkipVerify?: boolean;
+  vault?: SourcesVaultInfo;
 };
 
 export type SourcesGitAuthInfo = {
   username?: string;
+};
+
+export type SourcesVaultInfo = {
+  address?: string;
+  authMethod?: string;
+  kvVersion?: number;
+  namespace?: string;
+  tlsSkipVerify?: boolean;
 };
 
 export type SslSslUpdatePayload = {
@@ -4883,6 +4963,10 @@ export type StacksComposeStackFromFileContentPayload = {
    */
   Name: string;
   /**
+   * SecretMappings are resolved from external secret sources during deployment.
+   */
+  SecretMappings?: Array<PortainerStackSecretMapping>;
+  /**
    * Content of the Stack file
    */
   StackFileContent: string;
@@ -4905,6 +4989,10 @@ export type StacksComposeStackFromGitRepositoryPayload = {
    * A list of environment variables used during stack deployment
    */
   Env?: Array<PortainerPair>;
+  /**
+   * Base path on the target environment used for relative path volume Git clones
+   */
+  FilesystemPath?: string;
   /**
    * Whether the stack is from a app template
    */
@@ -4934,10 +5022,18 @@ export type StacksComposeStackFromGitRepositoryPayload = {
    */
   RepositoryUsername?: string;
   /**
+   * SecretMappings are resolved from external secret sources during deployment.
+   */
+  SecretMappings?: Array<PortainerStackSecretMapping>;
+  /**
    * SourceID references an existing Source for git credentials/URL.
    * When set, the inline URL and authentication fields are ignored.
    */
   SourceID?: number;
+  /**
+   * Whether the stack supports relative path volumes by cloning Git files on the target environment
+   */
+  SupportRelativePath?: boolean;
   /**
    * Deprecated: use SourceID instead. TLSSkipVerify skips SSL verification when cloning the Git repository.
    */
@@ -4975,6 +5071,10 @@ export type StacksKubernetesGitDeploymentPayload = {
    */
   RepositoryUsername?: string;
   /**
+   * SecretMappings are resolved from external secret sources during deployment.
+   */
+  SecretMappings?: Array<PortainerStackSecretMapping>;
+  /**
    * SourceID references an existing Source for git credentials/URL.
    * When set, the inline URL and authentication fields are ignored.
    */
@@ -5000,6 +5100,10 @@ export type StacksKubernetesStringDeploymentPayload = {
    */
   FromAppTemplate?: boolean;
   Namespace?: string;
+  /**
+   * SecretMappings are resolved from external secret sources during deployment.
+   */
+  SecretMappings?: Array<PortainerStackSecretMapping>;
   StackFileContent?: string;
   StackName?: string;
 };
@@ -5041,6 +5145,7 @@ export type StacksStackGitUpdatePayload = {
   AutoUpdate?: PortainerAutoUpdateSettings;
   ConfigFilePath?: string;
   Env?: Array<PortainerPair>;
+  FilesystemPath?: string;
   Prune?: boolean;
   /**
    * Deprecated: use SourceID instead. Use basic authentication to clone the Git repository.
@@ -5059,11 +5164,13 @@ export type StacksStackGitUpdatePayload = {
    * Deprecated: use SourceID instead. Username used in basic authentication.
    */
   RepositoryUsername?: string;
+  SecretMappings?: Array<PortainerStackSecretMapping>;
   /**
    * SourceID references an existing Source for git credentials/URL.
    * When set, the inline URL and authentication fields are ignored.
    */
   SourceID?: number;
+  SupportRelativePath?: boolean;
   /**
    * Deprecated: use SourceID instead. Skip TLS verification when cloning the Git repository.
    */
@@ -5133,6 +5240,11 @@ export type StacksStackResponse = {
    */
   Env?: Array<PortainerPair>;
   /**
+   * FilesystemPath is the base path on the target environment where Git repository files are cloned
+   * when SupportRelativePath is enabled.
+   */
+  FilesystemPath?: string;
+  /**
    * Whether the stack is from a app template
    */
   FromAppTemplate?: boolean;
@@ -5165,9 +5277,18 @@ export type StacksStackResponse = {
   ProjectPath?: string;
   ResourceControl?: PortainerResourceControl;
   /**
+   * SecretMappings are resolved at deployment time and injected into the stack environment.
+   */
+  SecretMappings?: Array<PortainerStackSecretMapping>;
+  /**
    * Stack status (1 - active, 2 - inactive, 3 - deploying, 4 - error)
    */
   Status?: PortainerStackStatus;
+  /**
+   * SupportRelativePath indicates whether Git repository files should be cloned on the target environment
+   * so relative bind mounts can resolve against that cloned repository.
+   */
+  SupportRelativePath?: boolean;
   /**
    * Cluster identifier of the Swarm cluster where the stack is deployed
    */
@@ -5204,6 +5325,10 @@ export type StacksSwarmStackFromFileContentPayload = {
    */
   Name: string;
   /**
+   * SecretMappings are resolved from external secret sources during deployment.
+   */
+  SecretMappings?: Array<PortainerStackSecretMapping>;
+  /**
    * Content of the Stack file
    */
   StackFileContent: string;
@@ -5230,6 +5355,10 @@ export type StacksSwarmStackFromGitRepositoryPayload = {
    * A list of environment variables used during stack deployment
    */
   Env?: Array<PortainerPair>;
+  /**
+   * Base path on the target environment used for relative path volume Git clones
+   */
+  FilesystemPath?: string;
   /**
    * Whether the stack is from a app template
    */
@@ -5259,10 +5388,18 @@ export type StacksSwarmStackFromGitRepositoryPayload = {
    */
   RepositoryUsername?: string;
   /**
+   * SecretMappings are resolved from external secret sources during deployment.
+   */
+  SecretMappings?: Array<PortainerStackSecretMapping>;
+  /**
    * SourceID references an existing Source for git credentials/URL.
    * When set, the inline URL and authentication fields are ignored.
    */
   SourceID?: number;
+  /**
+   * Whether the stack supports relative path volumes by cloning Git files on the target environment
+   */
+  SupportRelativePath?: boolean;
   /**
    * Swarm cluster identifier
    */
@@ -5352,6 +5489,9 @@ export type SystemVersionResponse = {
 };
 
 export type TagsTagCreatePayload = {
+  /**
+   * Struct tags are metadata read by validation and documentation tools.
+   */
   Name: string;
 };
 
@@ -5424,6 +5564,11 @@ export type UnstructuredUnstructured = {
   Object?: {
     [key: string]: unknown;
   };
+};
+
+export type UseractivityListResponse = {
+  logs?: Array<PortainerActivityLog>;
+  totalCount?: number;
 };
 
 export const UsersAccessLocation = {
@@ -16436,9 +16581,9 @@ export type GitOpsSourcesListData = {
      */
     status?: string;
     /**
-     * Filter by source type: git | oci | helm
+     * Filter by source type: git | oci | helm | vault
      */
-    type?: 'git' | 'helm' | 'oci';
+    type?: 'git' | 'helm' | 'oci' | 'vault';
   };
   url: '/gitops/sources';
 };
@@ -16832,6 +16977,76 @@ export type GitOpsSourcesTestResponses = {
 
 export type GitOpsSourcesTestResponse =
   GitOpsSourcesTestResponses[keyof GitOpsSourcesTestResponses];
+
+export type GitOpsSourcesCreateVaultData = {
+  /**
+   * Vault source details
+   */
+  body: SourcesVaultSourceCreatePayload;
+  path?: never;
+  query?: never;
+  url: '/gitops/sources/vault';
+};
+
+export type GitOpsSourcesCreateVaultErrors = {
+  /**
+   * Invalid request payload
+   */
+  400: unknown;
+  /**
+   * Access denied
+   */
+  403: unknown;
+  /**
+   * Server error
+   */
+  500: unknown;
+};
+
+export type GitOpsSourcesCreateVaultResponses = {
+  /**
+   * Created
+   */
+  201: PortainerSource;
+};
+
+export type GitOpsSourcesCreateVaultResponse =
+  GitOpsSourcesCreateVaultResponses[keyof GitOpsSourcesCreateVaultResponses];
+
+export type GitOpsSourcesVaultTestData = {
+  /**
+   * Vault connection details
+   */
+  body: SourcesVaultSourceCreatePayload;
+  path?: never;
+  query?: never;
+  url: '/gitops/sources/vault/test';
+};
+
+export type GitOpsSourcesVaultTestErrors = {
+  /**
+   * Invalid request payload
+   */
+  400: unknown;
+  /**
+   * Access denied
+   */
+  403: unknown;
+  /**
+   * Server error
+   */
+  500: unknown;
+};
+
+export type GitOpsSourcesVaultTestResponses = {
+  /**
+   * Connection test result
+   */
+  200: SourcesConnectionTestResult;
+};
+
+export type GitOpsSourcesVaultTestResponse =
+  GitOpsSourcesVaultTestResponses[keyof GitOpsSourcesVaultTestResponses];
 
 export type GitOpsWorkflowsListData = {
   body?: never;
@@ -24472,6 +24687,23 @@ export type UploadTlsResponses = {
 };
 
 export type UploadTlsResponse = UploadTlsResponses[keyof UploadTlsResponses];
+
+export type UserActivityLogsData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/useractivity/logs';
+};
+
+export type UserActivityLogsResponses = {
+  /**
+   * Success
+   */
+  200: UseractivityListResponse;
+};
+
+export type UserActivityLogsResponse =
+  UserActivityLogsResponses[keyof UserActivityLogsResponses];
 
 export type UserListData = {
   body?: never;

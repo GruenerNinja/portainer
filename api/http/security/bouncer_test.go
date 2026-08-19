@@ -3,6 +3,7 @@ package security
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -115,6 +116,21 @@ func Test_mwAuthenticateFirst(t *testing.T) {
 			is.Equal(tt.wantStatusCode, rr.Code, "Status should be %d", tt.wantStatusCode)
 		})
 	}
+}
+
+func TestRecordActivityDoesNotCaptureRequestBody(t *testing.T) {
+	t.Parallel()
+	_, store := datastore.MustNewTestStore(t, false, true)
+	bouncer := &RequestBouncer{dataStore: store}
+	request := httptest.NewRequest(http.MethodPost, "/stacks", strings.NewReader(`{"Password":"secret"}`))
+
+	bouncer.recordActivity(request, &RestrictedRequestContext{User: &portainer.User{Username: "admin"}})
+
+	entries, err := store.ActivityLog().ReadAll()
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	require.Equal(t, "admin", entries[0].Username)
+	require.NotContains(t, entries[0].Payload, "secret")
 }
 
 func Test_extractKeyFromCookie(t *testing.T) {

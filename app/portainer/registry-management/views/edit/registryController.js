@@ -18,6 +18,7 @@ export default class RegistryController {
 
     this.toggleAuthentication = this.toggleAuthentication.bind(this);
     this.toggleQuayUseOrganisation = this.toggleQuayUseOrganisation.bind(this);
+    this.toggleGithubUseOrganisation = this.toggleGithubUseOrganisation.bind(this);
   }
 
   toggleAuthentication(newValue) {
@@ -32,6 +33,12 @@ export default class RegistryController {
     });
   }
 
+  toggleGithubUseOrganisation(newValue) {
+    this.$scope.$evalAsync(() => {
+      this.registry.Github.UseOrganisation = newValue;
+    });
+  }
+
   passwordLabel() {
     const type = this.registry.Type;
     switch (type) {
@@ -40,6 +47,7 @@ export default class RegistryController {
       case RegistryTypes.DOCKERHUB:
         return 'Access token';
       case RegistryTypes.GITLAB:
+      case RegistryTypes.GITHUB:
         return 'Personal Access Token';
       default:
         return 'Password';
@@ -74,7 +82,8 @@ export default class RegistryController {
       this.state.nameAlreadyExists ||
       !this.registry.Name ||
       !this.registry.URL ||
-      (this.registry.Type == this.RegistryTypes.QUAY && this.registry.Quay.UseOrganisation && !this.registry.Quay.OrganisationName)
+      (this.registry.Type == this.RegistryTypes.QUAY && this.registry.Quay.UseOrganisation && !this.registry.Quay.OrganisationName) ||
+      (this.registry.Type == this.RegistryTypes.GITHUB && this.registry.Github.UseOrganisation && !this.registry.Github.OrganisationName)
     );
   }
 
@@ -94,6 +103,8 @@ export default class RegistryController {
         return 'Docker Hub';
       case RegistryTypes.ECR:
         return 'AWS ECR';
+      case RegistryTypes.GITHUB:
+        return 'GitHub Container Registry';
       default:
         return '';
     }

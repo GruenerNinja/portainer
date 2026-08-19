@@ -7,4 +7,5 @@ export const RegistryTypes = Object.freeze({
   PROGET: 5,
   DOCKERHUB: 6,
   ECR: 7,
+  GITHUB: 8,
 });

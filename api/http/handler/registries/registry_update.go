@@ -33,6 +33,8 @@ type registryUpdatePayload struct {
 	RegistryAccesses *portainer.RegistryAccesses `json:",omitempty"`
 	// ECR data
 	Ecr *portainer.EcrData `json:",omitempty"`
+	// GitHub container registry data
+	Github *portainer.GithubRegistryData `json:",omitempty"`
 }
 
 func (payload *registryUpdatePayload) Validate(r *http.Request) error {
@@ -172,6 +174,7 @@ func (handler *Handler) registryUpdate(w http.ResponseWriter, r *http.Request) *
 	}
 
 	registry.Quay = *cmp.Or(payload.Quay, &registry.Quay)
+	registry.Github = *cmp.Or(payload.Github, &registry.Github)
 
 	if err := handler.DataStore.Registry().Update(registry.ID, registry); err != nil {
 		return httperror.InternalServerError("Unable to persist registry changes inside the database", err)

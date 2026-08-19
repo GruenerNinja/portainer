@@ -495,6 +495,9 @@ import type {
   GitOpsSourcesCreateGitData,
   GitOpsSourcesCreateGitErrors,
   GitOpsSourcesCreateGitResponses,
+  GitOpsSourcesCreateVaultData,
+  GitOpsSourcesCreateVaultErrors,
+  GitOpsSourcesCreateVaultResponses,
   GitOpsSourcesDeleteData,
   GitOpsSourcesDeleteErrors,
   GitOpsSourcesDeleteResponses,
@@ -516,6 +519,9 @@ import type {
   GitOpsSourcesUpdateGitData,
   GitOpsSourcesUpdateGitErrors,
   GitOpsSourcesUpdateGitResponses,
+  GitOpsSourcesVaultTestData,
+  GitOpsSourcesVaultTestErrors,
+  GitOpsSourcesVaultTestResponses,
   GitOpsSourceWorkflowsListData,
   GitOpsSourceWorkflowsListErrors,
   GitOpsSourceWorkflowsListResponses,
@@ -812,6 +818,8 @@ import type {
   UploadTlsData,
   UploadTlsErrors,
   UploadTlsResponses,
+  UserActivityLogsData,
+  UserActivityLogsResponses,
   UserAdminCheckData,
   UserAdminCheckErrors,
   UserAdminCheckResponses,
@@ -1228,6 +1236,8 @@ import {
   zGitOpsSourceGetResponse,
   zGitOpsSourcesCreateGitBody,
   zGitOpsSourcesCreateGitResponse,
+  zGitOpsSourcesCreateVaultBody,
+  zGitOpsSourcesCreateVaultResponse,
   zGitOpsSourcesDeletePath,
   zGitOpsSourcesDeleteResponse,
   zGitOpsSourcesListQuery,
@@ -1244,6 +1254,8 @@ import {
   zGitOpsSourcesUpdateGitBody,
   zGitOpsSourcesUpdateGitPath,
   zGitOpsSourcesUpdateGitResponse,
+  zGitOpsSourcesVaultTestBody,
+  zGitOpsSourcesVaultTestResponse,
   zGitOpsSourceWorkflowsListPath,
   zGitOpsSourceWorkflowsListResponse,
   zGitOpsWorkflowGetPath,
@@ -1483,6 +1495,7 @@ import {
   zUploadTlsBody,
   zUploadTlsPath,
   zUploadTlsResponse,
+  zUserActivityLogsResponse,
   zUserAdminCheckResponse,
   zUserAdminInitBody,
   zUserAdminInitHeaders,
@@ -4589,6 +4602,88 @@ export const gitOpsSourcesTest = <ThrowOnError extends boolean = true>(
       { name: 'Authorization', type: 'apiKey' },
     ],
     url: '/gitops/sources/test',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Create a Vault source
+ *
+ * Creates a reusable HashiCorp Vault source for deploy-time secret resolution.
+ * **Access policy**: administrator
+ */
+export const gitOpsSourcesCreateVault = <ThrowOnError extends boolean = true>(
+  options: Options<GitOpsSourcesCreateVaultData, ThrowOnError>
+): RequestResult<
+  GitOpsSourcesCreateVaultResponses,
+  GitOpsSourcesCreateVaultErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    GitOpsSourcesCreateVaultResponses,
+    GitOpsSourcesCreateVaultErrors,
+    ThrowOnError
+  >({
+    requestValidator: async (data) =>
+      await z
+        .object({
+          body: zGitOpsSourcesCreateVaultBody,
+          path: z.never().optional(),
+          query: z.never().optional(),
+        })
+        .parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) =>
+      await zGitOpsSourcesCreateVaultResponse.parseAsync(data),
+    security: [
+      { name: 'X-API-KEY', type: 'apiKey' },
+      { name: 'Authorization', type: 'apiKey' },
+    ],
+    url: '/gitops/sources/vault',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Test a Vault source connection
+ *
+ * Tests connectivity for Vault connection details that have not been persisted yet.
+ * **Access policy**: administrator
+ */
+export const gitOpsSourcesVaultTest = <ThrowOnError extends boolean = true>(
+  options: Options<GitOpsSourcesVaultTestData, ThrowOnError>
+): RequestResult<
+  GitOpsSourcesVaultTestResponses,
+  GitOpsSourcesVaultTestErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    GitOpsSourcesVaultTestResponses,
+    GitOpsSourcesVaultTestErrors,
+    ThrowOnError
+  >({
+    requestValidator: async (data) =>
+      await z
+        .object({
+          body: zGitOpsSourcesVaultTestBody,
+          path: z.never().optional(),
+          query: z.never().optional(),
+        })
+        .parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) =>
+      await zGitOpsSourcesVaultTestResponse.parseAsync(data),
+    security: [
+      { name: 'X-API-KEY', type: 'apiKey' },
+      { name: 'Authorization', type: 'apiKey' },
+    ],
+    url: '/gitops/sources/vault/test',
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -11216,6 +11311,38 @@ export const uploadTls = <ThrowOnError extends boolean = true>(
       'Content-Type': null,
       ...options.headers,
     },
+  });
+
+/**
+ * List user activity logs
+ *
+ * Lists retained authenticated state-changing API requests. Request bodies and credentials are never recorded.
+ */
+export const userActivityLogs = <ThrowOnError extends boolean = true>(
+  options?: Options<UserActivityLogsData, ThrowOnError>
+): RequestResult<UserActivityLogsResponses, unknown, ThrowOnError> =>
+  (options?.client ?? client).get<
+    UserActivityLogsResponses,
+    unknown,
+    ThrowOnError
+  >({
+    requestValidator: async (data) =>
+      await z
+        .object({
+          body: z.never().optional(),
+          path: z.never().optional(),
+          query: z.never().optional(),
+        })
+        .parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) =>
+      await zUserActivityLogsResponse.parseAsync(data),
+    security: [
+      { name: 'X-API-KEY', type: 'apiKey' },
+      { name: 'Authorization', type: 'apiKey' },
+    ],
+    url: '/useractivity/logs',
+    ...options,
   });
 
 /**

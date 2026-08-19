@@ -18,6 +18,15 @@
             name-is-used="($ctrl.nameIsUsed)"
           ></registry-form-quay>
 
+          <registry-form-github
+            ng-if="$ctrl.model.Type === $ctrl.RegistryTypes.GITHUB"
+            model="$ctrl.model"
+            form-action="$ctrl.createRegistry"
+            form-action-label="Add registry"
+            action-in-progress="$ctrl.state.actionInProgress"
+            name-is-used="($ctrl.nameIsUsed)"
+          ></registry-form-github>
+
           <registry-form-azure
             ng-if="$ctrl.model.Type === $ctrl.RegistryTypes.AZURE"
             model="$ctrl.model"

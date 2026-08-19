@@ -14,6 +14,7 @@ var _ dataservices.DataStore = &testDatastore{}
 
 type testDatastore struct {
 	allowList               dataservices.AllowListService
+	activityLog             dataservices.ActivityLogService
 	customTemplate          dataservices.CustomTemplateService
 	edgeGroup               dataservices.EdgeGroupService
 	edgeJob                 dataservices.EdgeJobService
@@ -55,6 +56,7 @@ func (d *testDatastore) CheckCurrentEdition() error                         { re
 func (d *testDatastore) MigrateData() error                                 { return nil }
 func (d *testDatastore) Rollback(force bool) error                          { return nil }
 func (d *testDatastore) AllowList() dataservices.AllowListService           { return d.allowList }
+func (d *testDatastore) ActivityLog() dataservices.ActivityLogService       { return d.activityLog }
 func (d *testDatastore) CustomTemplate() dataservices.CustomTemplateService { return d.customTemplate }
 func (d *testDatastore) EdgeGroup() dataservices.EdgeGroupService           { return d.edgeGroup }
 func (d *testDatastore) EdgeJob() dataservices.EdgeJobService               { return d.edgeJob }

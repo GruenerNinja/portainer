@@ -2,6 +2,8 @@ package security
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"net/http"
 	"slices"
 	"strings"
@@ -282,8 +284,34 @@ func (bouncer *RequestBouncer) mwUpgradeToRestrictedRequest(next http.Handler) h
 		}
 
 		ctx := StoreRestrictedRequestContext(r, requestContext)
+		bouncer.recordActivity(r, requestContext)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+func (bouncer *RequestBouncer) recordActivity(r *http.Request, requestContext *RestrictedRequestContext) {
+	if r.Method == http.MethodGet || r.Method == http.MethodHead || r.Method == http.MethodOptions || strings.HasPrefix(r.URL.Path, "/useractivity/") {
+		return
+	}
+	if requestContext.User == nil {
+		return
+	}
+	service := bouncer.dataStore.ActivityLog()
+	if service == nil {
+		return
+	}
+
+	payload, _ := json.Marshal(map[string]string{"method": r.Method, "path": r.URL.Path})
+	entry := &portainer.ActivityLog{
+		Timestamp: time.Now().Unix(),
+		Action:    r.Method,
+		Context:   r.URL.Path,
+		Username:  requestContext.User.Username,
+		Payload:   base64.StdEncoding.EncodeToString(payload),
+	}
+	if err := service.Create(entry); err != nil {
+		log.Error().Err(err).Msg("failed to record user activity")
+	}
 }
 
 // mwIsTeamLeader will verify that the user is an admin or a team leader
@@ -518,7 +546,7 @@ func MWSecureHeaders(next http.Handler, hsts, csp bool) http.Handler {
 		}
 
 		if csp {
-			w.Header().Set("Content-Security-Policy", "script-src 'self' https://js.hsforms.net https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; object-src 'none'; frame-ancestors 'none'; frame-src https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/")
+			w.Header().Set("Content-Security-Policy", "script-src 'self' https://js.hsforms.net https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/ https://static.cloudflareinsights.com; connect-src 'self' https://cloudflareinsights.com; object-src 'none'; frame-ancestors 'none'; frame-src https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/")
 		}
 
 		w.Header().Set("X-Content-Type-Options", "nosniff")

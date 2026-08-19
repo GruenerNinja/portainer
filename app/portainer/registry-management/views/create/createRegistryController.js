@@ -26,6 +26,7 @@ class CreateRegistryController {
     this.selectDockerHub = this.selectDockerHub.bind(this);
     this.selectEcr = this.selectEcr.bind(this);
     this.selectQuayRegistry = this.selectQuayRegistry.bind(this);
+    this.selectGithubRegistry = this.selectGithubRegistry.bind(this);
     this.selectProGetRegistry = this.selectProGetRegistry.bind(this);
     this.selectAzureRegistry = this.selectAzureRegistry.bind(this);
     this.selectGitlabRegistry = this.selectGitlabRegistry.bind(this);
@@ -46,6 +47,14 @@ class CreateRegistryController {
     this.model.Quay = {};
     this.useDefaultQuayConfiguration();
     this.model.Type = RegistryTypes.QUAY;
+  }
+
+  selectGithubRegistry() {
+    this.model.Name = 'GitHub Container Registry';
+    this.model.URL = 'ghcr.io';
+    this.model.Authentication = true;
+    this.model.Github = { useOrganisation: false, organisationName: '' };
+    this.model.Type = RegistryTypes.GITHUB;
   }
 
   useDefaultGitlabConfiguration() {
@@ -177,6 +186,9 @@ class CreateRegistryController {
         break;
       case '7':
         this.selectEcr();
+        break;
+      case '8':
+        this.selectGithubRegistry();
         break;
       case '1':
         this.selectQuayRegistry();

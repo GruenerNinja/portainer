@@ -792,6 +792,19 @@ type (
 		OrganisationName string `json:"OrganisationName"`
 	}
 
+	// ActivityLog records an authenticated state-changing API request.
+	// Payload is base64-encoded JSON and deliberately excludes request bodies and credentials.
+	ActivityLog struct {
+		ID        ActivityLogID `json:"id"`
+		Timestamp int64         `json:"timestamp"`
+		Action    string        `json:"action"`
+		Context   string        `json:"context"`
+		Username  string        `json:"username"`
+		Payload   string        `json:"payload"`
+	}
+
+	ActivityLogID int
+
 	HelmUserRepositoryID int
 
 	// HelmUserRepositories stores a Helm repository URL for the given user
@@ -1015,8 +1028,8 @@ type (
 	Registry struct {
 		// Registry Identifier
 		ID RegistryID `json:"Id" example:"1"`
-		// Registry Type (1 - Quay, 2 - Azure, 3 - Custom, 4 - Gitlab, 5 - ProGet, 6 - DockerHub, 7 - ECR)
-		Type RegistryType `json:"Type" enums:"1,2,3,4,5,6,7"`
+		// Registry Type (1 - Quay, 2 - Azure, 3 - Custom, 4 - Gitlab, 5 - ProGet, 6 - DockerHub, 7 - ECR, 8 - GitHub)
+		Type RegistryType `json:"Type" enums:"1,2,3,4,5,6,7,8"`
 		// Registry Name
 		Name string `json:"Name" example:"my-registry"`
 		// URL or IP address of the Docker registry
@@ -1385,7 +1398,7 @@ type (
 		Git      *gittypes.GitSource `json:"git,omitempty"`
 		Registry *Registry           `json:"registry,omitempty"`
 		Helm     *HelmConfig         `json:"helm,omitempty"`
-		Vault    *VaultConfig         `json:"vault,omitempty"`
+		Vault    *VaultConfig        `json:"vault,omitempty"`
 
 		Public             bool         `json:"public"`
 		AdministratorsOnly bool         `json:"administratorsOnly"`

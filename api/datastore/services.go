@@ -7,6 +7,7 @@ import (
 	portainer "github.com/portainer/portainer/api"
 	"github.com/portainer/portainer/api/database/models"
 	"github.com/portainer/portainer/api/dataservices"
+	"github.com/portainer/portainer/api/dataservices/activitylog"
 	"github.com/portainer/portainer/api/dataservices/allowlist"
 	"github.com/portainer/portainer/api/dataservices/apikeyrepository"
 	"github.com/portainer/portainer/api/dataservices/customtemplate"
@@ -53,6 +54,7 @@ type Store struct {
 
 	fileService               portainer.FileService
 	AllowListService          *allowlist.Service
+	ActivityLogService        *activitylog.Service
 	CustomTemplateService     *customtemplate.Service
 	DockerHubService          *dockerhub.Service
 	EdgeGroupService          *edgegroup.Service
@@ -86,6 +88,12 @@ type Store struct {
 }
 
 func (store *Store) initServices() error {
+	activityLogService, err := activitylog.NewService(store.connection)
+	if err != nil {
+		return err
+	}
+	store.ActivityLogService = activityLogService
+
 	allowListService, err := allowlist.NewService(store.connection)
 	if err != nil {
 		return err
@@ -278,6 +286,10 @@ func (store *Store) initServices() error {
 	return nil
 }
 
+func (store *Store) ActivityLog() dataservices.ActivityLogService {
+	return store.ActivityLogService
+}
+
 // PendingActions gives access to the PendingActions data management layer
 func (store *Store) PendingActions() dataservices.PendingActionsService {
 	return store.PendingActionsService
@@ -417,6 +429,7 @@ func (store *Store) Workflow() dataservices.WorkflowService {
 }
 
 type storeExport struct {
+	ActivityLog        []portainer.ActivityLog        `json:"activity_logs,omitempty"`
 	CustomTemplate     []portainer.CustomTemplate     `json:"customtemplates,omitempty"`
 	EdgeGroup          []portainer.EdgeGroup          `json:"edgegroups,omitempty"`
 	EdgeJob            []portainer.EdgeJob            `json:"edgejobs,omitempty"`
@@ -448,6 +461,13 @@ type storeExport struct {
 
 func (store *Store) Export(filename string) (err error) {
 	backup := storeExport{}
+	if entries, err := store.ActivityLog().ReadAll(); err != nil {
+		if !store.IsErrObjectNotFound(err) {
+			log.Error().Err(err).Msg("exporting Activity Logs")
+		}
+	} else {
+		backup.ActivityLog = entries
+	}
 
 	if c, err := store.CustomTemplate().ReadAll(); err != nil {
 		if !store.IsErrObjectNotFound(err) {
@@ -685,6 +705,12 @@ func (store *Store) Import(filename string) (err error) {
 	err = store.Version().UpdateVersion(&backup.Version)
 	if err != nil {
 		return err
+	}
+
+	for _, v := range backup.ActivityLog {
+		if err := store.ActivityLog().Update(v.ID, &v); err != nil {
+			log.Warn().Err(err).Msg("failed to update the activity log in the database")
+		}
 	}
 
 	for _, v := range backup.CustomTemplate {

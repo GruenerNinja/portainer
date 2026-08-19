@@ -36,6 +36,7 @@ type (
 		Webhook() WebhookService
 		Workflow() WorkflowService
 		PendingActions() PendingActionsService
+		ActivityLog() ActivityLogService
 	}
 
 	DataStore interface {
@@ -87,6 +88,10 @@ type (
 		BaseCRUD[portainer.PendingAction, portainer.PendingActionID]
 		GetNextIdentifier() int
 		DeleteByEndpointID(ID portainer.EndpointID) error
+	}
+
+	ActivityLogService interface {
+		BaseCRUD[portainer.ActivityLog, portainer.ActivityLogID]
 	}
 
 	// EdgeStackService represents a service to manage Edge stacks

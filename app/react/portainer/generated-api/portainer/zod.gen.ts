@@ -841,6 +841,15 @@ export const zPortainerAccessPolicy = z.object({
   RoleId: z.int(),
 });
 
+export const zPortainerActivityLog = z.object({
+  action: z.string().optional(),
+  context: z.string().optional(),
+  id: z.int().optional(),
+  payload: z.string().optional(),
+  timestamp: z.int().optional(),
+  username: z.string().optional(),
+});
+
 export const zPortainerAuthenticationMethod = z.union([
   z.literal(0),
   z.literal(1),
@@ -1395,6 +1404,7 @@ export const zPortainerSourceType = z.union([
   z.literal(1),
   z.literal(2),
   z.literal(3),
+  z.literal(4),
 ]);
 
 export const zPortainerStackDeploymentInfo = z.object({
@@ -1438,6 +1448,13 @@ export const zPortainerEdgeStack = z.object({
 export const zPortainerStackOption = z.object({
   HelmAtomic: z.boolean().optional(),
   Prune: z.boolean().optional(),
+});
+
+export const zPortainerStackSecretMapping = z.object({
+  key: z.string().optional(),
+  name: z.string().optional(),
+  path: z.string().optional(),
+  sourceId: z.int().optional(),
 });
 
 export const zPortainerStackStatus = z.union([
@@ -1751,29 +1768,12 @@ export const zPortainerRegistry = z.object({
       z.literal(5),
       z.literal(6),
       z.literal(7),
+      z.literal(8),
     ])
     .optional(),
   URL: z.string().optional(),
   UserAccessPolicies: zPortainerUserAccessPolicies.optional(),
   Username: z.string().optional(),
-});
-
-export const zPortainerSource = z.object({
-  administratorsOnly: z.boolean().optional(),
-  git: zGittypesGitSource.optional(),
-  helm: zPortainerHelmConfig.optional(),
-  id: z.int().optional(),
-  interval: z.string().optional(),
-  lastSync: z.int().optional(),
-  name: z.string().optional(),
-  ownerID: z.int().optional(),
-  public: z.boolean().optional(),
-  registry: zPortainerRegistry.optional(),
-  status: zPortainerSourceStatus.optional(),
-  statusError: z.string().optional(),
-  teamAccesses: z.array(z.int()).optional(),
-  type: zPortainerSourceType.optional(),
-  userAccesses: z.array(z.int()).optional(),
 });
 
 export const zPortainerUserResourceAccess = z.object({
@@ -1825,6 +1825,7 @@ export const zPortainerStack = z.object({
   EndpointId: z.int().optional(),
   EntryPoint: z.string().optional(),
   Env: z.array(zPortainerPair).optional(),
+  FilesystemPath: z.string().optional(),
   FromAppTemplate: z.boolean().optional(),
   GitConfig: zGittypesRepoConfig.optional(),
   Id: z.int().optional(),
@@ -1833,7 +1834,9 @@ export const zPortainerStack = z.object({
   Option: zPortainerStackOption.optional(),
   ProjectPath: z.string().optional(),
   ResourceControl: zPortainerResourceControl.optional(),
+  SecretMappings: z.array(zPortainerStackSecretMapping).optional(),
   Status: zPortainerStackStatus.optional(),
+  SupportRelativePath: z.boolean().optional(),
   SwarmId: z.string().optional(),
   Type: zPortainerStackType.optional(),
   UpdateDate: z.int().optional(),
@@ -1858,6 +1861,38 @@ export const zPortainerUser = z.object({
   TokenIssueAt: z.int().optional(),
   UseCache: z.boolean().optional(),
   Username: z.string(),
+});
+
+export const zPortainerVaultAuthentication = z.object({
+  method: z.string().optional(),
+  token: z.string().optional(),
+});
+
+export const zPortainerVaultConfig = z.object({
+  address: z.string().optional(),
+  authentication: zPortainerVaultAuthentication.optional(),
+  kvVersion: z.int().optional(),
+  namespace: z.string().optional(),
+  tlsSkipVerify: z.boolean().optional(),
+});
+
+export const zPortainerSource = z.object({
+  administratorsOnly: z.boolean().optional(),
+  git: zGittypesGitSource.optional(),
+  helm: zPortainerHelmConfig.optional(),
+  id: z.int().optional(),
+  interval: z.string().optional(),
+  lastSync: z.int().optional(),
+  name: z.string().optional(),
+  ownerID: z.int().optional(),
+  public: z.boolean().optional(),
+  registry: zPortainerRegistry.optional(),
+  status: zPortainerSourceStatus.optional(),
+  statusError: z.string().optional(),
+  teamAccesses: z.array(z.int()).optional(),
+  type: zPortainerSourceType.optional(),
+  userAccesses: z.array(z.int()).optional(),
+  vault: zPortainerVaultConfig.optional(),
 });
 
 export const zPortainerWebhookType = z.union([z.literal(0), z.literal(1)]);
@@ -1920,6 +1955,7 @@ export const zRegistriesRegistryCreatePayload = z.object({
   Authentication: z.boolean(),
   BaseURL: z.string().optional(),
   Ecr: zPortainerEcrData.optional(),
+  Github: zPortainerGithubRegistryData.optional(),
   Gitlab: zPortainerGitlabRegistryData.optional(),
   Name: z.string(),
   Password: z.string().optional(),
@@ -1933,6 +1969,7 @@ export const zRegistriesRegistryCreatePayload = z.object({
     z.literal(5),
     z.literal(6),
     z.literal(7),
+    z.literal(8),
   ]),
   URL: z.string(),
   Username: z.string().optional(),
@@ -1964,6 +2001,7 @@ export const zRegistriesRegistryUpdatePayload = z.object({
   Authentication: z.boolean(),
   BaseURL: z.string().optional(),
   Ecr: zPortainerEcrData.optional(),
+  Github: zPortainerGithubRegistryData.optional(),
   Name: z.string(),
   Password: z.string().optional(),
   Quay: zPortainerQuayRegistryData.optional(),
@@ -2202,17 +2240,44 @@ export const zSourcesSourceAccessUpdatePayload = z.object({
   users: z.array(z.int()).optional(),
 });
 
-export const zSourcesSourceType = z.enum(['git', 'helm', 'oci']);
+export const zSourcesSourceType = z.enum(['git', 'helm', 'oci', 'vault']);
 
 export const zSourcesStatus = z.enum(['unknown', 'healthy', 'error']);
+
+export const zSourcesVaultAuthenticationPayload = z.object({
+  method: z.string().optional(),
+  token: z.string().optional(),
+});
+
+export const zSourcesVaultSourceCreatePayload = z.object({
+  address: z.string(),
+  administratorsOnly: z.boolean().optional(),
+  authentication: zSourcesVaultAuthenticationPayload.optional(),
+  kvVersion: z.int().optional(),
+  name: z.string().optional(),
+  namespace: z.string().optional(),
+  public: z.boolean().optional(),
+  teamAccesses: z.array(z.int()).optional(),
+  tlsSkipVerify: z.boolean().optional(),
+  userAccesses: z.array(z.int()).optional(),
+});
 
 export const zSourcesGitAuthInfo = z.object({
   username: z.string().optional(),
 });
 
+export const zSourcesVaultInfo = z.object({
+  address: z.string().optional(),
+  authMethod: z.string().optional(),
+  kvVersion: z.int().optional(),
+  namespace: z.string().optional(),
+  tlsSkipVerify: z.boolean().optional(),
+});
+
 export const zSourcesConnectionInfo = z.object({
   authentication: zSourcesGitAuthInfo.optional(),
   tlsSkipVerify: z.boolean().optional(),
+  vault: zSourcesVaultInfo.optional(),
 });
 
 export const zSslSslUpdatePayload = z.object({
@@ -2225,6 +2290,7 @@ export const zStacksComposeStackFromFileContentPayload = z.object({
   Env: z.array(zPortainerPair).optional(),
   FromAppTemplate: z.boolean().optional(),
   Name: z.string(),
+  SecretMappings: z.array(zPortainerStackSecretMapping).optional(),
   StackFileContent: z.string(),
 });
 
@@ -2233,6 +2299,7 @@ export const zStacksComposeStackFromGitRepositoryPayload = z.object({
   AutoUpdate: zPortainerAutoUpdateSettings.optional(),
   ComposeFile: z.string().optional().default('docker-compose.yml'),
   Env: z.array(zPortainerPair).optional(),
+  FilesystemPath: z.string().optional(),
   FromAppTemplate: z.boolean().optional(),
   Name: z.string(),
   RepositoryAuthentication: z.boolean().optional(),
@@ -2240,7 +2307,9 @@ export const zStacksComposeStackFromGitRepositoryPayload = z.object({
   RepositoryReferenceName: z.string().optional(),
   RepositoryURL: z.string().optional(),
   RepositoryUsername: z.string().optional(),
+  SecretMappings: z.array(zPortainerStackSecretMapping).optional(),
   SourceID: z.int().optional(),
+  SupportRelativePath: z.boolean().optional(),
   TLSSkipVerify: z.boolean().optional(),
 });
 
@@ -2259,6 +2328,7 @@ export const zStacksKubernetesGitDeploymentPayload = z.object({
   RepositoryReferenceName: z.string().optional(),
   RepositoryURL: z.string().optional(),
   RepositoryUsername: z.string().optional(),
+  SecretMappings: z.array(zPortainerStackSecretMapping).optional(),
   SourceID: z.int().optional(),
   StackName: z.string().optional(),
   TLSSkipVerify: z.boolean().optional(),
@@ -2275,6 +2345,7 @@ export const zStacksKubernetesStringDeploymentPayload = z.object({
   ComposeFormat: z.boolean().optional(),
   FromAppTemplate: z.boolean().optional(),
   Namespace: z.string().optional(),
+  SecretMappings: z.array(zPortainerStackSecretMapping).optional(),
   StackFileContent: z.string().optional(),
   StackName: z.string().optional(),
 });
@@ -2300,13 +2371,16 @@ export const zStacksStackGitUpdatePayload = z.object({
   AutoUpdate: zPortainerAutoUpdateSettings.optional(),
   ConfigFilePath: z.string().optional(),
   Env: z.array(zPortainerPair).optional(),
+  FilesystemPath: z.string().optional(),
   Prune: z.boolean().optional(),
   RepositoryAuthentication: z.boolean().optional(),
   RepositoryPassword: z.string().optional(),
   RepositoryReferenceName: z.string().optional(),
   RepositoryURL: z.string().optional(),
   RepositoryUsername: z.string().optional(),
+  SecretMappings: z.array(zPortainerStackSecretMapping).optional(),
   SourceID: z.int().optional(),
+  SupportRelativePath: z.boolean().optional(),
   TLSSkipVerify: z.boolean().optional(),
 });
 
@@ -2327,6 +2401,7 @@ export const zStacksStackResponse = z.object({
   EndpointId: z.int().optional(),
   EntryPoint: z.string().optional(),
   Env: z.array(zPortainerPair).optional(),
+  FilesystemPath: z.string().optional(),
   FromAppTemplate: z.boolean().optional(),
   GitConfig: zGittypesRepoConfig.optional(),
   GitSourceId: z.int().optional(),
@@ -2336,7 +2411,9 @@ export const zStacksStackResponse = z.object({
   Option: zPortainerStackOption.optional(),
   ProjectPath: z.string().optional(),
   ResourceControl: zPortainerResourceControl.optional(),
+  SecretMappings: z.array(zPortainerStackSecretMapping).optional(),
   Status: zPortainerStackStatus.optional(),
+  SupportRelativePath: z.boolean().optional(),
   SwarmId: z.string().optional(),
   Type: zPortainerStackType.optional(),
   UpdateDate: z.int().optional(),
@@ -2348,6 +2425,7 @@ export const zStacksSwarmStackFromFileContentPayload = z.object({
   Env: z.array(zPortainerPair).optional(),
   FromAppTemplate: z.boolean().optional(),
   Name: z.string(),
+  SecretMappings: z.array(zPortainerStackSecretMapping).optional(),
   StackFileContent: z.string(),
   SwarmID: z.string(),
 });
@@ -2357,6 +2435,7 @@ export const zStacksSwarmStackFromGitRepositoryPayload = z.object({
   AutoUpdate: zPortainerAutoUpdateSettings.optional(),
   ComposeFile: z.string().optional().default('docker-compose.yml'),
   Env: z.array(zPortainerPair).optional(),
+  FilesystemPath: z.string().optional(),
   FromAppTemplate: z.boolean().optional(),
   Name: z.string(),
   RepositoryAuthentication: z.boolean().optional(),
@@ -2364,7 +2443,9 @@ export const zStacksSwarmStackFromGitRepositoryPayload = z.object({
   RepositoryReferenceName: z.string().optional(),
   RepositoryURL: z.string().optional(),
   RepositoryUsername: z.string().optional(),
+  SecretMappings: z.array(zPortainerStackSecretMapping).optional(),
   SourceID: z.int().optional(),
+  SupportRelativePath: z.boolean().optional(),
   SwarmID: z.string(),
   TLSSkipVerify: z.boolean().optional(),
 });
@@ -2486,6 +2567,11 @@ export const zReleaseRelease = z.object({
   stackID: z.int().optional(),
   values: zReleaseValues.optional(),
   version: z.int().optional(),
+});
+
+export const zUseractivityListResponse = z.object({
+  logs: z.array(zPortainerActivityLog).optional(),
+  totalCount: z.int().optional(),
 });
 
 export const zUsersAccessLocation = z.enum(['environment', 'environmentGroup']);
@@ -5453,7 +5539,7 @@ export const zGitOpsSourcesListQuery = z.object({
   start: z.int().optional(),
   limit: z.int().optional(),
   status: z.string().optional(),
-  type: z.enum(['git', 'helm', 'oci']).optional(),
+  type: z.enum(['git', 'helm', 'oci', 'vault']).optional(),
 });
 
 /**
@@ -5554,6 +5640,26 @@ export const zGitOpsSourcesTestBody = zSourcesGitSourceCreatePayload;
  * Connection test result
  */
 export const zGitOpsSourcesTestResponse = zSourcesConnectionTestResult;
+
+/**
+ * Vault source details
+ */
+export const zGitOpsSourcesCreateVaultBody = zSourcesVaultSourceCreatePayload;
+
+/**
+ * Created
+ */
+export const zGitOpsSourcesCreateVaultResponse = zPortainerSource;
+
+/**
+ * Vault connection details
+ */
+export const zGitOpsSourcesVaultTestBody = zSourcesVaultSourceCreatePayload;
+
+/**
+ * Connection test result
+ */
+export const zGitOpsSourcesVaultTestResponse = zSourcesConnectionTestResult;
 
 export const zGitOpsWorkflowsListQuery = z.object({
   search: z.string().optional(),
@@ -7676,6 +7782,11 @@ export const zUploadTlsPath = z.object({
  * Success
  */
 export const zUploadTlsResponse = z.void();
+
+/**
+ * Success
+ */
+export const zUserActivityLogsResponse = zUseractivityListResponse;
 
 export const zUserListQuery = z.object({
   environmentId: z.int().optional(),

@@ -38,7 +38,7 @@ type Source struct {
 // @param start  query int    false "Pagination start index"
 // @param limit  query int    false "Pagination limit (0 = unlimited)"
 // @param status query string false "Filter by status: healthy | syncing | error | paused | unknown"
-// @param type   query SourceType false "Filter by source type: git | oci | helm"
+// @param type   query SourceType false "Filter by source type: git | oci | helm | vault"
 // @success 200 {array} Source
 // @failure 400 "Invalid status parameter"
 // @failure 403 "Access denied"

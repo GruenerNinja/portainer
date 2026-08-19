@@ -15,6 +15,7 @@ export function RegistryViewModel(data) {
   this.Gitlab = data.Gitlab;
   this.Quay = data.Quay;
   this.Ecr = data.Ecr;
+  this.Github = data.Github;
   this.ManagementConfiguration = data.ManagementConfiguration;
 }
 
@@ -82,6 +83,12 @@ export function RegistryCreateRequest(model) {
     this.Quay = {
       useOrganisation: model.Quay.useOrganisation,
       organisationName: model.Quay.organisationName,
+    };
+  }
+  if (model.Type === RegistryTypes.GITHUB) {
+    this.Github = {
+      UseOrganisation: model.Github.useOrganisation,
+      OrganisationName: model.Github.organisationName,
     };
   }
   if (model.Type === RegistryTypes.PROGET) {

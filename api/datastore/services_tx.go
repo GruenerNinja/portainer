@@ -14,6 +14,10 @@ func (tx *StoreTx) IsErrObjectNotFound(err error) bool {
 	return tx.store.IsErrObjectNotFound(err)
 }
 
+func (tx *StoreTx) ActivityLog() dataservices.ActivityLogService {
+	return tx.store.ActivityLogService.Tx(tx.tx)
+}
+
 func (tx *StoreTx) AllowList() dataservices.AllowListService {
 	return tx.store.AllowListService.Tx(tx.tx)
 }

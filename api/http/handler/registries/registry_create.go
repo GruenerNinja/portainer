@@ -16,15 +16,8 @@ import (
 type registryCreatePayload struct {
 	// Name that will be used to identify this registry
 	Name string `example:"my-registry" validate:"required"`
-	// Registry Type. Valid values are:
-	//	1 (Quay.io),
-	//	2 (Azure container registry),
-	//	3 (custom registry),
-	//	4 (Gitlab registry),
-	//	5 (ProGet registry),
-	//	6 (DockerHub)
-	//	7 (ECR)
-	Type portainer.RegistryType `example:"1" validate:"required" enums:"1,2,3,4,5,6,7"`
+	// Registry Type. Valid values: 1 (Quay.io), 2 (Azure), 3 (custom), 4 (GitLab), 5 (ProGet), 6 (DockerHub), 7 (ECR), 8 (GitHub container registry).
+	Type portainer.RegistryType `example:"1" validate:"required" enums:"1,2,3,4,5,6,7,8"`
 	// URL or IP address of the Docker registry
 	URL string `example:"registry.mydomain.tld:2375/feed" validate:"required"`
 	// BaseURL required for ProGet registry
@@ -41,6 +34,8 @@ type registryCreatePayload struct {
 	Quay portainer.QuayRegistryData
 	// ECR specific details, required when type = 7
 	Ecr portainer.EcrData
+	// GitHub specific details, used when type = 8
+	Github portainer.GithubRegistryData
 	// Use TLS
 	TLS bool `example:"true"`
 }
@@ -65,9 +60,9 @@ func (payload *registryCreatePayload) Validate(_ *http.Request) error {
 	}
 
 	switch payload.Type {
-	case portainer.QuayRegistry, portainer.AzureRegistry, portainer.CustomRegistry, portainer.GitlabRegistry, portainer.ProGetRegistry, portainer.DockerHubRegistry, portainer.EcrRegistry:
+	case portainer.QuayRegistry, portainer.AzureRegistry, portainer.CustomRegistry, portainer.GitlabRegistry, portainer.ProGetRegistry, portainer.DockerHubRegistry, portainer.EcrRegistry, portainer.GithubRegistry:
 	default:
-		return errors.New("invalid registry type. Valid values are: 1 (Quay.io), 2 (Azure container registry), 3 (custom registry), 4 (Gitlab registry), 5 (ProGet registry), 6 (DockerHub), 7 (ECR)")
+		return errors.New("invalid registry type. Valid values are: 1 (Quay.io), 2 (Azure container registry), 3 (custom registry), 4 (Gitlab registry), 5 (ProGet registry), 6 (DockerHub), 7 (ECR), 8 (GitHub container registry)")
 	}
 
 	if payload.Type == portainer.ProGetRegistry && payload.BaseURL == "" {
@@ -117,6 +112,7 @@ func (handler *Handler) registryCreate(w http.ResponseWriter, r *http.Request) *
 		Password:         payload.Password,
 		Gitlab:           payload.Gitlab,
 		Quay:             payload.Quay,
+		Github:           payload.Github,
 		RegistryAccesses: portainer.RegistryAccesses{},
 		Ecr:              payload.Ecr,
 	}

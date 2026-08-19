@@ -73,6 +73,7 @@ func (manager *SwarmStackManager) Deploy(
 		Options:       options,
 		RemoveOrphans: prune,
 		PullImage:     pullImage,
+		ForceRecreate: pullImage,
 	}); err != nil {
 		return err
 	}

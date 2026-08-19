@@ -2,8 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 
 import axios, { parseAxiosError } from '@/portainer/services/axios/axios';
 
-import { isBE } from '../../feature-flags/feature-flags.service';
-
 import { ActivityLogResponse, ActivityLogsResponse } from './types';
 
 export const sortKeys = ['Context', 'Action', 'Timestamp', 'Username'] as const;
@@ -39,13 +37,6 @@ export function useActivityLogs(query: Query) {
 
 async function fetchActivityLogs(query: Query): Promise<ActivityLogsResponse> {
   try {
-    if (!isBE) {
-      return {
-        logs: [{}, {}, {}, {}, {}] as Array<ActivityLogResponse>,
-        totalCount: 5,
-      };
-    }
-
     const { data } = await axios.get<ActivityLogsResponse>(
       '/useractivity/logs',
       { params: query }

@@ -193,6 +193,28 @@ func TestBuildSwarmDeployCmdSourceDir(t *testing.T) {
 	}, cmd)
 }
 
+func TestBuildSwarmDeployCmdPreservesRelativePathsWithRepullAndForceRedeploy(t *testing.T) {
+	t.Parallel()
+
+	opts := testKeepFilesOptions()
+	opts.sourceDir = "tmc-proxy"
+	opts.deploymentDir = ".deployed"
+	opts.pullImage = true
+	opts.forceRecreate = true
+	opts.prune = true
+	stack := testRemoteStack()
+	stack.EntryPoint = "tmc-proxy/docker-compose.yml"
+
+	cmd := buildSwarmDeployCmd(stack, opts, nil, nil)
+	assert.Contains(t, cmd, "--source-dir")
+	assert.Contains(t, cmd, "tmc-proxy")
+	assert.Contains(t, cmd, "--deployment-dir")
+	assert.Contains(t, cmd, ".deployed")
+	assert.Contains(t, cmd, "-f")
+	assert.Contains(t, cmd, "--force-recreate")
+	assert.Contains(t, cmd, "-r")
+}
+
 func TestBuildSwarmDeployCmdDeploymentFileOptions(t *testing.T) {
 	t.Parallel()
 

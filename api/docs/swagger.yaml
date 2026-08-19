@@ -3111,6 +3111,21 @@ definitions:
     required:
     - RoleId
     type: object
+  portainer.ActivityLog:
+    properties:
+      action:
+        type: string
+      context:
+        type: string
+      id:
+        type: integer
+      payload:
+        type: string
+      timestamp:
+        type: integer
+      username:
+        type: string
+    type: object
   portainer.Artifact:
     properties:
       edgeGroups:
@@ -4387,7 +4402,7 @@ definitions:
         allOf:
         - $ref: '#/definitions/portainer.RegistryType'
         description: Registry Type (1 - Quay, 2 - Azure, 3 - Custom, 4 - Gitlab, 5
-          - ProGet, 6 - DockerHub, 7 - ECR)
+          - ProGet, 6 - DockerHub, 7 - ECR, 8 - GitHub)
         enum:
         - 1
         - 2
@@ -4396,6 +4411,7 @@ definitions:
         - 5
         - 6
         - 7
+        - 8
       URL:
         description: URL or IP address of the Docker registry
         example: registry.mydomain.tld:2375
@@ -4746,6 +4762,8 @@ definitions:
         items:
           type: integer
         type: array
+      vault:
+        $ref: '#/definitions/portainer.VaultConfig'
     type: object
   portainer.SourceStatus:
     enum:
@@ -4763,12 +4781,14 @@ definitions:
     - 1
     - 2
     - 3
+    - 4
     type: integer
     x-enum-varnames:
     - _
     - SourceTypeGit
     - SourceTypeRegistry
     - SourceTypeHelm
+    - SourceTypeVault
   portainer.Stack:
     properties:
       AdditionalFiles:
@@ -4826,6 +4846,12 @@ definitions:
         items:
           $ref: '#/definitions/portainer.Pair'
         type: array
+      FilesystemPath:
+        description: |-
+          FilesystemPath is the base path on the target environment where Git repository files are cloned
+          when SupportRelativePath is enabled.
+        example: /mnt
+        type: string
       FromAppTemplate:
         description: Whether the stack is from a app template
         example: false
@@ -4859,11 +4885,23 @@ definitions:
         type: string
       ResourceControl:
         $ref: '#/definitions/portainer.ResourceControl'
+      SecretMappings:
+        description: SecretMappings are resolved at deployment time and injected into
+          the stack environment.
+        items:
+          $ref: '#/definitions/portainer.StackSecretMapping'
+        type: array
       Status:
         allOf:
         - $ref: '#/definitions/portainer.StackStatus'
         description: Stack status (1 - active, 2 - inactive, 3 - deploying, 4 - error)
         example: 1
+      SupportRelativePath:
+        description: |-
+          SupportRelativePath indicates whether Git repository files should be cloned on the target environment
+          so relative bind mounts can resolve against that cloned repository.
+        example: false
+        type: boolean
       SwarmId:
         description: Cluster identifier of the Swarm cluster where the stack is deployed
         example: jpofkc0i9uo9wtx1zesuk649w
@@ -4943,6 +4981,21 @@ definitions:
         description: Prune services that are no longer referenced
         example: false
         type: boolean
+    type: object
+  portainer.StackSecretMapping:
+    properties:
+      key:
+        example: password
+        type: string
+      name:
+        example: DATABASE_PASSWORD
+        type: string
+      path:
+        example: kv/apps/my-stack
+        type: string
+      sourceId:
+        example: 1
+        type: integer
     type: object
   portainer.StackStatus:
     enum:
@@ -5345,6 +5398,31 @@ definitions:
         example: dark
         type: string
     type: object
+  portainer.VaultAuthentication:
+    properties:
+      method:
+        example: token
+        type: string
+      token:
+        type: string
+    type: object
+  portainer.VaultConfig:
+    properties:
+      address:
+        example: https://vault.example.com
+        type: string
+      authentication:
+        $ref: '#/definitions/portainer.VaultAuthentication'
+      kvVersion:
+        example: 2
+        type: integer
+      namespace:
+        example: admin
+        type: string
+      tlsSkipVerify:
+        example: false
+        type: boolean
+    type: object
   portainer.Webhook:
     properties:
       EndpointId:
@@ -5434,6 +5512,10 @@ definitions:
         allOf:
         - $ref: '#/definitions/portainer.EcrData'
         description: ECR specific details, required when type = 7
+      Github:
+        allOf:
+        - $ref: '#/definitions/portainer.GithubRegistryData'
+        description: GitHub specific details, used when type = 8
       Gitlab:
         allOf:
         - $ref: '#/definitions/portainer.GitlabRegistryData'
@@ -5458,9 +5540,8 @@ definitions:
       Type:
         allOf:
         - $ref: '#/definitions/portainer.RegistryType'
-        description: "Registry Type. Valid values are:\n\t1 (Quay.io),\n\t2 (Azure
-          container registry),\n\t3 (custom registry),\n\t4 (Gitlab registry),\n\t5
-          (ProGet registry),\n\t6 (DockerHub)\n\t7 (ECR)"
+        description: 'Registry Type. Valid values: 1 (Quay.io), 2 (Azure), 3 (custom),
+          4 (GitLab), 5 (ProGet), 6 (DockerHub), 7 (ECR), 8 (GitHub container registry).'
         enum:
         - 1
         - 2
@@ -5469,6 +5550,7 @@ definitions:
         - 5
         - 6
         - 7
+        - 8
         example: 1
       URL:
         description: URL or IP address of the Docker registry
@@ -5548,6 +5630,10 @@ definitions:
         allOf:
         - $ref: '#/definitions/portainer.EcrData'
         description: ECR data
+      Github:
+        allOf:
+        - $ref: '#/definitions/portainer.GithubRegistryData'
+        description: GitHub container registry data
       Name:
         description: Name that will be used to identify this registry
         example: my-registry
@@ -6303,11 +6389,13 @@ definitions:
     - git
     - helm
     - oci
+    - vault
     type: string
     x-enum-varnames:
     - SourceTypeGit
     - SourceTypeHelm
     - SourceTypeOCI
+    - SourceTypeVault
   sources.Status:
     enum:
     - unknown
@@ -6318,6 +6406,44 @@ definitions:
     - SourceStatusUnknown
     - SourceStatusHealthy
     - SourceStatusError
+  sources.VaultAuthenticationPayload:
+    properties:
+      method:
+        type: string
+      token:
+        type: string
+    type: object
+  sources.VaultSourceCreatePayload:
+    properties:
+      address:
+        type: string
+      administratorsOnly:
+        example: true
+        type: boolean
+      authentication:
+        $ref: '#/definitions/sources.VaultAuthenticationPayload'
+      kvVersion:
+        type: integer
+      name:
+        type: string
+      namespace:
+        type: string
+      public:
+        example: true
+        type: boolean
+      teamAccesses:
+        items:
+          type: integer
+        type: array
+      tlsSkipVerify:
+        type: boolean
+      userAccesses:
+        items:
+          type: integer
+        type: array
+    required:
+    - address
+    type: object
   sources.Workflow:
     properties:
       creationDate:
@@ -6354,11 +6480,26 @@ definitions:
         $ref: '#/definitions/sources.gitAuthInfo'
       tlsSkipVerify:
         type: boolean
+      vault:
+        $ref: '#/definitions/sources.vaultInfo'
     type: object
   sources.gitAuthInfo:
     properties:
       username:
         type: string
+    type: object
+  sources.vaultInfo:
+    properties:
+      address:
+        type: string
+      authMethod:
+        type: string
+      kvVersion:
+        type: integer
+      namespace:
+        type: string
+      tlsSkipVerify:
+        type: boolean
     type: object
   ssl.sslUpdatePayload:
     properties:
@@ -6385,6 +6526,12 @@ definitions:
         description: Name of the stack
         example: myStack
         type: string
+      SecretMappings:
+        description: SecretMappings are resolved from external secret sources during
+          deployment.
+        items:
+          $ref: '#/definitions/portainer.StackSecretMapping'
+        type: array
       StackFileContent:
         description: Content of the Stack file
         example: |-
@@ -6421,6 +6568,11 @@ definitions:
         items:
           $ref: '#/definitions/portainer.Pair'
         type: array
+      FilesystemPath:
+        description: Base path on the target environment used for relative path volume
+          Git clones
+        example: /mnt
+        type: string
       FromAppTemplate:
         description: Whether the stack is from a app template
         example: false
@@ -6451,12 +6603,23 @@ definitions:
         description: 'Deprecated: use SourceID instead. Username used in basic authentication.'
         example: myGitUsername
         type: string
+      SecretMappings:
+        description: SecretMappings are resolved from external secret sources during
+          deployment.
+        items:
+          $ref: '#/definitions/portainer.StackSecretMapping'
+        type: array
       SourceID:
         description: |-
           SourceID references an existing Source for git credentials/URL.
           When set, the inline URL and authentication fields are ignored.
         example: 1
         type: integer
+      SupportRelativePath:
+        description: Whether the stack supports relative path volumes by cloning Git
+          files on the target environment
+        example: false
+        type: boolean
       TLSSkipVerify:
         description: 'Deprecated: use SourceID instead. TLSSkipVerify skips SSL verification
           when cloning the Git repository.'
@@ -6502,6 +6665,12 @@ definitions:
       RepositoryUsername:
         description: 'Deprecated: use SourceID instead. Username used in basic authentication.'
         type: string
+      SecretMappings:
+        description: SecretMappings are resolved from external secret sources during
+          deployment.
+        items:
+          $ref: '#/definitions/portainer.StackSecretMapping'
+        type: array
       SourceID:
         description: |-
           SourceID references an existing Source for git credentials/URL.
@@ -6537,6 +6706,12 @@ definitions:
         type: boolean
       Namespace:
         type: string
+      SecretMappings:
+        description: SecretMappings are resolved from external secret sources during
+          deployment.
+        items:
+          $ref: '#/definitions/portainer.StackSecretMapping'
+        type: array
       StackFileContent:
         type: string
       StackName:
@@ -6600,6 +6775,8 @@ definitions:
         items:
           $ref: '#/definitions/portainer.Pair'
         type: array
+      FilesystemPath:
+        type: string
       Prune:
         type: boolean
       RepositoryAuthentication:
@@ -6618,11 +6795,17 @@ definitions:
       RepositoryUsername:
         description: 'Deprecated: use SourceID instead. Username used in basic authentication.'
         type: string
+      SecretMappings:
+        items:
+          $ref: '#/definitions/portainer.StackSecretMapping'
+        type: array
       SourceID:
         description: |-
           SourceID references an existing Source for git credentials/URL.
           When set, the inline URL and authentication fields are ignored.
         type: integer
+      SupportRelativePath:
+        type: boolean
       TLSSkipVerify:
         description: 'Deprecated: use SourceID instead. Skip TLS verification when
           cloning the Git repository.'
@@ -6704,6 +6887,12 @@ definitions:
         items:
           $ref: '#/definitions/portainer.Pair'
         type: array
+      FilesystemPath:
+        description: |-
+          FilesystemPath is the base path on the target environment where Git repository files are cloned
+          when SupportRelativePath is enabled.
+        example: /mnt
+        type: string
       FromAppTemplate:
         description: Whether the stack is from a app template
         example: false
@@ -6739,11 +6928,23 @@ definitions:
         type: string
       ResourceControl:
         $ref: '#/definitions/portainer.ResourceControl'
+      SecretMappings:
+        description: SecretMappings are resolved at deployment time and injected into
+          the stack environment.
+        items:
+          $ref: '#/definitions/portainer.StackSecretMapping'
+        type: array
       Status:
         allOf:
         - $ref: '#/definitions/portainer.StackStatus'
         description: Stack status (1 - active, 2 - inactive, 3 - deploying, 4 - error)
         example: 1
+      SupportRelativePath:
+        description: |-
+          SupportRelativePath indicates whether Git repository files should be cloned on the target environment
+          so relative bind mounts can resolve against that cloned repository.
+        example: false
+        type: boolean
       SwarmId:
         description: Cluster identifier of the Swarm cluster where the stack is deployed
         example: jpofkc0i9uo9wtx1zesuk649w
@@ -6781,6 +6982,12 @@ definitions:
         description: Name of the stack
         example: myStack
         type: string
+      SecretMappings:
+        description: SecretMappings are resolved from external secret sources during
+          deployment.
+        items:
+          $ref: '#/definitions/portainer.StackSecretMapping'
+        type: array
       StackFileContent:
         description: Content of the Stack file
         example: |-
@@ -6822,6 +7029,11 @@ definitions:
         items:
           $ref: '#/definitions/portainer.Pair'
         type: array
+      FilesystemPath:
+        description: Base path on the target environment used for relative path volume
+          Git clones
+        example: /mnt
+        type: string
       FromAppTemplate:
         description: Whether the stack is from a app template
         example: false
@@ -6852,12 +7064,23 @@ definitions:
         description: 'Deprecated: use SourceID instead. Username used in basic authentication.'
         example: myGitUsername
         type: string
+      SecretMappings:
+        description: SecretMappings are resolved from external secret sources during
+          deployment.
+        items:
+          $ref: '#/definitions/portainer.StackSecretMapping'
+        type: array
       SourceID:
         description: |-
           SourceID references an existing Source for git credentials/URL.
           When set, the inline URL and authentication fields are ignored.
         example: 1
         type: integer
+      SupportRelativePath:
+        description: Whether the stack supports relative path volumes by cloning Git
+          files on the target environment
+        example: false
+        type: boolean
       SwarmID:
         description: Swarm cluster identifier
         example: jpofkc0i9uo9wtx1zesuk649w
@@ -6977,6 +7200,8 @@ definitions:
   tags.tagCreatePayload:
     properties:
       Name:
+        description: Struct tags are metadata read by validation and documentation
+          tools.
         example: org/acme
         type: string
     required:
@@ -7077,6 +7302,15 @@ definitions:
           map[string]interface{}
           children.
         type: object
+    type: object
+  useractivity.listResponse:
+    properties:
+      logs:
+        items:
+          $ref: '#/definitions/portainer.ActivityLog'
+        type: array
+      totalCount:
+        type: integer
     type: object
   users.AccessLocation:
     enum:
@@ -17885,11 +18119,12 @@ paths:
         in: query
         name: status
         type: string
-      - description: 'Filter by source type: git | oci | helm'
+      - description: 'Filter by source type: git | oci | helm | vault'
         enum:
         - git
         - helm
         - oci
+        - vault
         in: query
         name: type
         type: string
@@ -18227,6 +18462,74 @@ paths:
       - ApiKeyAuth: []
       - jwt: []
       summary: Test a Git source connection
+      tags:
+      - gitops
+  /gitops/sources/vault:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Creates a reusable HashiCorp Vault source for deploy-time secret resolution.
+        **Access policy**: administrator
+      operationId: GitOpsSourcesCreateVault
+      parameters:
+      - description: Vault source details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/sources.VaultSourceCreatePayload'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/portainer.Source'
+        "400":
+          description: Invalid request payload
+        "403":
+          description: Access denied
+        "500":
+          description: Server error
+      security:
+      - ApiKeyAuth: []
+      - jwt: []
+      summary: Create a Vault source
+      tags:
+      - gitops
+  /gitops/sources/vault/test:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Tests connectivity for Vault connection details that have not been persisted yet.
+        **Access policy**: administrator
+      operationId: GitOpsSourcesVaultTest
+      parameters:
+      - description: Vault connection details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/sources.VaultSourceCreatePayload'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Connection test result
+          schema:
+            $ref: '#/definitions/sources.ConnectionTestResult'
+        "400":
+          description: Invalid request payload
+        "403":
+          description: Access denied
+        "500":
+          description: Server error
+      security:
+      - ApiKeyAuth: []
+      - jwt: []
+      summary: Test a Vault source connection
       tags:
       - gitops
   /gitops/workflows:
@@ -25501,6 +25804,24 @@ paths:
       summary: Upload TLS files
       tags:
       - upload
+  /useractivity/logs:
+    get:
+      description: Lists retained authenticated state-changing API requests. Request
+        bodies and credentials are never recorded.
+      operationId: UserActivityLogs
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success
+          schema:
+            $ref: '#/definitions/useractivity.listResponse'
+      security:
+      - ApiKeyAuth: []
+      - jwt: []
+      summary: List user activity logs
+      tags:
+      - users
   /users:
     get:
       description: |-

@@ -324,7 +324,7 @@ func migrateDBTestHelper(t *testing.T, srcPath, wantPath string, overrideInstanc
 	}
 
 	// Compare the result we got with the one we wanted.
-	if diff := cmp.Diff(wantJSON, gotJSON); diff != "" {
+	if diff := cmp.Diff(bytes.TrimSpace(wantJSON), bytes.TrimSpace(gotJSON)); diff != "" {
 		gotPath := filesystem.JoinPaths(os.TempDir(), "portainer-migrator-test-fail.json")
 		err = os.WriteFile(
 			gotPath,

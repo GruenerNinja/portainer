@@ -15,11 +15,31 @@ import (
 type stubSwarmDeployer struct {
 	swarm.Deployer
 
-	waitResult libstack.WaitResult
+	waitResult    libstack.WaitResult
+	deployOptions swarm.DeployOptions
+}
+
+func (s *stubSwarmDeployer) Deploy(_ context.Context, _ []string, options swarm.DeployOptions) error {
+	s.deployOptions = options
+	return nil
 }
 
 func (s *stubSwarmDeployer) WaitForStatus(context.Context, string, swarm.Options, libstack.Status) libstack.WaitResult {
 	return s.waitResult
+}
+
+func TestSwarmStackManagerDeployRepullAlsoForcesServiceRedeployment(t *testing.T) {
+	t.Parallel()
+
+	deployer := &stubSwarmDeployer{waitResult: libstack.WaitResult{Status: libstack.StatusRunning}}
+	manager := NewSwarmStackManager(deployer, nil)
+	stack := &portainer.Stack{Name: "my-stack", EntryPoint: "docker-compose.yml", ProjectPath: "/tmp/project"}
+	endpoint := &portainer.Endpoint{URL: "unix:///var/run/docker.sock"}
+
+	require.NoError(t, manager.Deploy(t.Context(), stack, true, true, endpoint, nil))
+	assert.True(t, deployer.deployOptions.PullImage)
+	assert.True(t, deployer.deployOptions.ForceRecreate)
+	assert.True(t, deployer.deployOptions.RemoveOrphans)
 }
 
 func TestSwarmStackManager_CheckRunningStatus(t *testing.T) {

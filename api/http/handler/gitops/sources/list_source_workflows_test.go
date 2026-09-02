@@ -88,6 +88,85 @@ func TestListSourceWorkflows_ReturnsWorkflows(t *testing.T) {
 	assert.Equal(t, srcID, items[0].SourceID)
 }
 
+func TestListSourceWorkflows_ReturnsWorkflowsUsingVaultSecrets(t *testing.T) {
+	t.Parallel()
+	_, store := datastore.MustNewTestStore(t, false, true)
+
+	var srcID portainer.SourceID
+	require.NoError(t, store.UpdateTx(func(tx dataservices.DataStoreTx) error {
+		src := &portainer.Source{
+			Name: "production-vault",
+			Type: portainer.SourceTypeVault,
+			Vault: &portainer.VaultConfig{
+				Address: "https://vault.example.com",
+			},
+		}
+		require.NoError(t, tx.Source().Create(adminUserContext, src))
+		srcID = src.ID
+
+		workflow := &portainer.Workflow{
+			Artifacts: []portainer.Artifact{{StackID: 1}},
+		}
+		require.NoError(t, tx.Workflow().Create(workflow))
+
+		require.NoError(t, tx.Stack().Create(&portainer.Stack{
+			ID:         1,
+			Name:       "vault-backed-stack",
+			WorkflowID: workflow.ID,
+			SecretMappings: []portainer.StackSecretMapping{{
+				SourceID: src.ID,
+			}},
+		}))
+
+		return tx.User().Create(&portainer.User{ID: 1, Role: portainer.AdministratorRole})
+	}))
+
+	h := newTestHandler(t, store)
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, buildGetWorkflowsReq(t, 1, strconv.Itoa(int(srcID))))
+
+	items := decodeSourceWorkflows(t, rr)
+	require.Len(t, items, 1)
+	assert.Equal(t, "vault-backed-stack", items[0].Name)
+	assert.Equal(t, srcID, items[0].SourceID)
+	assert.Nil(t, items[0].GitConfig)
+}
+
+func TestListSourceWorkflows_SkipsVaultSecretStacksWithoutWorkflow(t *testing.T) {
+	t.Parallel()
+	_, store := datastore.MustNewTestStore(t, false, true)
+
+	var srcID portainer.SourceID
+	require.NoError(t, store.UpdateTx(func(tx dataservices.DataStoreTx) error {
+		src := &portainer.Source{
+			Name: "production-vault",
+			Type: portainer.SourceTypeVault,
+			Vault: &portainer.VaultConfig{
+				Address: "https://vault.example.com",
+			},
+		}
+		require.NoError(t, tx.Source().Create(adminUserContext, src))
+		srcID = src.ID
+
+		require.NoError(t, tx.Stack().Create(&portainer.Stack{
+			ID:   1,
+			Name: "file-stack",
+			SecretMappings: []portainer.StackSecretMapping{{
+				SourceID: src.ID,
+			}},
+		}))
+
+		return tx.User().Create(&portainer.User{ID: 1, Role: portainer.AdministratorRole})
+	}))
+
+	h := newTestHandler(t, store)
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, buildGetWorkflowsReq(t, 1, strconv.Itoa(int(srcID))))
+
+	items := decodeSourceWorkflows(t, rr)
+	assert.Empty(t, items)
+}
+
 func TestListSourceWorkflows_RedactsCredentials(t *testing.T) {
 	t.Parallel()
 	_, store := datastore.MustNewTestStore(t, false, true)

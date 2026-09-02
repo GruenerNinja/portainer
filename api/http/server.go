@@ -273,6 +273,8 @@ func (server *Server) Start(ctx context.Context) error {
 	teamMembershipHandler.DataStore = server.DataStore
 	teamMembershipHandler.K8sClientFactory = server.KubernetesClientFactory
 
+	system.StartVersionCheckService(ctx, portainer.VersionCheckURL)
+
 	var systemHandler = system.NewHandler(requestBouncer,
 		server.Status,
 		server.DataStore,

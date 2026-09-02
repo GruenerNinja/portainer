@@ -5434,6 +5434,11 @@ export type StacksUpdateSwarmStackPayload = {
   StackFileContent?: string;
 };
 
+export type StacksWebhookInvokeResponse = {
+  message?: string;
+  stackId?: number;
+};
+
 export type StatsContainerStats = {
   healthy?: number;
   running?: number;
@@ -23913,10 +23918,13 @@ export type WebhookInvokeErrors = {
 
 export type WebhookInvokeResponses = {
   /**
-   * Success
+   * Accepted
    */
-  200: unknown;
+  202: StacksWebhookInvokeResponse;
 };
+
+export type WebhookInvokeResponse =
+  WebhookInvokeResponses[keyof WebhookInvokeResponses];
 
 export type SystemInfoData = {
   body?: never;

@@ -96,6 +96,7 @@ export interface Stack {
   GitConfig?: RepoConfigResponse;
   GitSourceId?: number;
   FromAppTemplate: boolean;
+  WorkflowID?: number;
   Namespace?: string;
   IsComposeFormat: boolean;
   Webhook?: string;

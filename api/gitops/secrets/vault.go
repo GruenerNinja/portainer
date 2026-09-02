@@ -46,6 +46,12 @@ func TestVaultConnection(ctx context.Context, config *portainer.VaultConfig) err
 	if config == nil {
 		return fmt.Errorf("vault configuration is required")
 	}
+	if config.Authentication.Method != "token" {
+		return fmt.Errorf("unsupported vault authentication method %q", config.Authentication.Method)
+	}
+	if strings.TrimSpace(config.Authentication.Token) == "" {
+		return fmt.Errorf("vault token is required")
+	}
 
 	endpoint, err := vaultURL(config.Address, "v1/sys/health")
 	if err != nil {
@@ -64,11 +70,51 @@ func TestVaultConnection(ctx context.Context, config *portainer.VaultConfig) err
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode >= 200 && resp.StatusCode < 500 {
-		return nil
+	if !isHealthyVaultStatus(resp.StatusCode) {
+		return fmt.Errorf("vault health check failed with status %d", resp.StatusCode)
 	}
 
-	return fmt.Errorf("vault health check failed with status %d", resp.StatusCode)
+	return testVaultToken(ctx, config)
+}
+
+func testVaultToken(ctx context.Context, config *portainer.VaultConfig) error {
+	endpoint, err := vaultURL(config.Address, "v1/auth/token/lookup-self")
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return err
+	}
+	applyVaultHeaders(req, config)
+
+	resp, err := NewVaultClient(config.TLSSkipVerify).httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return fmt.Errorf("vault token validation failed with status %d", resp.StatusCode)
+	}
+
+	return nil
+}
+
+func isHealthyVaultStatus(statusCode int) bool {
+	if statusCode >= http.StatusOK && statusCode < http.StatusMultipleChoices {
+		return true
+	}
+
+	// Vault reports healthy standby and replication modes with non-2xx status
+	// codes unless the health endpoint is configured with custom status codes.
+	switch statusCode {
+	case http.StatusTooManyRequests, 472, 473:
+		return true
+	default:
+		return false
+	}
 }
 
 func ResolveVaultSecret(ctx context.Context, config *portainer.VaultConfig, secretPath, key string) (string, error) {

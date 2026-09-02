@@ -5,6 +5,7 @@ import { Input } from '@@/form-components/Input';
 import { Select } from '@@/form-components/ReactSelect';
 import { SwitchField } from '@@/form-components/SwitchField';
 
+import { VaultTokenCreateLink } from '../../VaultTokenCreateLink';
 import { FormValues } from '../type';
 
 import { ConnectionTest } from './ConnectionTest';
@@ -98,16 +99,19 @@ export function ConfigureVault() {
         errors={errors.vault?.authentication?.token}
         tooltip="Vault token used by Portainer when resolving stack secrets"
       >
-        <Input
-          id="vault-token-input"
-          type="password"
-          value={values.vault.authentication.token}
-          data-cy="vault-token-input"
-          required
-          onChange={({ target: { value } }) =>
-            setFieldValue('vault.authentication.token', value)
-          }
-        />
+        <div className="flex flex-col gap-2">
+          <Input
+            id="vault-token-input"
+            type="password"
+            value={values.vault.authentication.token}
+            data-cy="vault-token-input"
+            required
+            onChange={({ target: { value } }) =>
+              setFieldValue('vault.authentication.token', value)
+            }
+          />
+          <VaultTokenCreateLink address={values.vault.address} />
+        </div>
       </FormControl>
 
       <ConnectionTest />

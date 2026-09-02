@@ -5,6 +5,7 @@ import { Card } from '@@/primitives/Card';
 import { FormControl } from '@@/form-components/FormControl';
 import { Input } from '@@/form-components/Input';
 
+import { VaultTokenCreateLink } from '../../../VaultTokenCreateLink';
 import { GitAuthentication } from '../../../components/GitAuthentication';
 
 import { SettingsFormValues } from './types';
@@ -28,18 +29,21 @@ export function EditAuthWidget() {
             errors={errors.token}
             tooltip="Leave empty to keep the saved token"
           >
-            <Input
-              id="vault-token"
-              type="password"
-              value={values.token}
-              onChange={(e) =>
-                setValues((oldValues) => ({
-                  ...oldValues,
-                  token: e.target.value,
-                }))
-              }
-              data-cy="source-vault-token-input"
-            />
+            <div className="flex flex-col gap-2">
+              <Input
+                id="vault-token"
+                type="password"
+                value={values.token}
+                onChange={(e) =>
+                  setValues((oldValues) => ({
+                    ...oldValues,
+                    token: e.target.value,
+                  }))
+                }
+                data-cy="source-vault-token-input"
+              />
+              <VaultTokenCreateLink address={values.url} />
+            </div>
           </FormControl>
         ) : (
           <GitAuthentication

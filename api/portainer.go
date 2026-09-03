@@ -1010,11 +1010,12 @@ type (
 
 	// VaultConfig represents a HashiCorp Vault source configuration.
 	VaultConfig struct {
-		Address        string              `json:"address" example:"https://vault.example.com"`
-		TLSSkipVerify  bool                `json:"tlsSkipVerify" example:"false"`
-		Namespace      string              `json:"namespace,omitempty" example:"admin"`
-		KVVersion      int                 `json:"kvVersion" example:"2"`
-		Authentication VaultAuthentication `json:"authentication"`
+		Address         string              `json:"address" example:"https://vault.example.com"`
+		InternalAddress string              `json:"internalAddress,omitempty" example:"http://vault:8200"`
+		TLSSkipVerify   bool                `json:"tlsSkipVerify" example:"false"`
+		Namespace       string              `json:"namespace,omitempty" example:"admin"`
+		KVVersion       int                 `json:"kvVersion" example:"2"`
+		Authentication  VaultAuthentication `json:"authentication"`
 	}
 
 	// VaultAuthentication represents Vault authentication settings.

@@ -33,6 +33,7 @@ export function SettingsForm({ source, onCancel }: Props) {
     type: source.type === 'vault' ? 'vault' : 'git',
     name: source.name ?? '',
     url: source.connection.vault?.address ?? source.url ?? '',
+    internalAddress: source.connection.vault?.internalAddress ?? '',
     tlsSkipVerify: source.connection.tlsSkipVerify ?? false,
     authEnabled: !!source.connection.authentication,
     username: source.connection.authentication?.username ?? '',

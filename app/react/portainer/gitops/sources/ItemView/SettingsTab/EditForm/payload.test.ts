@@ -5,6 +5,7 @@ const baseValues: SettingsFormValues = {
   type: 'git',
   name: 'my-source',
   url: 'https://github.com/org/repo.git',
+  internalAddress: '',
   tlsSkipVerify: false,
   authEnabled: false,
   username: '',
@@ -55,5 +56,24 @@ describe('buildUpdatePayload interval handling', () => {
     const values: SettingsFormValues = { ...initialValues, interval: '10m' };
     const payload = buildUpdatePayload(values, initialValues);
     expect(payload.interval).toBe('10m');
+  });
+});
+
+describe('buildUpdatePayload Vault address handling', () => {
+  it('sends a changed internal Vault address', () => {
+    const initialValues: SettingsFormValues = {
+      ...baseValues,
+      type: 'vault',
+      url: 'https://vault.example.com',
+    };
+    const values: SettingsFormValues = {
+      ...initialValues,
+      internalAddress: 'http://vault:8200',
+    };
+
+    expect(buildUpdatePayload(values, initialValues)).toMatchObject({
+      type: 'vault',
+      internalAddress: 'http://vault:8200',
+    });
   });
 });

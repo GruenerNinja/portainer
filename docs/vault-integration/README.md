@@ -23,6 +23,8 @@ The Go API already accepted Vault, but the committed OpenAPI definition and gene
 
 - HashiCorp Vault KV v1 and KV v2.
 - Token authentication through `X-Vault-Token`.
+- Automatic renewal of renewable periodic tokens after their remaining TTL reaches half of the configured period.
+- A stable public/domain address plus an optional internal address that is preferred for backend requests, with automatic fallback to the public address.
 - Optional Vault Enterprise/HCP namespace through `X-Vault-Namespace`.
 - Optional TLS certificate verification bypass.
 - A single key mapped to an environment variable.
@@ -32,6 +34,6 @@ The Go API already accepted Vault, but the committed OpenAPI definition and gene
 
 ## Operational contract
 
-Use the Vault server base URL as the source address, for example `https://vault.example.com`. Do not use a Vault UI URL. Secret mapping paths include the KV mount, for example `kv/apps/my-stack`; callers should not prepend `/v1/`. For KV v2, the backend inserts `data` for reads and `metadata` for folder listings.
+Use the Vault server base URL as the public source address, for example `https://vault.example.com`. Do not use a Vault UI URL. When that domain is served through a reverse proxy, configure the optional internal address (for example `http://vault:8200` or `http://192.168.4.20:8200`) so deployments remain independent of the proxy. Secret mapping paths include the KV mount, for example `kv/apps/my-stack`; callers should not prepend `/v1/`. For KV v2, the backend inserts `data` for reads and `metadata` for folder listings.
 
-The stored token is sensitive. API responses must continue to redact it. Never log the Vault configuration, request headers, resolved values, or the final environment after secret injection.
+The stored token is sensitive. API responses must continue to redact it. Never log the Vault configuration, request headers, resolved values, or the final environment after secret injection. A periodic token can remain valid indefinitely while Portainer is running, but it must be created with a period and a policy that grants the required KV data and metadata capabilities.

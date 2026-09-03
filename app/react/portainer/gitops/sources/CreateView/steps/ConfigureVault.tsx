@@ -31,10 +31,10 @@ export function ConfigureVault() {
     <div className="grid">
       <FormControl
         inputId="vault-address-input"
-        label="Vault Address"
+        label="Public Vault Address"
         required
         errors={errors.vault?.address}
-        tooltip="Enter the URL of the Vault server, for example https://vault.example.com. Do not paste a Vault UI secret URL here."
+        tooltip="Enter the stable domain URL of the Vault server, for example https://vault.example.com. Do not paste a Vault UI secret URL here."
       >
         <Input
           id="vault-address-input"
@@ -44,6 +44,23 @@ export function ConfigureVault() {
           required
           onChange={({ target: { value } }) =>
             setFieldValue('vault.address', value)
+          }
+        />
+      </FormControl>
+
+      <FormControl
+        inputId="vault-internal-address-input"
+        label="Internal Vault Address"
+        errors={errors.vault?.internalAddress}
+        tooltip="Optional direct URL reachable from Portainer, for example http://vault:8200 or http://192.168.4.20:8200. Portainer uses it first and falls back to the public address, so Vault access does not depend on the public reverse proxy."
+      >
+        <Input
+          id="vault-internal-address-input"
+          value={values.vault.internalAddress}
+          data-cy="vault-internal-address-input"
+          placeholder="http://vault:8200"
+          onChange={({ target: { value } }) =>
+            setFieldValue('vault.internalAddress', value)
           }
         />
       </FormControl>
@@ -97,7 +114,7 @@ export function ConfigureVault() {
         label="Token"
         required
         errors={errors.vault?.authentication?.token}
-        tooltip="Vault token used by Portainer when resolving stack secrets"
+        tooltip="Vault token used by Portainer when resolving stack secrets. Renewable periodic tokens are checked hourly and renewed after half their period has elapsed."
       >
         <div className="flex flex-col gap-2">
           <Input

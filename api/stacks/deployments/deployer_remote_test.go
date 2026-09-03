@@ -1,7 +1,12 @@
 package deployments
 
 import (
+	"context"
 	"encoding/base64"
+	"encoding/json"
+	"errors"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -13,6 +18,76 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+type capturePullComposeManager struct {
+	pulledStack *portainer.Stack
+	pullErr     error
+}
+
+func (manager *capturePullComposeManager) ComposeSyntaxMaxVersion() string { return "" }
+
+func (manager *capturePullComposeManager) NormalizeStackName(name string) string { return name }
+
+func (manager *capturePullComposeManager) Run(context.Context, *portainer.Stack, *portainer.Endpoint, string, portainer.ComposeRunOptions) error {
+	return nil
+}
+
+func (manager *capturePullComposeManager) Up(context.Context, *portainer.Stack, *portainer.Endpoint, portainer.ComposeUpOptions) error {
+	return nil
+}
+
+func (manager *capturePullComposeManager) Down(context.Context, *portainer.Stack, *portainer.Endpoint) error {
+	return nil
+}
+
+func (manager *capturePullComposeManager) Pull(_ context.Context, stack *portainer.Stack, _ *portainer.Endpoint, _ portainer.ComposeOptions) error {
+	manager.pulledStack = stack
+	return manager.pullErr
+}
+
+func TestDeployRemoteComposeStackResolvesSecretsBeforePull(t *testing.T) {
+	t.Parallel()
+
+	vaultServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "/v1/secret/data/app", r.URL.Path)
+		require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
+			"data": map[string]any{
+				"data": map[string]any{"IMAGE_TAG": "vault-release"},
+			},
+		}))
+	}))
+	t.Cleanup(vaultServer.Close)
+
+	_, store := datastore.MustNewTestStore(t, false, true)
+	src := &portainer.Source{
+		Type: portainer.SourceTypeVault,
+		Vault: &portainer.VaultConfig{
+			Address:   vaultServer.URL,
+			KVVersion: 2,
+			Authentication: portainer.VaultAuthentication{
+				Method: "token",
+				Token:  "token-value",
+			},
+		},
+	}
+	require.NoError(t, store.Source().Create(adminUserContext, src))
+
+	pullErr := errors.New("stop after pull")
+	composeManager := &capturePullComposeManager{pullErr: pullErr}
+	deployer := NewStackDeployer(nil, composeManager, nil, nil, store)
+	stack := &portainer.Stack{
+		SecretMappings: []portainer.StackSecretMapping{{
+			SourceID: src.ID,
+			Path:     "secret/app",
+			Key:      "IMAGE_TAG",
+		}},
+	}
+
+	err := deployer.DeployRemoteComposeStack(t.Context(), 1, stack, &portainer.Endpoint{}, nil, false, true, false)
+	require.ErrorIs(t, err, pullErr)
+	require.NotNil(t, composeManager.pulledStack)
+	assert.Contains(t, composeManager.pulledStack.Env, portainer.Pair{Name: "IMAGE_TAG", Value: "vault-release"})
+}
 
 func TestRemoteComposeDestination(t *testing.T) {
 	t.Parallel()

@@ -39,6 +39,7 @@ export function CreateForm({ steps }: Props) {
     },
     vault: {
       address: '',
+      internalAddress: '',
       namespace: '',
       kvVersion: 2,
       tlsSkipVerify: false,

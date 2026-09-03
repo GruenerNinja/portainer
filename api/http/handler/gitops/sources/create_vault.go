@@ -21,12 +21,13 @@ type VaultAuthenticationPayload struct {
 
 type VaultSourceCreatePayload struct {
 	SourceAccessControlPayload
-	Name           string                     `json:"name"`
-	Address        string                     `json:"address" validate:"required"`
-	TLSSkipVerify  bool                       `json:"tlsSkipVerify"`
-	Namespace      string                     `json:"namespace"`
-	KVVersion      int                        `json:"kvVersion"`
-	Authentication VaultAuthenticationPayload `json:"authentication"`
+	Name            string                     `json:"name"`
+	Address         string                     `json:"address" validate:"required"`
+	InternalAddress string                     `json:"internalAddress"`
+	TLSSkipVerify   bool                       `json:"tlsSkipVerify"`
+	Namespace       string                     `json:"namespace"`
+	KVVersion       int                        `json:"kvVersion"`
+	Authentication  VaultAuthenticationPayload `json:"authentication"`
 }
 
 func (payload *VaultSourceCreatePayload) Validate(_ *http.Request) error {
@@ -102,10 +103,11 @@ func BuildVaultSource(payload VaultSourceCreatePayload) *portainer.Source {
 		Public:             payload.Public,
 		AdministratorsOnly: payload.AdministratorsOnly,
 		Vault: &portainer.VaultConfig{
-			Address:       strings.TrimSpace(payload.Address),
-			TLSSkipVerify: payload.TLSSkipVerify,
-			Namespace:     strings.TrimSpace(payload.Namespace),
-			KVVersion:     kvVersion,
+			Address:         strings.TrimSpace(payload.Address),
+			InternalAddress: strings.TrimSpace(payload.InternalAddress),
+			TLSSkipVerify:   payload.TLSSkipVerify,
+			Namespace:       strings.TrimSpace(payload.Namespace),
+			KVVersion:       kvVersion,
 			Authentication: portainer.VaultAuthentication{
 				Method: payload.Authentication.Method,
 				Token:  payload.Authentication.Token,

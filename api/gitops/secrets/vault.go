@@ -19,6 +19,20 @@ type VaultClient struct {
 	httpClient *http.Client
 }
 
+type VaultTokenInfo struct {
+	TTL            int64 `json:"ttl"`
+	CreationTTL    int64 `json:"creation_ttl"`
+	Period         int64 `json:"period"`
+	ExplicitMaxTTL int64 `json:"explicit_max_ttl"`
+	Renewable      bool  `json:"renewable"`
+}
+
+type VaultTokenRenewalResult struct {
+	Renewed bool
+	TTL     int64
+	Period  int64
+}
+
 type vaultStatusError struct {
 	operation  string
 	statusCode int
@@ -53,7 +67,14 @@ func TestVaultConnection(ctx context.Context, config *portainer.VaultConfig) err
 		return fmt.Errorf("vault token is required")
 	}
 
-	endpoint, err := vaultURL(config.Address, "v1/sys/health")
+	_, err := tryVaultAddresses(config, func(address string) (struct{}, error) {
+		return struct{}{}, testVaultConnectionAtAddress(ctx, config, address)
+	})
+	return err
+}
+
+func testVaultConnectionAtAddress(ctx context.Context, config *portainer.VaultConfig, address string) error {
+	endpoint, err := vaultURL(address, "v1/sys/health")
 	if err != nil {
 		return err
 	}
@@ -74,11 +95,11 @@ func TestVaultConnection(ctx context.Context, config *portainer.VaultConfig) err
 		return fmt.Errorf("vault health check failed with status %d", resp.StatusCode)
 	}
 
-	return testVaultToken(ctx, config)
+	return testVaultToken(ctx, config, address)
 }
 
-func testVaultToken(ctx context.Context, config *portainer.VaultConfig) error {
-	endpoint, err := vaultURL(config.Address, "v1/auth/token/lookup-self")
+func testVaultToken(ctx context.Context, config *portainer.VaultConfig, address string) error {
+	endpoint, err := vaultURL(address, "v1/auth/token/lookup-self")
 	if err != nil {
 		return err
 	}
@@ -99,6 +120,127 @@ func testVaultToken(ctx context.Context, config *portainer.VaultConfig) error {
 		return fmt.Errorf("vault token validation failed with status %d", resp.StatusCode)
 	}
 
+	return nil
+}
+
+func LookupVaultToken(ctx context.Context, config *portainer.VaultConfig) (VaultTokenInfo, error) {
+	if err := validateVaultTokenConfig(config); err != nil {
+		return VaultTokenInfo{}, err
+	}
+
+	return tryVaultAddresses(config, func(address string) (VaultTokenInfo, error) {
+		endpoint, err := vaultURL(address, "v1/auth/token/lookup-self")
+		if err != nil {
+			return VaultTokenInfo{}, err
+		}
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+		if err != nil {
+			return VaultTokenInfo{}, err
+		}
+		applyVaultHeaders(req, config)
+
+		resp, err := NewVaultClient(config.TLSSkipVerify).httpClient.Do(req)
+		if err != nil {
+			return VaultTokenInfo{}, err
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+			return VaultTokenInfo{}, fmt.Errorf("vault token lookup failed with status %d", resp.StatusCode)
+		}
+
+		var payload struct {
+			Data VaultTokenInfo `json:"data"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+			return VaultTokenInfo{}, fmt.Errorf("failed to decode Vault token lookup response: %w", err)
+		}
+
+		return payload.Data, nil
+	})
+}
+
+func RenewVaultToken(ctx context.Context, config *portainer.VaultConfig) (VaultTokenInfo, error) {
+	if err := validateVaultTokenConfig(config); err != nil {
+		return VaultTokenInfo{}, err
+	}
+
+	return tryVaultAddresses(config, func(address string) (VaultTokenInfo, error) {
+		endpoint, err := vaultURL(address, "v1/auth/token/renew-self")
+		if err != nil {
+			return VaultTokenInfo{}, err
+		}
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, http.NoBody)
+		if err != nil {
+			return VaultTokenInfo{}, err
+		}
+		applyVaultHeaders(req, config)
+
+		resp, err := NewVaultClient(config.TLSSkipVerify).httpClient.Do(req)
+		if err != nil {
+			return VaultTokenInfo{}, err
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+			return VaultTokenInfo{}, fmt.Errorf("vault token renewal failed with status %d", resp.StatusCode)
+		}
+
+		var payload struct {
+			Auth struct {
+				LeaseDuration int64 `json:"lease_duration"`
+				Renewable     bool  `json:"renewable"`
+			} `json:"auth"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+			return VaultTokenInfo{}, fmt.Errorf("failed to decode Vault token renewal response: %w", err)
+		}
+
+		return VaultTokenInfo{
+			TTL:       payload.Auth.LeaseDuration,
+			Renewable: payload.Auth.Renewable,
+		}, nil
+	})
+}
+
+func RenewVaultTokenIfNeeded(ctx context.Context, config *portainer.VaultConfig) (VaultTokenRenewalResult, error) {
+	info, err := LookupVaultToken(ctx, config)
+	if err != nil {
+		return VaultTokenRenewalResult{}, err
+	}
+
+	result := VaultTokenRenewalResult{TTL: info.TTL, Period: info.Period}
+	if !info.Renewable || info.Period <= 0 {
+		return result, nil
+	}
+
+	renewalThreshold := (info.Period + 1) / 2
+	if info.TTL > renewalThreshold {
+		return result, nil
+	}
+
+	renewedInfo, err := RenewVaultToken(ctx, config)
+	if err != nil {
+		return VaultTokenRenewalResult{}, err
+	}
+
+	result.Renewed = true
+	result.TTL = renewedInfo.TTL
+	return result, nil
+}
+
+func validateVaultTokenConfig(config *portainer.VaultConfig) error {
+	if config == nil {
+		return fmt.Errorf("vault configuration is required")
+	}
+	if config.Authentication.Method != "token" {
+		return fmt.Errorf("unsupported vault authentication method %q", config.Authentication.Method)
+	}
+	if strings.TrimSpace(config.Authentication.Token) == "" {
+		return fmt.Errorf("vault token is required")
+	}
 	return nil
 }
 
@@ -163,8 +305,14 @@ func ResolveVaultSecretValues(ctx context.Context, config *portainer.VaultConfig
 }
 
 func readVaultSecretValues(ctx context.Context, config *portainer.VaultConfig, secretPath string) (map[string]string, error) {
+	return tryVaultAddresses(config, func(address string) (map[string]string, error) {
+		return readVaultSecretValuesAtAddress(ctx, config, address, secretPath)
+	})
+}
+
+func readVaultSecretValuesAtAddress(ctx context.Context, config *portainer.VaultConfig, address, secretPath string) (map[string]string, error) {
 	apiPath := vaultSecretAPIPath(config.KVVersion, secretPath)
-	endpoint, err := vaultURL(config.Address, apiPath)
+	endpoint, err := vaultURL(address, apiPath)
 	if err != nil {
 		return nil, err
 	}
@@ -238,8 +386,14 @@ func resolveVaultSecretFolderValues(ctx context.Context, config *portainer.Vault
 }
 
 func listVaultSecretKeys(ctx context.Context, config *portainer.VaultConfig, secretPath string) ([]string, error) {
+	return tryVaultAddresses(config, func(address string) ([]string, error) {
+		return listVaultSecretKeysAtAddress(ctx, config, address, secretPath)
+	})
+}
+
+func listVaultSecretKeysAtAddress(ctx context.Context, config *portainer.VaultConfig, address, secretPath string) ([]string, error) {
 	apiPath := vaultSecretListAPIPath(config.KVVersion, secretPath)
-	endpoint, err := vaultURL(config.Address, apiPath)
+	endpoint, err := vaultURL(address, apiPath)
 	if err != nil {
 		return nil, err
 	}
@@ -327,8 +481,63 @@ func vaultSecretChildPath(secretPath, key string) string {
 }
 
 func isVaultStatusError(err error, statusCode int) bool {
-	var statusErr *vaultStatusError
-	return errors.As(err, &statusErr) && statusErr.statusCode == statusCode
+	if err == nil {
+		return false
+	}
+
+	if statusErr, ok := err.(*vaultStatusError); ok {
+		return statusErr.statusCode == statusCode
+	}
+
+	if joined, ok := err.(interface{ Unwrap() []error }); ok {
+		for _, nestedErr := range joined.Unwrap() {
+			if isVaultStatusError(nestedErr, statusCode) {
+				return true
+			}
+		}
+		return false
+	}
+
+	return isVaultStatusError(errors.Unwrap(err), statusCode)
+}
+
+func tryVaultAddresses[T any](config *portainer.VaultConfig, operation func(address string) (T, error)) (T, error) {
+	var zero T
+	addresses := vaultAddressCandidates(config)
+	if len(addresses) == 0 {
+		return zero, fmt.Errorf("vault address is required")
+	}
+
+	failures := make([]error, 0, len(addresses))
+	for _, address := range addresses {
+		result, err := operation(address)
+		if err == nil {
+			return result, nil
+		}
+		if len(addresses) == 1 {
+			return zero, err
+		}
+		failures = append(failures, fmt.Errorf("%s: %w", address, err))
+	}
+
+	return zero, fmt.Errorf("all configured Vault addresses failed: %w", errors.Join(failures...))
+}
+
+func vaultAddressCandidates(config *portainer.VaultConfig) []string {
+	if config == nil {
+		return nil
+	}
+
+	addresses := make([]string, 0, 2)
+	for _, address := range []string{config.InternalAddress, config.Address} {
+		address = strings.TrimSpace(address)
+		if address == "" || (len(addresses) > 0 && addresses[0] == address) {
+			continue
+		}
+		addresses = append(addresses, address)
+	}
+
+	return addresses
 }
 
 func vaultURL(address, apiPath string) (string, error) {

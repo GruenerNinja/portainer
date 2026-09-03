@@ -37,24 +37,33 @@ export function ConnectionDetailsWidget({ source }: Props) {
           </DetailField>
         </div>
         <DetailField
-          label={source.type === 'vault' ? 'Vault Address' : 'Repository URL'}
+          label={
+            source.type === 'vault' ? 'Public Vault Address' : 'Repository URL'
+          }
         >
           <code
             className="bg-transparent p-0 font-mono text-sm"
             data-cy="source-url"
           >
-            {source.url ?? '-'}
+            {source.connection.vault?.address ?? source.url ?? '-'}
           </code>
         </DetailField>
         {source.connection.vault && (
-          <div className="grid grid-cols-2 gap-4">
-            <DetailField label="Namespace">
-              {source.connection.vault.namespace || '-'}
+          <>
+            <DetailField label="Internal Vault Address">
+              <code className="bg-transparent p-0 font-mono text-sm">
+                {source.connection.vault.internalAddress || '-'}
+              </code>
             </DetailField>
-            <DetailField label="KV engine version">
-              KV v{source.connection.vault.kvVersion}
-            </DetailField>
-          </div>
+            <div className="grid grid-cols-2 gap-4">
+              <DetailField label="Namespace">
+                {source.connection.vault.namespace || '-'}
+              </DetailField>
+              <DetailField label="KV engine version">
+                KV v{source.connection.vault.kvVersion}
+              </DetailField>
+            </div>
+          </>
         )}
       </Card.Body>
     </Card.Container>

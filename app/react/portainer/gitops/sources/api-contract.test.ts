@@ -29,6 +29,7 @@ describe('Vault source API contract', () => {
         connection: {
           vault: {
             address: 'https://vault.example.com',
+            internalAddress: 'http://vault:8200',
             authMethod: 'token',
             kvVersion: 2,
             tlsSkipVerify: false,

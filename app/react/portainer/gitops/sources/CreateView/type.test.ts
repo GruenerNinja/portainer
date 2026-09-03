@@ -14,6 +14,7 @@ const baseGit = {
 
 const baseVault = {
   address: 'https://vault.example.com',
+  internalAddress: 'http://vault:8200',
   namespace: '',
   kvVersion: 2 as const,
   tlsSkipVerify: false,
@@ -223,6 +224,7 @@ describe('formValuesToCreatePayload', () => {
     expect(payload).toMatchObject({
       name: 'vault-source',
       address: baseVault.address,
+      internalAddress: baseVault.internalAddress,
       authentication: baseVault.authentication,
       administratorsOnly: true,
       public: false,

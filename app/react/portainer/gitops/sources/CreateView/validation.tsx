@@ -41,6 +41,7 @@ export function validateGitConnection() {
 export function validateVaultConnection() {
   return validateVault().pick([
     'address',
+    'internalAddress',
     'namespace',
     'kvVersion',
     'tlsSkipVerify',
@@ -98,6 +99,13 @@ function validateVault() {
             value,
             (url) => !!url.hostname && url.hostname !== 'localhost'
           )
+      ),
+    internalAddress: string()
+      .optional()
+      .test(
+        'valid internal vault address',
+        'The internal Vault address must be a valid URL',
+        (value) => !value || isValidUrl(value, (url) => Boolean(url.hostname))
       ),
     namespace: string().optional(),
     kvVersion: mixed<1 | 2>().oneOf([1, 2]).required('KV version is required.'),

@@ -31,13 +31,15 @@ After generation, confirm `zSourcesSourceType` and `zGitOpsSourcesListQuery` in 
 
 1. Start a Vault development/test instance with a known token.
 2. Enable a KV v1 or KV v2 mount and write a string secret.
-3. In Portainer, create a Vault source with the server base address, matching KV version, token, and namespace if applicable.
+3. In Portainer, create a Vault source with the public/domain base address, optional direct internal address, matching KV version, token, and namespace if applicable.
 4. Test the connection, save the source, reload the source list, and open its settings page. A reload is important because it exercises generated response validation.
 5. Create a Git-backed stack and add a Vault mapping for one key. Deploy and confirm the application receives the value without the value appearing in the stored stack configuration or API response.
 6. Repeat with an empty key to test all-key expansion.
 7. Map a folder and verify direct-child naming for both single-value and multi-value child secrets.
 8. Update the Vault source without entering a replacement token and confirm the existing credential remains usable; then replace it and retest.
 9. Exercise a denied source/stack action as a non-administrator to verify access control.
+10. If an internal address is configured, stop or bypass the public proxy and verify that the connection test and a stack deployment still resolve Vault values.
+11. Create a renewable periodic token, shorten its period for testing, and verify that the startup/hourly worker renews it after its TTL reaches half of the period. Confirm logs contain the source ID and renewed TTL but not the token.
 
 ## Release checklist
 
@@ -47,6 +49,7 @@ After generation, confirm `zSourcesSourceType` and `zGitOpsSourcesListQuery` in 
 - Vault endpoints and fields appear in the generated SDK and types.
 - All credentials are redacted from create, get, update, test errors, and logs.
 - KV v1, KV v2, namespace, TLS, and folder-list behavior have tests appropriate to the change.
+- Periodic token lookup, renewal threshold, address fallback, and worker behavior have tests appropriate to the change.
 - All stack deployment paths still call the secret resolver.
 - No resolved value is persisted or logged.
 - Source and stack access-control behavior was reviewed.

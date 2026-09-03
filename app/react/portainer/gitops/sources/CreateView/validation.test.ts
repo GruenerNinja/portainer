@@ -1,7 +1,11 @@
 import { ResourceControlOwnership } from '@/react/portainer/access-control/types';
 
 import { FormValues } from './type';
-import { validateGitConnection, validationSchema } from './validation';
+import {
+  validateGitConnection,
+  validateVaultConnection,
+  validationSchema,
+} from './validation';
 
 const baseAuth = {
   authEnabled: false,
@@ -17,6 +21,7 @@ const validGitValues = {
 
 const validVaultValues = {
   address: 'https://vault.example.com',
+  internalAddress: 'http://vault:8200',
   namespace: '',
   kvVersion: 2 as const,
   tlsSkipVerify: false,
@@ -77,6 +82,26 @@ describe('validateGitConnection (pick schema — no connectionOk)', () => {
         authentication: baseAuth,
       })
     ).resolves.toBe(true);
+  });
+});
+
+describe('validateVaultConnection', () => {
+  it('accepts a Docker-network internal address', async () => {
+    await expect(
+      validateVaultConnection().isValid({
+        ...validVaultValues,
+        internalAddress: 'http://vault:8200',
+      })
+    ).resolves.toBe(true);
+  });
+
+  it('rejects an invalid internal address', async () => {
+    await expect(
+      validateVaultConnection().isValid({
+        ...validVaultValues,
+        internalAddress: 'vault:8200',
+      })
+    ).resolves.toBe(false);
   });
 });
 

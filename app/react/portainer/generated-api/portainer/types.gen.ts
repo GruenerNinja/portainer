@@ -4070,6 +4070,7 @@ export type PortainerVaultAuthentication = {
 export type PortainerVaultConfig = {
   address?: string;
   authentication?: PortainerVaultAuthentication;
+  internalAddress?: string;
   kvVersion?: number;
   namespace?: string;
   tlsSkipVerify?: boolean;
@@ -4900,6 +4901,7 @@ export type SourcesVaultSourceCreatePayload = {
   address: string;
   administratorsOnly?: boolean;
   authentication?: SourcesVaultAuthenticationPayload;
+  internalAddress?: string;
   kvVersion?: number;
   name?: string;
   namespace?: string;
@@ -4935,6 +4937,7 @@ export type SourcesGitAuthInfo = {
 export type SourcesVaultInfo = {
   address?: string;
   authMethod?: string;
+  internalAddress?: string;
   kvVersion?: number;
   namespace?: string;
   tlsSkipVerify?: boolean;

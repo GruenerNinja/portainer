@@ -6,6 +6,7 @@ export interface SettingsFormValues {
   type: 'git' | 'vault';
   name: string;
   url: string;
+  internalAddress: string;
   tlsSkipVerify: boolean;
   authEnabled: boolean;
   username: string;
@@ -21,6 +22,7 @@ export const validationSchema = object({
   type: string().oneOf(['git', 'vault']).required(),
   name: string().required('Name is required'),
   url: string().required('URL is required'),
+  internalAddress: string().optional(),
   tlsSkipVerify: yupBoolean().defined(),
   authEnabled: yupBoolean().defined(),
   username: string().when('authEnabled', {

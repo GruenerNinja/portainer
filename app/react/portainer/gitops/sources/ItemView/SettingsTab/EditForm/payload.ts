@@ -11,6 +11,10 @@ export function buildUpdatePayload(
       type: 'vault',
       name: changed(values.name, initialValues.name),
       address: changed(values.url, initialValues.url),
+      internalAddress: changed(
+        values.internalAddress,
+        initialValues.internalAddress
+      ),
       tlsSkipVerify: changed(values.tlsSkipVerify, initialValues.tlsSkipVerify),
       namespace: changed(values.namespace, initialValues.namespace),
       kvVersion: changed(values.kvVersion, initialValues.kvVersion),

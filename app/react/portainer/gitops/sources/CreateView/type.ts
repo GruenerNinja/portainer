@@ -28,6 +28,7 @@ type GitFormValues = {
 
 export type VaultFormValues = {
   address: string;
+  internalAddress?: string;
   namespace?: string;
   kvVersion: 1 | 2;
   tlsSkipVerify?: boolean;
@@ -42,6 +43,7 @@ export type VaultFormValues = {
 export type VaultSourcePayload = {
   name?: string;
   address: string;
+  internalAddress?: string;
   namespace?: string;
   kvVersion?: 1 | 2;
   tlsSkipVerify?: boolean;
@@ -67,8 +69,12 @@ export type FormValues = AccessControlFormData & {
 export function formValuesToCreatePayload(
   values: FormValues & { type: 'git' }
 ): Extract<CreateSourcePayload, { type: 'git' }>;
-export function formValuesToCreatePayload(values: FormValues): CreateSourcePayload;
-export function formValuesToCreatePayload(values: FormValues): CreateSourcePayload {
+export function formValuesToCreatePayload(
+  values: FormValues
+): CreateSourcePayload;
+export function formValuesToCreatePayload(
+  values: FormValues
+): CreateSourcePayload {
   const { name, type, authorizedTeams, authorizedUsers, ownership } = values;
   const accessControl = {
     administratorsOnly: ownership === ResourceControlOwnership.ADMINISTRATORS,
@@ -123,6 +129,7 @@ function vaultFormValuesToPayload(
   name: string,
   {
     address,
+    internalAddress,
     namespace,
     kvVersion,
     tlsSkipVerify,
@@ -132,6 +139,7 @@ function vaultFormValuesToPayload(
   return {
     name,
     address,
+    internalAddress: internalAddress?.trim() || undefined,
     namespace,
     kvVersion,
     tlsSkipVerify,

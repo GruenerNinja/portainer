@@ -10,12 +10,13 @@ import (
 var ErrNotVaultSource = errors.New("source is not a Vault source")
 
 type VaultSourceUpdatePayload struct {
-	Name           *string                           `json:"name"`
-	Address        *string                           `json:"address"`
-	TLSSkipVerify  *bool                             `json:"tlsSkipVerify"`
-	Namespace      *string                           `json:"namespace"`
-	KVVersion      *int                              `json:"kvVersion"`
-	Authentication *VaultAuthenticationUpdatePayload `json:"authentication"`
+	Name            *string                           `json:"name"`
+	Address         *string                           `json:"address"`
+	InternalAddress *string                           `json:"internalAddress"`
+	TLSSkipVerify   *bool                             `json:"tlsSkipVerify"`
+	Namespace       *string                           `json:"namespace"`
+	KVVersion       *int                              `json:"kvVersion"`
+	Authentication  *VaultAuthenticationUpdatePayload `json:"authentication"`
 }
 
 type VaultAuthenticationUpdatePayload struct {
@@ -43,6 +44,9 @@ func ApplyVaultSourceChanges(src *portainer.Source, payload VaultSourceUpdatePay
 
 	if payload.Address != nil {
 		src.Vault.Address = strings.TrimSpace(*payload.Address)
+	}
+	if payload.InternalAddress != nil {
+		src.Vault.InternalAddress = strings.TrimSpace(*payload.InternalAddress)
 	}
 	if payload.TLSSkipVerify != nil {
 		src.Vault.TLSSkipVerify = *payload.TLSSkipVerify

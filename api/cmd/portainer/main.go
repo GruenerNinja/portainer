@@ -28,6 +28,7 @@ import (
 	"github.com/portainer/portainer/api/filesystem"
 	"github.com/portainer/portainer/api/git"
 	"github.com/portainer/portainer/api/gitops/scheduling"
+	gitopssecrets "github.com/portainer/portainer/api/gitops/secrets"
 	"github.com/portainer/portainer/api/http"
 	"github.com/portainer/portainer/api/http/proxy"
 	kubeproxy "github.com/portainer/portainer/api/http/proxy/factory/kubernetes"
@@ -582,6 +583,8 @@ func buildServer(flags *portainer.CLIFlags, shutdownCtx context.Context, shutdow
 	}
 
 	sched := scheduler.NewScheduler(shutdownCtx)
+	vaultTokenRenewer := gitopssecrets.NewVaultTokenRenewer(dataStore)
+	vaultTokenRenewer.Start(shutdownCtx)
 	stackDeployer := deployments.NewStackDeployer(swarmStackManager, composeStackManager, kubernetesDeployer, dockerClientFactory, dataStore)
 	sourceScheduler := scheduling.NewSourceScheduler(sched, dataStore, scheduling.Deployers{
 		Stack: func(ctx context.Context, stackID portainer.StackID) error {

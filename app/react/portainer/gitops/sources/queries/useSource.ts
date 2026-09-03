@@ -16,6 +16,7 @@ export type SourceDetail = Omit<SourcesSourceDetail, 'connection' | 'type'> & {
   connection: SourcesConnectionInfo & {
     vault?: {
       address: string;
+      internalAddress?: string;
       tlsSkipVerify: boolean;
       namespace?: string;
       kvVersion: number;

@@ -5413,6 +5413,9 @@ definitions:
         type: string
       authentication:
         $ref: '#/definitions/portainer.VaultAuthentication'
+      internalAddress:
+        example: http://vault:8200
+        type: string
       kvVersion:
         example: 2
         type: integer
@@ -6422,6 +6425,8 @@ definitions:
         type: boolean
       authentication:
         $ref: '#/definitions/sources.VaultAuthenticationPayload'
+      internalAddress:
+        type: string
       kvVersion:
         type: integer
       name:
@@ -6493,6 +6498,8 @@ definitions:
       address:
         type: string
       authMethod:
+        type: string
+      internalAddress:
         type: string
       kvVersion:
         type: integer

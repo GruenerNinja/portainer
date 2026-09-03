@@ -41,12 +41,12 @@ export function EditConnectionDetailsWidget() {
         </FormControl>
         <FormControl
           inputId="url"
-          label={isVault ? 'Vault Address' : 'Repository URL'}
+          label={isVault ? 'Public Vault Address' : 'Repository URL'}
           errors={errors.url}
           required
           tooltip={
             isVault
-              ? 'Enter the URL of the Vault server, for example https://vault.example.com. Do not paste a Vault UI secret URL here.'
+              ? 'Enter the stable domain URL of the Vault server, for example https://vault.example.com. Do not paste a Vault UI secret URL here.'
               : undefined
           }
         >
@@ -60,6 +60,23 @@ export function EditConnectionDetailsWidget() {
         </FormControl>
         {isVault && (
           <>
+            <FormControl
+              inputId="internalAddress"
+              label="Internal Vault Address"
+              errors={errors.internalAddress}
+              tooltip="Optional direct URL reachable from Portainer. It is used first, with the public address as fallback, so Vault access does not depend on the public reverse proxy."
+            >
+              <Input
+                id="internalAddress"
+                name="internalAddress"
+                value={values.internalAddress}
+                placeholder="http://vault:8200"
+                onChange={(e) =>
+                  setFieldValue('internalAddress', e.target.value)
+                }
+                data-cy="source-vault-internal-address-input"
+              />
+            </FormControl>
             <FormControl
               inputId="namespace"
               label="Namespace"

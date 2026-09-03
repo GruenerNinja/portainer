@@ -1871,6 +1871,7 @@ export const zPortainerVaultAuthentication = z.object({
 export const zPortainerVaultConfig = z.object({
   address: z.string().optional(),
   authentication: zPortainerVaultAuthentication.optional(),
+  internalAddress: z.string().optional(),
   kvVersion: z.int().optional(),
   namespace: z.string().optional(),
   tlsSkipVerify: z.boolean().optional(),
@@ -2253,6 +2254,7 @@ export const zSourcesVaultSourceCreatePayload = z.object({
   address: z.string(),
   administratorsOnly: z.boolean().optional(),
   authentication: zSourcesVaultAuthenticationPayload.optional(),
+  internalAddress: z.string().optional(),
   kvVersion: z.int().optional(),
   name: z.string().optional(),
   namespace: z.string().optional(),
@@ -2269,6 +2271,7 @@ export const zSourcesGitAuthInfo = z.object({
 export const zSourcesVaultInfo = z.object({
   address: z.string().optional(),
   authMethod: z.string().optional(),
+  internalAddress: z.string().optional(),
   kvVersion: z.int().optional(),
   namespace: z.string().optional(),
   tlsSkipVerify: z.boolean().optional(),

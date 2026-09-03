@@ -13,6 +13,7 @@ import { sourceQueryKeys } from './query-keys';
 export type VaultSourceUpdatePayload = {
   name?: string;
   address?: string;
+  internalAddress?: string;
   tlsSkipVerify?: boolean;
   namespace?: string;
   kvVersion?: number;

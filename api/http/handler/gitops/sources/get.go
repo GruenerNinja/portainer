@@ -24,11 +24,12 @@ type connectionInfo struct {
 }
 
 type vaultInfo struct {
-	Address       string `json:"address"`
-	TLSSkipVerify bool   `json:"tlsSkipVerify"`
-	Namespace     string `json:"namespace,omitempty"`
-	KVVersion     int    `json:"kvVersion"`
-	AuthMethod    string `json:"authMethod"`
+	Address         string `json:"address"`
+	InternalAddress string `json:"internalAddress,omitempty"`
+	TLSSkipVerify   bool   `json:"tlsSkipVerify"`
+	Namespace       string `json:"namespace,omitempty"`
+	KVVersion       int    `json:"kvVersion"`
+	AuthMethod      string `json:"authMethod"`
 }
 
 type SourceAccess struct {
@@ -130,11 +131,12 @@ func buildConnectionInfo(src *portainer.Source) connectionInfo {
 		return connectionInfo{
 			TLSSkipVerify: src.Vault.TLSSkipVerify,
 			Vault: &vaultInfo{
-				Address:       src.Vault.Address,
-				TLSSkipVerify: src.Vault.TLSSkipVerify,
-				Namespace:     src.Vault.Namespace,
-				KVVersion:     src.Vault.KVVersion,
-				AuthMethod:    src.Vault.Authentication.Method,
+				Address:         src.Vault.Address,
+				InternalAddress: src.Vault.InternalAddress,
+				TLSSkipVerify:   src.Vault.TLSSkipVerify,
+				Namespace:       src.Vault.Namespace,
+				KVVersion:       src.Vault.KVVersion,
+				AuthMethod:      src.Vault.Authentication.Method,
 			},
 		}
 	}

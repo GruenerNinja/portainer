@@ -4,6 +4,7 @@ const baseValues = {
   type: 'git',
   name: 'my-source',
   url: 'https://github.com/org/repo.git',
+  internalAddress: '',
   tlsSkipVerify: false,
   authEnabled: false,
   username: '',

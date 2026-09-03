@@ -17942,6 +17942,9 @@ components:
           type: string
         authentication:
           $ref: "#/components/schemas/portainer.VaultAuthentication"
+        internalAddress:
+          example: http://vault:8200
+          type: string
         kvVersion:
           example: 2
           type: integer
@@ -18966,6 +18969,8 @@ components:
           type: boolean
         authentication:
           $ref: "#/components/schemas/sources.VaultAuthenticationPayload"
+        internalAddress:
+          type: string
         kvVersion:
           type: integer
         name:
@@ -19037,6 +19042,8 @@ components:
         address:
           type: string
         authMethod:
+          type: string
+        internalAddress:
           type: string
         kvVersion:
           type: integer

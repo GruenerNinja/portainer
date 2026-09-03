@@ -6,7 +6,17 @@ The generated API contract is stale. Confirm `SourceTypeVault` exists in `api/ht
 
 ## Connection test succeeds but secret reads fail
 
-The health check treats Vault HTTP statuses below 500 as reachable; it does not prove the token can read a particular mount or path. Check the token policy, namespace, KV version, and secret mapping path. The mapping path must include the mount and must not include `/v1/`.
+The connection test accepts healthy, standby, and replication-mode Vault health responses and validates the token with `lookup-self`; it does not prove the token can read a particular mount or path. Check the token policy, namespace, KV version, and secret mapping path. The mapping path must include the mount and must not include `/v1/`.
+
+For a KV v2 mount named `kv`, whole-mount read access requires `read` on `kv/data/*`; folder expansion also requires `list` on `kv/metadata` and `read,list` on `kv/metadata/*`. A token that names a policy which does not exist can pass `lookup-self` and still receive 403 responses on secret reads.
+
+## A periodic token is not renewed
+
+Automatic renewal applies only when `lookup-self` reports both `renewable: true` and a positive `period`. Portainer checks at startup and hourly, and renews when TTL is at or below half the period. Verify the token was created with `-period`, that its policy is still present, and that either the internal or public Vault address is reachable. Portainer logs renewal failures by source ID without logging the credential.
+
+## Vault becomes unavailable while the reverse proxy redeploys
+
+Set the source's public address to the stable Vault domain and set **Internal Vault Address** to a direct URL reachable from the Portainer container or host. Portainer tries the internal address first and falls back to the public address. A Docker service name only works when Portainer and Vault share a Docker network; otherwise use a directly reachable private IP and port.
 
 ## KV v2 returns 404
 

@@ -67,6 +67,44 @@ test('when ownership is restricted, and the user is admin should have either tea
   );
 });
 
+test.each([
+  ['read-only team', { readOnlyAuthorizedTeams: [1] }],
+  ['read-only user', { readOnlyAuthorizedUsers: [1] }],
+])(
+  'when stack ownership is restricted, an admin can select only a %s',
+  async (_, readOnlySelection) => {
+    const schema = validationSchema(true, true);
+    const object = {
+      ownership: ResourceControlOwnership.RESTRICTED,
+      authorizedTeams: [],
+      authorizedUsers: [],
+      readOnlyAuthorizedTeams: [],
+      readOnlyAuthorizedUsers: [],
+      ...readOnlySelection,
+    };
+
+    await expect(
+      schema.validate(object, { strict: true })
+    ).resolves.toStrictEqual(object);
+  }
+);
+
+test('when read-only access is unavailable, a stale read-only selection does not validate', async () => {
+  const schema = validationSchema(true);
+
+  await expect(
+    schema.validate(
+      {
+        ownership: ResourceControlOwnership.RESTRICTED,
+        authorizedTeams: [],
+        authorizedUsers: [],
+        readOnlyAuthorizedTeams: [1],
+      },
+      { strict: true }
+    )
+  ).rejects.toThrowErrorMatchingSnapshot();
+});
+
 test('when  ownership is restricted, user is not admin with teams, should be valid', async () => {
   const schema = validationSchema(false);
 

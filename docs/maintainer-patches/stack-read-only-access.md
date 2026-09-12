@@ -13,7 +13,7 @@ This fork supports per-stack viewer grants in addition to the existing read-writ
 
 Use the **Standard user** environment role for an agent that must create and manage its own stacks. Assign its user or owning team read-write access to those stacks, then add read-only user/team grants only to the other stacks it may inspect. API keys inherit the permissions of their user.
 
-Administrators configure viewer grants in a stack's **Access control** panel or during stack creation. Read-only users and teams are stored in the existing `UserAccesses` and `TeamAccesses` collections with `AccessLevel: 2`; existing read-write grants remain `AccessLevel: 1`.
+Administrators configure viewer grants in a stack's **Access control** panel or during stack creation. A restricted stack may contain only read-only recipients; that selection satisfies form validation even when no read-write user or team is selected. Read-only users and teams are stored in the existing `UserAccesses` and `TeamAccesses` collections with `AccessLevel: 2`; existing read-write grants remain `AccessLevel: 1`.
 
 For backward compatibility, legacy resource-control entries that omit `AccessLevel` and decode as `0` retain their historical read-write behavior.
 
@@ -55,6 +55,7 @@ GOCACHE=/tmp/portainer-go-cache go test \
 
 pnpm typecheck
 pnpm exec vitest run \
+  app/react/portainer/access-control/AccessControlForm/AccessControlForm.validation.test.ts \
   app/react/portainer/access-control/utils.test.ts \
   app/react/portainer/access-control/AccessControlForm/AccessControlForm.test.tsx \
   app/react/portainer/access-control/AccessControlPanel/AccessControlPaneDetails.test.tsx \

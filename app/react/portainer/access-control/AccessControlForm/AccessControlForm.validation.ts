@@ -3,7 +3,8 @@ import { object, mixed, array, number, SchemaOf } from 'yup';
 import { AccessControlFormData, ResourceControlOwnership } from '../types';
 
 export function validationSchema(
-  isAdmin: boolean
+  isAdmin: boolean,
+  allowReadOnlyAccess = false
 ): SchemaOf<AccessControlFormData> {
   return object()
     .shape({
@@ -20,7 +21,13 @@ export function validationSchema(
       isAdmin
         ? 'You must specify at least one team or user.'
         : 'You must specify at least one team.',
-      ({ ownership, authorizedTeams, authorizedUsers }) => {
+      ({
+        ownership,
+        authorizedTeams,
+        authorizedUsers,
+        readOnlyAuthorizedTeams,
+        readOnlyAuthorizedUsers,
+      }) => {
         if (ownership !== ResourceControlOwnership.RESTRICTED) {
           return true;
         }
@@ -29,11 +36,15 @@ export function validationSchema(
           return !!authorizedTeams && authorizedTeams.length > 0;
         }
 
-        return (
-          !!authorizedTeams &&
-          !!authorizedUsers &&
-          (authorizedTeams.length > 0 || authorizedUsers.length > 0)
-        );
+        const hasWriteAccess =
+          (authorizedTeams?.length || 0) > 0 ||
+          (authorizedUsers?.length || 0) > 0;
+        const hasReadOnlyAccess =
+          allowReadOnlyAccess &&
+          ((readOnlyAuthorizedTeams?.length || 0) > 0 ||
+            (readOnlyAuthorizedUsers?.length || 0) > 0);
+
+        return hasWriteAccess || hasReadOnlyAccess;
       }
     );
 }

@@ -3,3 +3,5 @@
 exports[`when ownership is restricted and no teams or users, should be invalid 1`] = `[ValidationError: You must specify at least one team or user.]`;
 
 exports[`when ownership is restricted and no teams or users, should be invalid 2`] = `[ValidationError: You must specify at least one team.]`;
+
+exports[`when read-only access is unavailable, a stale read-only selection does not validate 1`] = `[ValidationError: You must specify at least one team or user.]`;

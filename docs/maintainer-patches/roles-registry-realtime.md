@@ -1,6 +1,6 @@
 # Custom roles, GHCR browsing, and realtime UI updates
 
-Release `2.39.3.2.20` completes the Community implementation of custom environment roles, provides working GitHub Container Registry repository and tag browsing, and reduces repetitive UI requests.
+Release `2.39.3.2.21` completes the Community implementation of custom environment roles, provides working GitHub Container Registry repository and tag browsing, fixes read-only-only stack access validation, and reduces repetitive UI requests.
 
 ## Role identifiers and custom roles
 

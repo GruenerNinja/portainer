@@ -19,7 +19,7 @@ import { useAssociateStackToEnvironmentMutation } from './useAssociateStackToEnv
 
 function validationSchema({ isAdmin }: { isAdmin: boolean }) {
   return object({
-    accessControl: accessControlValidation(isAdmin),
+    accessControl: accessControlValidation(isAdmin, true),
   });
 }
 

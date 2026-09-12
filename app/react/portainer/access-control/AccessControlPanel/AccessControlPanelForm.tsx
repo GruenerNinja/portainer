@@ -85,7 +85,12 @@ export function AccessControlPanelForm({
       validateOnMount
       validateOnChange
       validationSchema={() =>
-        object({ accessControl: validationSchema(isAdmin) })
+        object({
+          accessControl: validationSchema(
+            isAdmin,
+            resourceType === ResourceControlType.Stack
+          ),
+        })
       }
     >
       {({ setFieldValue, values, isSubmitting, isValid, errors }) => (

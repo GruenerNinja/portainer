@@ -1909,6 +1909,10 @@ export const zPortainerWebhook = z.object({
   Type: zPortainerWebhookType.optional(),
 });
 
+export const zRegistriesRegistryCatalogResponse = z.object({
+  repositories: z.array(z.string()).optional(),
+});
+
 export const zRegistriesRegistryConfigurePayload = z.object({
   Authentication: z.boolean(),
   Password: z.string().optional(),
@@ -1998,6 +2002,11 @@ export const zRegistriesRegistryPingPayload = z.object({
 export const zRegistriesRegistryPingResponse = z.object({
   message: z.string().optional(),
   success: z.boolean().optional(),
+});
+
+export const zRegistriesRegistryTagsResponse = z.object({
+  name: z.string().optional(),
+  tags: z.array(z.string()).optional(),
 });
 
 export const zRegistriesRegistryUpdatePayload = z.object({
@@ -7200,6 +7209,27 @@ export const zRegistryConfigurePath = z.object({
  * Success
  */
 export const zRegistryConfigureResponse = z.void();
+
+export const zRegistryRepositoriesListPath = z.object({
+  id: z.int(),
+});
+
+/**
+ * Success
+ */
+export const zRegistryRepositoriesListResponse =
+  zRegistriesRegistryCatalogResponse;
+
+export const zRegistryRepositoryTagsListPath = z.object({
+  id: z.int(),
+  repository: z.string(),
+});
+
+/**
+ * Success
+ */
+export const zRegistryRepositoryTagsListResponse =
+  zRegistriesRegistryTagsResponse;
 
 /**
  * Registry credentials to test

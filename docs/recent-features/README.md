@@ -1,6 +1,6 @@
 # Features added in the last four weeks
 
-This catalog covers work added, restored, or consolidated in the TheModCraft Portainer fork from **August 15 through September 12, 2026**. The current fork release identifier is **2.39.3.2.19**, while upstream API and database compatibility remain at Portainer **2.45.0**.
+This catalog covers work added, restored, or consolidated in the TheModCraft Portainer fork from **August 15 through September 12, 2026**. The current fork release identifier is **2.39.3.2.20**, while upstream API and database compatibility remain at Portainer **2.45.0**.
 
 ## Feature catalog
 
@@ -26,7 +26,7 @@ This catalog covers work added, restored, or consolidated in the TheModCraft Por
 | Sep 12                | Stack access control | Per-stack read-only sharing                    | Lets administrators share selected stack definitions with viewer users or teams while owners keep exclusive update, redeploy, start, stop, delete, and access-control rights.                                   | [Read-only stack sharing](../maintainer-patches/stack-read-only-access.md) |
 | Sep 12                | Role management      | Custom role lifecycle                          | Adds administrator create, inspect, edit, and guarded delete workflows for custom roles; assigned roles cannot be deleted and built-in roles remain protected.                                                  | [Roles, registries, and realtime UI](../maintainer-patches/roles-registry-realtime.md) |
 | Sep 12                | API compatibility    | Open-ended role identifiers                    | Accepts role ID `0` for non-role policies and IDs above `5` for custom roles, eliminating generated-client validation failures in team, registry, and namespace policy responses.                              | [Roles, registries, and realtime UI](../maintainer-patches/roles-registry-realtime.md) |
-| Sep 12                | Container registries | Community GHCR browsing                        | Enables authenticated GitHub Container Registry repository browsing in this Community fork without a Business Feature gate.                                                                                   | [Roles, registries, and realtime UI](../maintainer-patches/roles-registry-realtime.md) |
+| Sep 12                | Container registries | Community GHCR browsing                        | Enables authenticated GitHub Container Registry repository and read-only tag browsing in this Community fork without a Business Feature gate, backed by registry-access-checked API routes.                    | [Roles, registries, and realtime UI](../maintainer-patches/roles-registry-realtime.md) |
 | Sep 12                | UI performance       | Realtime cache synchronization                 | Keeps forward/back navigation data warm, suppresses focus-triggered duplicate requests, and uses an authenticated WebSocket invalidation stream so active views refresh after mutations.                       | [Roles, registries, and realtime UI](../maintainer-patches/roles-registry-realtime.md) |
 
 ## Compatibility and maintenance work

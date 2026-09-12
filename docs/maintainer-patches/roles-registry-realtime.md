@@ -1,6 +1,6 @@
 # Custom roles, GHCR browsing, and realtime UI updates
 
-Release `2.39.3.2.19` completes the Community implementation of custom environment roles, provides working GitHub Container Registry repository and tag browsing, and reduces repetitive UI requests.
+Release `2.39.3.2.20` completes the Community implementation of custom environment roles, provides working GitHub Container Registry repository and tag browsing, and reduces repetitive UI requests.
 
 ## Role identifiers and custom roles
 
@@ -16,7 +16,7 @@ The access pickers read roles from `/api/roles`; do not reintroduce a hard-coded
 
 ## GitHub Container Registry
 
-Authenticated `ghcr.io` entries can open Community-owned repository and read-only tag-list views using the maintained GitHub registry proxy. The Browse action is a Community feature in this fork and must not be wrapped in `REGISTRY_MANAGEMENT` or another Business feature indicator. Registry mutation actions remain absent from these read-only browser views.
+Authenticated `ghcr.io` entries can open Community-owned repository and read-only tag-list views. The access-checked backend uses the GitHub Packages API for GHCR catalogs and ORAS for repository tags, keeping registry credentials on the server. The Browse action is a Community feature in this fork and must not be wrapped in `REGISTRY_MANAGEMENT` or another Business feature indicator. Registry mutation actions remain absent from these read-only browser views.
 
 ## Realtime query synchronization
 
@@ -29,8 +29,9 @@ The default client cache keeps data fresh for 30 seconds and retained for 10 min
 ```sh
 GOCACHE=/tmp/portainer-rolefix-go-cache go test ./api/http/handler/roles
 GOCACHE=/tmp/portainer-rolefix-go-cache go test ./api/http/handler/websocket -run TestEventHubPublishesCoalescedInvalidations
+GOCACHE=/tmp/portainer-rolefix-go-cache go test ./api/http/handler/registries -run '^TestRegistryRepositor'
 pnpm test app/react/portainer/users/RolesView/role-schema.test.ts --run
 pnpm typecheck
 ```
 
-In the browser, confirm that Roles shows Add role, that opening the editor lists permissions, and that built-in rows have neither Edit nor selectable delete controls. On Registries, confirm that an authenticated GHCR row has an enabled Browse action without a Business Feature label.
+In the browser, confirm that Roles shows Add role, that opening the editor lists permissions, and that built-in rows have neither Edit nor selectable delete controls. On Registries, confirm that an authenticated GHCR row has an enabled Browse action without a Business Feature label, then open a repository and verify its read-only tag list.

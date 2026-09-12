@@ -614,6 +614,12 @@ import type {
   RegistryPingData,
   RegistryPingErrors,
   RegistryPingResponses,
+  RegistryRepositoriesListData,
+  RegistryRepositoriesListErrors,
+  RegistryRepositoriesListResponses,
+  RegistryRepositoryTagsListData,
+  RegistryRepositoryTagsListErrors,
+  RegistryRepositoryTagsListResponses,
   RegistryUpdateData,
   RegistryUpdateErrors,
   RegistryUpdateResponses,
@@ -1340,6 +1346,10 @@ import {
   zRegistryListResponse,
   zRegistryPingBody,
   zRegistryPingResponse,
+  zRegistryRepositoriesListPath,
+  zRegistryRepositoriesListResponse,
+  zRegistryRepositoryTagsListPath,
+  zRegistryRepositoryTagsListResponse,
   zRegistryUpdateBody,
   zRegistryUpdatePath,
   zRegistryUpdateResponse,
@@ -9326,6 +9336,80 @@ export const registryConfigure = <ThrowOnError extends boolean = true>(
       'Content-Type': 'application/json',
       ...options.headers,
     },
+  });
+
+/**
+ * List registry repositories
+ *
+ * List repositories visible with the configured registry credentials.
+ * **Access policy**: restricted
+ */
+export const registryRepositoriesList = <ThrowOnError extends boolean = true>(
+  options: Options<RegistryRepositoriesListData, ThrowOnError>
+): RequestResult<
+  RegistryRepositoriesListResponses,
+  RegistryRepositoriesListErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    RegistryRepositoriesListResponses,
+    RegistryRepositoriesListErrors,
+    ThrowOnError
+  >({
+    requestValidator: async (data) =>
+      await z
+        .object({
+          body: z.never().optional(),
+          path: zRegistryRepositoriesListPath,
+          query: z.never().optional(),
+        })
+        .parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) =>
+      await zRegistryRepositoriesListResponse.parseAsync(data),
+    security: [
+      { name: 'X-API-KEY', type: 'apiKey' },
+      { name: 'Authorization', type: 'apiKey' },
+    ],
+    url: '/registries/{id}/v2/_catalog',
+    ...options,
+  });
+
+/**
+ * List repository tags
+ *
+ * List tags for a repository using the configured registry credentials.
+ * **Access policy**: restricted
+ */
+export const registryRepositoryTagsList = <ThrowOnError extends boolean = true>(
+  options: Options<RegistryRepositoryTagsListData, ThrowOnError>
+): RequestResult<
+  RegistryRepositoryTagsListResponses,
+  RegistryRepositoryTagsListErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    RegistryRepositoryTagsListResponses,
+    RegistryRepositoryTagsListErrors,
+    ThrowOnError
+  >({
+    requestValidator: async (data) =>
+      await z
+        .object({
+          body: z.never().optional(),
+          path: zRegistryRepositoryTagsListPath,
+          query: z.never().optional(),
+        })
+        .parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) =>
+      await zRegistryRepositoryTagsListResponse.parseAsync(data),
+    security: [
+      { name: 'X-API-KEY', type: 'apiKey' },
+      { name: 'Authorization', type: 'apiKey' },
+    ],
+    url: '/registries/{id}/v2/{repository}/tags/list',
+    ...options,
   });
 
 /**

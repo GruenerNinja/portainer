@@ -5462,6 +5462,13 @@ definitions:
     x-enum-varnames:
     - _
     - ServiceWebhook
+  registries.registryCatalogResponse:
+    properties:
+      repositories:
+        items:
+          type: string
+        type: array
+    type: object
   registries.registryConfigurePayload:
     properties:
       Authentication:
@@ -5627,6 +5634,15 @@ definitions:
         description: Success indicates if the registry connection was successful
         example: true
         type: boolean
+    type: object
+  registries.registryTagsResponse:
+    properties:
+      name:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
     type: object
   registries.registryUpdatePayload:
     properties:
@@ -23985,6 +24001,77 @@ paths:
       - ApiKeyAuth: []
       - jwt: []
       summary: Configures a registry
+      tags:
+      - registries
+  /registries/{id}/v2/_catalog:
+    get:
+      description: |-
+        List repositories visible with the configured registry credentials.
+        **Access policy**: restricted
+      operationId: RegistryRepositoriesList
+      parameters:
+      - description: Registry identifier
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success
+          schema:
+            $ref: '#/definitions/registries.registryCatalogResponse'
+        "400":
+          description: Invalid request
+        "403":
+          description: Permission denied to access registry
+        "404":
+          description: Registry not found
+        "500":
+          description: Server error
+      security:
+      - ApiKeyAuth: []
+      - jwt: []
+      summary: List registry repositories
+      tags:
+      - registries
+  /registries/{id}/v2/{repository}/tags/list:
+    get:
+      description: |-
+        List tags for a repository using the configured registry credentials.
+        **Access policy**: restricted
+      operationId: RegistryRepositoryTagsList
+      parameters:
+      - description: Registry identifier
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Repository name
+        in: path
+        name: repository
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success
+          schema:
+            $ref: '#/definitions/registries.registryTagsResponse'
+        "400":
+          description: Invalid request
+        "403":
+          description: Permission denied to access registry
+        "404":
+          description: Registry not found
+        "500":
+          description: Server error
+      security:
+      - ApiKeyAuth: []
+      - jwt: []
+      summary: List repository tags
       tags:
       - registries
   /registries/ping:

@@ -4117,6 +4117,10 @@ export const PortainerWebhookType = {
 export type PortainerWebhookType =
   (typeof PortainerWebhookType)[keyof typeof PortainerWebhookType];
 
+export type RegistriesRegistryCatalogResponse = {
+  repositories?: Array<string>;
+};
+
 export type RegistriesRegistryConfigurePayload = {
   /**
    * Is authentication against this registry enabled
@@ -4247,6 +4251,11 @@ export type RegistriesRegistryPingResponse = {
    * Success indicates if the registry connection was successful
    */
   success?: boolean;
+};
+
+export type RegistriesRegistryTagsResponse = {
+  name?: string;
+  tags?: Array<string>;
 };
 
 export type RegistriesRegistryUpdatePayload = {
@@ -22640,6 +22649,92 @@ export type RegistryConfigureResponses = {
 
 export type RegistryConfigureResponse =
   RegistryConfigureResponses[keyof RegistryConfigureResponses];
+
+export type RegistryRepositoriesListData = {
+  body?: never;
+  path: {
+    /**
+     * Registry identifier
+     */
+    id: number;
+  };
+  query?: never;
+  url: '/registries/{id}/v2/_catalog';
+};
+
+export type RegistryRepositoriesListErrors = {
+  /**
+   * Invalid request
+   */
+  400: unknown;
+  /**
+   * Permission denied to access registry
+   */
+  403: unknown;
+  /**
+   * Registry not found
+   */
+  404: unknown;
+  /**
+   * Server error
+   */
+  500: unknown;
+};
+
+export type RegistryRepositoriesListResponses = {
+  /**
+   * Success
+   */
+  200: RegistriesRegistryCatalogResponse;
+};
+
+export type RegistryRepositoriesListResponse =
+  RegistryRepositoriesListResponses[keyof RegistryRepositoriesListResponses];
+
+export type RegistryRepositoryTagsListData = {
+  body?: never;
+  path: {
+    /**
+     * Registry identifier
+     */
+    id: number;
+    /**
+     * Repository name
+     */
+    repository: string;
+  };
+  query?: never;
+  url: '/registries/{id}/v2/{repository}/tags/list';
+};
+
+export type RegistryRepositoryTagsListErrors = {
+  /**
+   * Invalid request
+   */
+  400: unknown;
+  /**
+   * Permission denied to access registry
+   */
+  403: unknown;
+  /**
+   * Registry not found
+   */
+  404: unknown;
+  /**
+   * Server error
+   */
+  500: unknown;
+};
+
+export type RegistryRepositoryTagsListResponses = {
+  /**
+   * Success
+   */
+  200: RegistriesRegistryTagsResponse;
+};
+
+export type RegistryRepositoryTagsListResponse =
+  RegistryRepositoryTagsListResponses[keyof RegistryRepositoryTagsListResponses];
 
 export type RegistryPingData = {
   /**

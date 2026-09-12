@@ -1,6 +1,7 @@
 package registries
 
 import (
+	"context"
 	"net/http"
 
 	portainer "github.com/portainer/portainer/api"
@@ -47,6 +48,8 @@ type Handler struct {
 	ProxyManager          *proxy.Manager
 	K8sClientFactory      *cli.ClientFactory
 	PendingActionsService *pendingactions.PendingActionsService
+	listRepositories      func(context.Context, *portainer.Registry) ([]string, error)
+	listTags              func(context.Context, *portainer.Registry, string) ([]string, error)
 }
 
 // NewHandler creates a handler to manage registry operations.
@@ -59,8 +62,10 @@ func NewHandler(bouncer security.BouncerService) *Handler {
 
 func newHandler(bouncer security.BouncerService) *Handler {
 	return &Handler{
-		Router:         mux.NewRouter(),
-		requestBouncer: bouncer,
+		Router:           mux.NewRouter(),
+		requestBouncer:   bouncer,
+		listRepositories: listRegistryRepositories,
+		listTags:         listRegistryTags,
 	}
 }
 
@@ -78,6 +83,8 @@ func (handler *Handler) initRouter(bouncer accessGuard) {
 	registryAccessRouter := handler.NewRoute().Subrouter()
 	registryAccessRouter.Use(bouncer.AuthenticatedAccess, handler.RegistryAccess)
 	registryAccessRouter.Handle("/registries/{id}", httperror.LoggerHandler(handler.registryInspect)).Methods(http.MethodGet)
+	registryAccessRouter.Handle("/registries/{id}/v2/_catalog", httperror.LoggerHandler(handler.registryRepositoriesList)).Methods(http.MethodGet)
+	registryAccessRouter.Handle("/registries/{id}/v2/{repository:.+}/tags/list", httperror.LoggerHandler(handler.registryRepositoryTagsList)).Methods(http.MethodGet)
 
 	// Keep the gitlab proxy on the regular authenticated router as it doesn't require specific registry access
 	authenticatedRouter := handler.NewRoute().Subrouter()

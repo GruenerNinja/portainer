@@ -13,6 +13,7 @@ This repository is the TheModCraft Portainer CE fork. It preserves upstream API 
 [![TheModCraft release](https://img.shields.io/github/v/release/GruenerNinja/portainer?color=%2344cc11&label=TheModCraft%20release&style=for-the-badge)](https://github.com/GruenerNinja/portainer/releases/latest)
 
 - [Recent feature catalog](./docs/recent-features/README.md)
+- [Next-month feature planning backlog](./docs/planning/README.md)
 - [TheModCraft architecture and operations guide](./docs/themodcraft/README.md)
 - [Maintainer patch guide](./docs/maintainer-patches/README.md)
 - [Release and deployment instructions](./docs/themodcraft/release-and-deployment.md)

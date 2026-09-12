@@ -4,6 +4,7 @@ This directory is the maintenance handoff for behavior added by this fork. It ex
 
 ## Contents
 
+- [Feature planning backlog](../planning/README.md): one-month discovery backlog, scoring rubric, and planning-ready gate for possible future fork features.
 - [Recent features](../recent-features/README.md): table of work added, restored, or consolidated during the last four weeks.
 - [Overview response cache](overview-cache.md): stale-while-revalidate caching for Docker, Podman, and Kubernetes overview pages.
 - [Custom versioning](custom-versioning.md): footer version, Docker Hub update checks, and the boundary between the fork release and the upstream API/database version.

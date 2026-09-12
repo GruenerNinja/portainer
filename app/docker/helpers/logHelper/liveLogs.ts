@@ -143,6 +143,10 @@ export function openDockerLogsStream(options: LiveLogsOptions) {
 
     socket.addEventListener('close', () => {
       socket = undefined;
+      if (stopped) {
+        return;
+      }
+
       try {
         appendLogs(decoder.flush());
       } catch (error) {

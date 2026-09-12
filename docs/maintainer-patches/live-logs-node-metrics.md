@@ -1,6 +1,6 @@
 # Live Docker logs and session-cached node metrics
 
-Release `2.39.3.2.22` removes repetitive Docker log requests and keeps recent Kubernetes node charts available during navigation.
+Release `2.39.3.2.23` removes repetitive Docker log requests and keeps recent Kubernetes node charts available during navigation.
 
 ## Docker log streaming
 

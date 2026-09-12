@@ -1,4 +1,32 @@
-import { DockerLogStreamDecoder } from './liveLogs';
+import { DockerLogStreamDecoder, openDockerLogsStream } from './liveLogs';
+
+class FakeWebSocket {
+  static current: FakeWebSocket;
+
+  binaryType: BinaryType = 'blob';
+
+  private listeners = new Map<string, EventListener[]>();
+
+  constructor() {
+    FakeWebSocket.current = this;
+  }
+
+  addEventListener(type: string, listener: EventListenerOrEventListenerObject) {
+    const callback =
+      typeof listener === 'function'
+        ? listener
+        : listener.handleEvent.bind(listener);
+    this.listeners.set(type, [...(this.listeners.get(type) ?? []), callback]);
+  }
+
+  close() {
+    this.emit('close', new Event('close'));
+  }
+
+  emit(type: string, event: Event) {
+    this.listeners.get(type)?.forEach((listener) => listener(event));
+  }
+}
 
 function dockerFrame(text: string, stream = 1) {
   const payload = new TextEncoder().encode(text);
@@ -46,5 +74,36 @@ describe('DockerLogStreamDecoder', () => {
     decoder.push(dockerFrame('partial').slice(0, 10));
 
     expect(() => decoder.flush()).toThrow('incomplete frame');
+  });
+});
+
+describe('openDockerLogsStream', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('does not report a partial frame when the user closes the stream', () => {
+    vi.stubGlobal('WebSocket', FakeWebSocket);
+    const onError = vi.fn();
+    const stream = openDockerLogsStream({
+      environmentId: 1,
+      resource: 'containers',
+      resourceId: 'abc123',
+      timestamps: false,
+      since: 0,
+      tail: 100,
+      multiplexed: true,
+      onLogs: vi.fn(),
+      onError,
+    });
+    const partialFrame = dockerFrame('partial').slice(0, 10);
+    FakeWebSocket.current.emit(
+      'message',
+      new MessageEvent('message', { data: partialFrame.buffer })
+    );
+
+    stream.close();
+
+    expect(onError).not.toHaveBeenCalled();
   });
 });

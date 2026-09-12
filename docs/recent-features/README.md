@@ -1,6 +1,6 @@
 # Features added in the last four weeks
 
-This catalog covers work added, restored, or consolidated in the TheModCraft Portainer fork from **August 15 through September 12, 2026**. The current fork release identifier is **2.39.3.2.22**, while upstream API and database compatibility remain at Portainer **2.45.0**.
+This catalog covers work added, restored, or consolidated in the TheModCraft Portainer fork from **August 15 through September 12, 2026**. The current fork release identifier is **2.39.3.2.23**, while upstream API and database compatibility remain at Portainer **2.45.0**.
 
 ## Feature catalog
 

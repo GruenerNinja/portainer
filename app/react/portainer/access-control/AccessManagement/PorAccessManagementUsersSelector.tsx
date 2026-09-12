@@ -1,5 +1,6 @@
 import { User as UserIcon, Users as TeamIcon } from 'lucide-react';
 import { OptionProps, components, MultiValueGenericProps } from 'react-select';
+import clsx from 'clsx';
 
 import { Select } from '@@/form-components/ReactSelect';
 
@@ -10,6 +11,7 @@ interface Props {
   onChange(value: readonly Option[]): void;
   options: Option[];
   isLoading?: boolean;
+  className?: string;
 }
 
 export function PorAccessManagementUsersSelector({
@@ -17,9 +19,10 @@ export function PorAccessManagementUsersSelector({
   value,
   onChange,
   isLoading,
+  className,
 }: Props) {
   return (
-    <div className="form-group">
+    <div className={clsx('form-group', className)}>
       <label
         className="col-sm-3 col-lg-2 control-label text-left"
         htmlFor="users-selector"

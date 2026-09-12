@@ -2,7 +2,9 @@ package settings
 
 import (
 	"cmp"
+	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -103,6 +105,24 @@ func (payload *settingsUpdatePayload) Validate(r *http.Request) error {
 		if payload.OAuthSettings.AuthStyle < oauth2.AuthStyleAutoDetect || payload.OAuthSettings.AuthStyle > oauth2.AuthStyleInHeader {
 			return errors.New("Invalid OAuth AuthStyle")
 		}
+
+		if payload.OAuthSettings.OAuthAutoMapTeamMemberships {
+			if strings.TrimSpace(payload.OAuthSettings.TeamMemberships.OAuthClaimName) == "" {
+				return errors.New("OAuth team membership claim name is required")
+			}
+
+			for _, mapping := range payload.OAuthSettings.TeamMemberships.OAuthClaimMappings {
+				if mapping.Team == 0 {
+					return errors.New("OAuth team membership mapping requires a team")
+				}
+				if strings.TrimSpace(mapping.ClaimValRegex) == "" {
+					return errors.New("OAuth team membership mapping requires a claim value regular expression")
+				}
+				if _, err := regexp.Compile(mapping.ClaimValRegex); err != nil {
+					return errors.Wrap(err, "Invalid OAuth team membership claim value regular expression")
+				}
+			}
+		}
 	}
 
 	return nil
@@ -191,6 +211,25 @@ func (handler *Handler) updateSettings(tx dataservices.DataStoreTx, payload sett
 	}
 
 	if payload.OAuthSettings != nil {
+		if payload.OAuthSettings.OAuthAutoMapTeamMemberships {
+			teamIDs := map[portainer.TeamID]struct{}{}
+			for _, mapping := range payload.OAuthSettings.TeamMemberships.OAuthClaimMappings {
+				teamIDs[mapping.Team] = struct{}{}
+			}
+			if payload.OAuthSettings.DefaultTeamID != 0 {
+				teamIDs[payload.OAuthSettings.DefaultTeamID] = struct{}{}
+			}
+			for teamID := range teamIDs {
+				exists, err := tx.Team().Exists(teamID)
+				if err != nil {
+					return nil, httperror.InternalServerError("Unable to validate OAuth team membership mapping", err)
+				}
+				if !exists {
+					return nil, httperror.BadRequest("Invalid OAuth team membership mapping", fmt.Errorf("team %d does not exist", teamID))
+				}
+			}
+		}
+
 		clientSecret := payload.OAuthSettings.ClientSecret
 		if clientSecret == "" {
 			clientSecret = settings.OAuthSettings.ClientSecret

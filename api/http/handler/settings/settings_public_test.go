@@ -72,3 +72,14 @@ func TestGeneratePublicSettingsWithoutSSO(t *testing.T) {
 		t.Errorf("wrong OAuthLogoutURI, want: %s, got: %s", dummyOAuthLogoutURI, publicSettings.OAuthLogoutURI)
 	}
 }
+
+func TestGeneratePublicSettingsWithOAuthTeamSync(t *testing.T) {
+	t.Parallel()
+	_, mockAppSettings := newTestSettings()
+	mockAppSettings.OAuthSettings.OAuthAutoMapTeamMemberships = true
+
+	publicSettings := generatePublicSettings(mockAppSettings)
+	if !publicSettings.TeamSync {
+		t.Error("expected OAuth automatic team membership to enable public team sync state")
+	}
+}

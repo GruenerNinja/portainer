@@ -89,6 +89,7 @@ func generatePublicSettings(appSettings *portainer.Settings) *publicSettingsResp
 
 	// If OAuth authentication is on, compose the related fields from application settings
 	if publicSettings.AuthenticationMethod == portainer.AuthenticationOAuth {
+		publicSettings.TeamSync = appSettings.OAuthSettings.OAuthAutoMapTeamMemberships
 		publicSettings.OAuthLogoutURI = appSettings.OAuthSettings.LogoutURI
 		publicSettings.OAuthLoginURI = fmt.Sprintf("%s?response_type=code&client_id=%s&redirect_uri=%s&scope=%s",
 			appSettings.OAuthSettings.AuthorizationURI,

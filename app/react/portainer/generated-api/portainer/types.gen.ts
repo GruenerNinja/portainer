@@ -3046,6 +3046,11 @@ export const PortainerMembershipRole = {
 export type PortainerMembershipRole =
   (typeof PortainerMembershipRole)[keyof typeof PortainerMembershipRole];
 
+export type PortainerOAuthClaimMapping = {
+  ClaimValRegex?: string;
+  Team?: number;
+};
+
 export type PortainerOAuthSettings = {
   AccessTokenURI?: string;
   AuthStyle?: Oauth2AuthStyle;
@@ -3056,11 +3061,18 @@ export type PortainerOAuthSettings = {
   KubeSecretKey?: Array<number>;
   LogoutURI?: string;
   OAuthAutoCreateUsers?: boolean;
+  OAuthAutoMapTeamMemberships?: boolean;
   RedirectURI?: string;
   ResourceURI?: string;
   SSO?: boolean;
   Scopes?: string;
+  TeamMemberships?: PortainerOAuthTeamMembershipSettings;
   UserIdentifier?: string;
+};
+
+export type PortainerOAuthTeamMembershipSettings = {
+  OAuthClaimMappings?: Array<PortainerOAuthClaimMapping>;
+  OAuthClaimName?: string;
 };
 
 export type PortainerPair = {

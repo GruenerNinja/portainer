@@ -168,15 +168,16 @@ func Test_Authenticate(t *testing.T) {
 		srv, config := oauthtest.RunOAuthServer(code, config)
 		defer srv.Close()
 
-		username, err := authService.Authenticate(t.Context(), code, config)
+		identity, err := authService.Authenticate(t.Context(), code, config)
 		if err != nil {
 			t.Errorf("Authenticate should succeed to extract username from resource if correct UserIdentifier provided; UserIdentifier=%s", config.UserIdentifier)
 		}
 
 		want := "test-oauth-user"
-		if username != want {
-			t.Errorf("Authenticate should return correct username; got=%s, want=%s", username, want)
+		if identity.Username != want {
+			t.Errorf("Authenticate should return correct username; got=%s, want=%s", identity.Username, want)
 		}
+		assert.Equal(t, "testing", identity.Claims["groups"])
 	})
 
 }

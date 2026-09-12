@@ -4282,6 +4282,13 @@ definitions:
     - _
     - TeamLeader
     - TeamMember
+  portainer.OAuthClaimMapping:
+    properties:
+      ClaimValRegex:
+        type: string
+      Team:
+        type: integer
+    type: object
   portainer.OAuthSettings:
     properties:
       AccessTokenURI:
@@ -4304,6 +4311,8 @@ definitions:
         type: string
       OAuthAutoCreateUsers:
         type: boolean
+      OAuthAutoMapTeamMemberships:
+        type: boolean
       RedirectURI:
         type: string
       ResourceURI:
@@ -4312,7 +4321,18 @@ definitions:
         type: boolean
       Scopes:
         type: string
+      TeamMemberships:
+        $ref: '#/definitions/portainer.OAuthTeamMembershipSettings'
       UserIdentifier:
+        type: string
+    type: object
+  portainer.OAuthTeamMembershipSettings:
+    properties:
+      OAuthClaimMappings:
+        items:
+          $ref: '#/definitions/portainer.OAuthClaimMapping'
+        type: array
+      OAuthClaimName:
         type: string
     type: object
   portainer.Pair:

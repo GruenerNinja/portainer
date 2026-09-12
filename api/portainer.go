@@ -988,21 +988,38 @@ type (
 	MembershipRole int
 
 	// OAuthSettings represents the settings used to authorize with an authorization server
+	OAuthClaimMapping struct {
+		ClaimValRegex string `json:"ClaimValRegex"`
+		Team          TeamID `json:"Team"`
+	}
+
+	OAuthTeamMembershipSettings struct {
+		OAuthClaimName     string              `json:"OAuthClaimName"`
+		OAuthClaimMappings []OAuthClaimMapping `json:"OAuthClaimMappings"`
+	}
+
+	OAuthIdentity struct {
+		Username string
+		Claims   map[string]any
+	}
+
 	OAuthSettings struct {
-		ClientID             string           `json:"ClientID"`
-		ClientSecret         string           `json:"ClientSecret,omitempty"`
-		AccessTokenURI       string           `json:"AccessTokenURI"`
-		AuthorizationURI     string           `json:"AuthorizationURI"`
-		ResourceURI          string           `json:"ResourceURI"`
-		RedirectURI          string           `json:"RedirectURI"`
-		UserIdentifier       string           `json:"UserIdentifier"`
-		Scopes               string           `json:"Scopes"`
-		OAuthAutoCreateUsers bool             `json:"OAuthAutoCreateUsers"`
-		DefaultTeamID        TeamID           `json:"DefaultTeamID"`
-		SSO                  bool             `json:"SSO"`
-		LogoutURI            string           `json:"LogoutURI"`
-		KubeSecretKey        []byte           `json:"KubeSecretKey"`
-		AuthStyle            oauth2.AuthStyle `json:"AuthStyle"`
+		ClientID                    string                      `json:"ClientID"`
+		ClientSecret                string                      `json:"ClientSecret,omitempty"`
+		AccessTokenURI              string                      `json:"AccessTokenURI"`
+		AuthorizationURI            string                      `json:"AuthorizationURI"`
+		ResourceURI                 string                      `json:"ResourceURI"`
+		RedirectURI                 string                      `json:"RedirectURI"`
+		UserIdentifier              string                      `json:"UserIdentifier"`
+		Scopes                      string                      `json:"Scopes"`
+		OAuthAutoCreateUsers        bool                        `json:"OAuthAutoCreateUsers"`
+		OAuthAutoMapTeamMemberships bool                        `json:"OAuthAutoMapTeamMemberships"`
+		TeamMemberships             OAuthTeamMembershipSettings `json:"TeamMemberships"`
+		DefaultTeamID               TeamID                      `json:"DefaultTeamID"`
+		SSO                         bool                        `json:"SSO"`
+		LogoutURI                   string                      `json:"LogoutURI"`
+		KubeSecretKey               []byte                      `json:"KubeSecretKey"`
+		AuthStyle                   oauth2.AuthStyle            `json:"AuthStyle"`
 	}
 
 	// Pair defines a key/value string pair
@@ -2136,7 +2153,7 @@ type (
 
 	// OAuthService represents a service used to authenticate users using OAuth
 	OAuthService interface {
-		Authenticate(ctx context.Context, code string, configuration *OAuthSettings) (string, error)
+		Authenticate(ctx context.Context, code string, configuration *OAuthSettings) (*OAuthIdentity, error)
 	}
 
 	// ReverseTunnelService represents a service used to manage reverse tunnel connections.

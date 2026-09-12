@@ -17061,6 +17061,13 @@ components:
         - _
         - TeamLeader
         - TeamMember
+    portainer.OAuthClaimMapping:
+      properties:
+        ClaimValRegex:
+          type: string
+        Team:
+          type: integer
+      type: object
     portainer.OAuthSettings:
       properties:
         AccessTokenURI:
@@ -17083,6 +17090,8 @@ components:
           type: string
         OAuthAutoCreateUsers:
           type: boolean
+        OAuthAutoMapTeamMemberships:
+          type: boolean
         RedirectURI:
           type: string
         ResourceURI:
@@ -17091,7 +17100,18 @@ components:
           type: boolean
         Scopes:
           type: string
+        TeamMemberships:
+          $ref: "#/components/schemas/portainer.OAuthTeamMembershipSettings"
         UserIdentifier:
+          type: string
+      type: object
+    portainer.OAuthTeamMembershipSettings:
+      properties:
+        OAuthClaimMappings:
+          items:
+            $ref: "#/components/schemas/portainer.OAuthClaimMapping"
+          type: array
+        OAuthClaimName:
           type: string
       type: object
     portainer.Pair:

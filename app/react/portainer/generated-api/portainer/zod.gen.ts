@@ -1224,6 +1224,16 @@ export const zPortainerMembershipRole = z.union([
   z.literal(2),
 ]);
 
+export const zPortainerOAuthClaimMapping = z.object({
+  ClaimValRegex: z.string().optional(),
+  Team: z.int().optional(),
+});
+
+export const zPortainerOAuthTeamMembershipSettings = z.object({
+  OAuthClaimMappings: z.array(zPortainerOAuthClaimMapping).optional(),
+  OAuthClaimName: z.string().optional(),
+});
+
 export const zPortainerOAuthSettings = z.object({
   AccessTokenURI: z.string().optional(),
   AuthStyle: zOauth2AuthStyle.optional(),
@@ -1234,10 +1244,12 @@ export const zPortainerOAuthSettings = z.object({
   KubeSecretKey: z.array(z.int()).optional(),
   LogoutURI: z.string().optional(),
   OAuthAutoCreateUsers: z.boolean().optional(),
+  OAuthAutoMapTeamMemberships: z.boolean().optional(),
   RedirectURI: z.string().optional(),
   ResourceURI: z.string().optional(),
   SSO: z.boolean().optional(),
   Scopes: z.string().optional(),
+  TeamMemberships: zPortainerOAuthTeamMembershipSettings.optional(),
   UserIdentifier: z.string().optional(),
 });
 

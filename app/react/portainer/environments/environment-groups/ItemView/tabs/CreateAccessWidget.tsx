@@ -55,6 +55,7 @@ export function CreateAccessWidget({
 
         <form className="form-horizontal" onSubmit={handleSubmit}>
           <PorAccessManagementUsersSelector
+            className="mb-6"
             options={availableUsersAndTeams}
             value={selectedUsersAndTeams}
             onChange={(value) => setSelectedUsersAndTeams([...value])}

@@ -46,6 +46,15 @@ function setupMocks({
     http.get('/api/endpoint_groups/2', () => HttpResponse.json(group)),
     http.get('/api/users', () => HttpResponse.json(users)),
     http.get('/api/teams', () => HttpResponse.json(teams)),
+    http.get('/api/roles', () =>
+      HttpResponse.json([
+        { Id: 1, Name: 'Environment administrator' },
+        { Id: 2, Name: 'Helpdesk' },
+        { Id: 3, Name: 'Standard user' },
+        { Id: 4, Name: 'Read-only user' },
+        { Id: 5, Name: 'Operator' },
+      ])
+    ),
     http.put('/api/endpoint_groups/2', async ({ request }) => {
       onUpdate(await request.json());
       await holdUpdate;

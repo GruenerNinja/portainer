@@ -61,5 +61,6 @@ export const accessControlModule = angular
       'options',
       'value',
       'isLoading',
+      'className',
     ])
   ).name;

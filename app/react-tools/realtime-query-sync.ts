@@ -1,12 +1,13 @@
-import { baseHref } from '@/portainer/helpers/pathHelper';
-
 import type { QueryClient } from '@tanstack/react-query';
+
+import { baseHref } from '@/portainer/helpers/pathHelper';
 
 let socket: WebSocket | undefined;
 let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
 
 export function startRealtimeQuerySync(queryClient: QueryClient) {
   if (
+    process.env.NODE_ENV === 'test' ||
     typeof window === 'undefined' ||
     typeof WebSocket === 'undefined' ||
     socket

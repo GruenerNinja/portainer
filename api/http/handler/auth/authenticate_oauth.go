@@ -27,21 +27,21 @@ func (payload *oauthPayload) Validate(r *http.Request) error {
 	return nil
 }
 
-func (handler *Handler) authenticateOAuth(ctx context.Context, code string, settings *portainer.OAuthSettings) (string, error) {
+func (handler *Handler) authenticateOAuth(ctx context.Context, code string, settings *portainer.OAuthSettings) (*portainer.OAuthIdentity, error) {
 	if code == "" {
-		return "", errors.New("Invalid OAuth authorization code")
+		return nil, errors.New("Invalid OAuth authorization code")
 	}
 
 	if settings == nil {
-		return "", errors.New("Invalid OAuth configuration")
+		return nil, errors.New("Invalid OAuth configuration")
 	}
 
-	username, err := handler.OAuthService.Authenticate(ctx, code, settings)
+	identity, err := handler.OAuthService.Authenticate(ctx, code, settings)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return username, nil
+	return identity, nil
 }
 
 // @id ValidateOAuth
@@ -76,12 +76,13 @@ func (handler *Handler) validateOAuth(w http.ResponseWriter, r *http.Request) *h
 		return httperror.Forbidden("OAuth authentication is not enabled", errors.New("OAuth authentication is not enabled"))
 	}
 
-	username, err := handler.authenticateOAuth(r.Context(), payload.Code, &settings.OAuthSettings)
+	identity, err := handler.authenticateOAuth(r.Context(), payload.Code, &settings.OAuthSettings)
 	if err != nil {
 		log.Debug().Err(err).Msg("OAuth authentication error")
 
 		return httperror.InternalServerError("Unable to authenticate through OAuth", httperrors.ErrUnauthorized)
 	}
+	username := identity.Username
 
 	user, err := handler.DataStore.User().UserByUsername(username)
 	if err != nil && !handler.DataStore.IsErrObjectNotFound(err) {
@@ -103,7 +104,7 @@ func (handler *Handler) validateOAuth(w http.ResponseWriter, r *http.Request) *h
 			return httperror.InternalServerError("Unable to persist user inside the database", err)
 		}
 
-		if settings.OAuthSettings.DefaultTeamID != 0 {
+		if settings.OAuthSettings.DefaultTeamID != 0 && !settings.OAuthSettings.OAuthAutoMapTeamMemberships {
 			membership := &portainer.TeamMembership{
 				UserID: user.ID,
 				TeamID: settings.OAuthSettings.DefaultTeamID,
@@ -116,6 +117,12 @@ func (handler *Handler) validateOAuth(w http.ResponseWriter, r *http.Request) *h
 			}
 		}
 
+	}
+
+	if settings.OAuthSettings.OAuthAutoMapTeamMemberships {
+		if err := handler.syncOAuthTeamMemberships(user.ID, &settings.OAuthSettings, identity.Claims); err != nil {
+			return httperror.InternalServerError("Unable to synchronize OAuth team memberships", err)
+		}
 	}
 
 	return handler.writeToken(w, r, user, false, settings.ForceSecureCookies)

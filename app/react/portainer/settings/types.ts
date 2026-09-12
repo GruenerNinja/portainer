@@ -47,6 +47,14 @@ export interface OAuthSettings {
   UserIdentifier: string;
   Scopes: string;
   OAuthAutoCreateUsers: boolean;
+  OAuthAutoMapTeamMemberships: boolean;
+  TeamMemberships: {
+    OAuthClaimName: string;
+    OAuthClaimMappings: Array<{
+      ClaimValRegex: string;
+      Team: TeamId;
+    }>;
+  };
   DefaultTeamID: TeamId;
   SSO: boolean;
   LogoutURI: string;

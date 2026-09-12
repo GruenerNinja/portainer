@@ -145,6 +145,18 @@ export default class OAuthSettingsController {
   $onInit() {
     this.isLimitedToBE = isLimitedToBE(this.limitedFeature);
 
+    if (this.settings.DefaultTeamID === 0) {
+      this.settings.DefaultTeamID = null;
+    }
+
+    if (this.settings.TeamMemberships == null) {
+      this.settings.TeamMemberships = {};
+    }
+
+    if (this.settings.TeamMemberships.OAuthClaimMappings == null) {
+      this.settings.TeamMemberships.OAuthClaimMappings = [];
+    }
+
     if (this.isLimitedToBE) {
       return;
     }
@@ -164,18 +176,6 @@ export default class OAuthSettingsController {
           this.onMicrosoftTenantIDChange();
         }
       }
-    }
-
-    if (this.settings.DefaultTeamID === 0) {
-      this.settings.DefaultTeamID = null;
-    }
-
-    if (this.settings.TeamMemberships == null) {
-      this.settings.TeamMemberships = {};
-    }
-
-    if (this.settings.TeamMemberships.OAuthClaimMappings === null) {
-      this.settings.TeamMemberships.OAuthClaimMappings = [];
     }
   }
 }

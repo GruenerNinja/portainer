@@ -34,9 +34,18 @@ const columns = [
   }),
 ];
 
+const readOnlyColumns = [
+  helper.accessor('Name', {
+    header: 'Tag',
+  }),
+];
+
 export function useColumns(advancedFeaturesAvailable: boolean) {
   return useMemo(
-    () => _.compact([...columns, advancedFeaturesAvailable && actions]),
+    () =>
+      advancedFeaturesAvailable
+        ? _.compact([...columns, actions])
+        : readOnlyColumns,
     [advancedFeaturesAvailable]
   );
 }

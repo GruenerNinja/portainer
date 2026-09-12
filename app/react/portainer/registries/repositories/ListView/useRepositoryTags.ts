@@ -58,10 +58,11 @@ export async function getRepositoryTags(
     }
   );
   acc.name = data.name;
-  acc.tags = _.concat(acc.tags, data.tags);
+  const pageTags = data.tags || [];
+  acc.tags = _.concat(acc.tags, pageTags);
 
-  if (headers.link) {
-    const last = data.tags[data.tags.length - 1];
+  if (headers.link && pageTags.length) {
+    const last = pageTags[pageTags.length - 1];
     return getRepositoryTags(
       { registryId, repository, n, last, environmentId },
       acc

@@ -36,6 +36,7 @@ export function TagsDatatable({
       dataset={dataset || []}
       isLoading={!dataset}
       settingsManager={tableState}
+      disableSelect={!advancedFeaturesAvailable}
       renderTableActions={(selectedItems) =>
         advancedFeaturesAvailable && (
           <DeleteButton

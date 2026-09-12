@@ -44,7 +44,35 @@ function config($stateRegistryProvider) {
     },
   };
 
+  const registryRepositories = {
+    name: 'portainer.registries.registry.repositories',
+    url: '/repositories?endpointId',
+    views: {
+      'content@': {
+        component: 'registryRepositoriesView',
+      },
+    },
+    data: {
+      docs: '/admin/registries/browse',
+    },
+  };
+
+  const registryRepository = {
+    name: 'portainer.registries.registry.repository',
+    url: '/repository?repository&endpointId',
+    views: {
+      'content@': {
+        component: 'registryRepositoryView',
+      },
+    },
+    data: {
+      docs: '/admin/registries/browse',
+    },
+  };
+
   $stateRegistryProvider.register(registries);
   $stateRegistryProvider.register(registry);
+  $stateRegistryProvider.register(registryRepositories);
+  $stateRegistryProvider.register(registryRepository);
   $stateRegistryProvider.register(registryCreation);
 }

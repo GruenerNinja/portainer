@@ -13,7 +13,9 @@ export function useRegistry(
   registryId?: Registry['Id'],
   shouldShowError: boolean = true
 ) {
-  const environmentId = useEnvironmentId();
+  // Registry details are also available from the global administrator view,
+  // where there is no environment in the route.
+  const environmentId = useEnvironmentId(false);
 
   return useQuery(
     registryId ? queryKeys.item(registryId) : [],
@@ -26,11 +28,11 @@ export function useRegistry(
   );
 }
 
-async function getRegistry(registryId: Registry['Id'], environmentId: number) {
+async function getRegistry(registryId: Registry['Id'], environmentId?: number) {
   try {
     const { data } = await axios.get<Registry>(buildUrl(registryId), {
       params: {
-        endpointId: environmentId,
+        endpointId: environmentId || undefined,
       },
     });
     return data;

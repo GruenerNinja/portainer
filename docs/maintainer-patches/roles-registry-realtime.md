@@ -1,6 +1,6 @@
 # Custom roles, GHCR browsing, and realtime UI updates
 
-Release `2.39.3.2.18` completes the Community implementation of custom environment roles, removes the remaining Business-only presentation from GitHub Container Registry browsing, and reduces repetitive UI requests.
+Release `2.39.3.2.19` completes the Community implementation of custom environment roles, provides working GitHub Container Registry repository and tag browsing, and reduces repetitive UI requests.
 
 ## Role identifiers and custom roles
 
@@ -16,7 +16,7 @@ The access pickers read roles from `/api/roles`; do not reintroduce a hard-coded
 
 ## GitHub Container Registry
 
-Authenticated `ghcr.io` entries can open the repository browser using the maintained GitHub registry proxy. The Browse action is a Community feature in this fork and must not be wrapped in `REGISTRY_MANAGEMENT` or another Business feature indicator.
+Authenticated `ghcr.io` entries can open Community-owned repository and read-only tag-list views using the maintained GitHub registry proxy. The Browse action is a Community feature in this fork and must not be wrapped in `REGISTRY_MANAGEMENT` or another Business feature indicator. Registry mutation actions remain absent from these read-only browser views.
 
 ## Realtime query synchronization
 

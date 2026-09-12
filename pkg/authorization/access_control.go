@@ -106,26 +106,45 @@ func NewRestrictedResourceControl(resourceIdentifier string, resourceType portai
 	}
 }
 
-// UserCanAccessResource validates that a user has permissions defined in the specified resource control
-// based on their identifier and the team(s) they belong to.
+// UserCanAccessResource validates that a user has read-write permissions defined in the specified
+// resource control based on their identifier and the team(s) they belong to.
 func UserCanAccessResource(userID portainer.UserID, userTeamIDs []portainer.TeamID, resourceControl *portainer.ResourceControl) bool {
+	return userCanAccessResourceAtLevel(userID, userTeamIDs, resourceControl, portainer.ReadWriteAccessLevel)
+}
+
+// UserCanReadResource validates that a user has either read-only or read-write permissions defined
+// in the specified resource control based on their identifier and the team(s) they belong to.
+func UserCanReadResource(userID portainer.UserID, userTeamIDs []portainer.TeamID, resourceControl *portainer.ResourceControl) bool {
+	return userCanAccessResourceAtLevel(userID, userTeamIDs, resourceControl, portainer.ReadWriteAccessLevel, portainer.ReadOnlyAccessLevel)
+}
+
+func userCanAccessResourceAtLevel(userID portainer.UserID, userTeamIDs []portainer.TeamID, resourceControl *portainer.ResourceControl, levels ...portainer.ResourceAccessLevel) bool {
 	if resourceControl == nil {
 		return false
 	}
 
 	for _, authorizedUserAccess := range resourceControl.UserAccesses {
-		if userID == authorizedUserAccess.UserID {
+		if userID == authorizedUserAccess.UserID && accessLevelMatches(authorizedUserAccess.AccessLevel, levels) {
 			return true
 		}
 	}
 
 	for _, authorizedTeamAccess := range resourceControl.TeamAccesses {
-		if slices.Contains(userTeamIDs, authorizedTeamAccess.TeamID) {
+		if slices.Contains(userTeamIDs, authorizedTeamAccess.TeamID) && accessLevelMatches(authorizedTeamAccess.AccessLevel, levels) {
 			return true
 		}
 	}
 
 	return resourceControl.Public
+}
+
+func accessLevelMatches(accessLevel portainer.ResourceAccessLevel, levels []portainer.ResourceAccessLevel) bool {
+	if accessLevel == 0 {
+		// Resource controls created before access levels were enforced may omit the field.
+		// Preserve their historical read-write behavior.
+		accessLevel = portainer.ReadWriteAccessLevel
+	}
+	return slices.Contains(levels, accessLevel)
 }
 
 // GetResourceControlByResourceIDAndType retrieves the first matching resource control in a set of resource controls

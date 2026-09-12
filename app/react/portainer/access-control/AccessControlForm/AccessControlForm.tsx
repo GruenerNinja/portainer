@@ -16,6 +16,7 @@ export interface Props {
   formNamespace?: string;
   errors?: FormikErrors<AccessControlFormData>;
   environmentId: EnvironmentId;
+  allowReadOnlyAccess?: boolean;
 }
 
 export function AccessControlForm({
@@ -25,6 +26,7 @@ export function AccessControlForm({
   formNamespace,
   errors,
   environmentId,
+  allowReadOnlyAccess = false,
 }: Props) {
   const isAdminQuery = useIsEdgeAdmin();
 
@@ -61,6 +63,7 @@ export function AccessControlForm({
           errors={errors}
           formNamespace={formNamespace}
           environmentId={environmentId}
+          allowReadOnlyAccess={allowReadOnlyAccess}
         />
       )}
     </>

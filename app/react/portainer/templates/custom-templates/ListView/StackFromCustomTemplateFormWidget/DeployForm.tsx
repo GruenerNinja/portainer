@@ -148,6 +148,7 @@ export function DeployForm({
             values={values.accessControl}
             errors={errors.accessControl}
             environmentId={environmentId}
+            allowReadOnlyAccess
           />
 
           <FormActions

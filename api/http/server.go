@@ -208,6 +208,7 @@ func (server *Server) Start(ctx context.Context) error {
 	containerService := docker.NewContainerService(server.DockerClientFactory, server.DataStore)
 
 	var dockerHandler = dockerhandler.NewHandler(requestBouncer, server.AuthorizationService, server.DataStore, server.DockerClientFactory, containerService)
+	dockerHandler.Start(ctx)
 
 	var fileHandler = file.NewHandler(filesystem.JoinPaths(server.AssetsPath, "public"), server.CSP, adminMonitor.WasInstanceDisabled)
 

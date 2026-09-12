@@ -1,7 +1,5 @@
 import _ from 'lodash-es';
 
-import { isLimitedToBE } from '@/react/portainer/feature-flags/feature-flags.service';
-
 export default class AccessViewerController {
   /* @ngInject */
   constructor($scope, Notifications, UserService, TeamMembershipService, Authentication) {
@@ -11,7 +9,6 @@ export default class AccessViewerController {
     this.TeamMembershipService = TeamMembershipService;
     this.Authentication = Authentication;
 
-    this.limitedFeature = 'rbac-roles';
     this.users = [];
     this.selectedUserId = null;
 
@@ -53,10 +50,6 @@ export default class AccessViewerController {
 
   async $onInit() {
     try {
-      if (isLimitedToBE(this.limitedFeature)) {
-        return;
-      }
-
       this.isAdmin = this.Authentication.isAdmin();
       const allUsers = await this.UserService.users();
       const teamMemberships = await this.TeamMembershipService.memberships();

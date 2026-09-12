@@ -88,6 +88,12 @@ func Test_HasNewerVersion(t *testing.T) {
 	// current and latest versions are equal
 	f("2.20.0", "2.20.0", false)
 
+	// maintained releases use additional numeric components
+	f("2.39.3.2.15", "2.39.3.2.16", true)
+	f("2.39.3.2.16", "2.39.3.2.15", false)
+	f("2.39.3.2.9", "2.39.3.2.10", true)
+	f("v2.39.3.2.15", "2.39.3.2.16", true)
+
 	// current version isn't a valid semver
 	f("not-a-version", "2.20.0", false)
 
@@ -96,6 +102,15 @@ func Test_HasNewerVersion(t *testing.T) {
 
 	// latest version hasn't been fetched yet
 	f("2.20.0", "", false)
+}
+
+func Test_serverVersion(t *testing.T) {
+	t.Parallel()
+
+	require.Equal(t, "2.39.3.2.16", serverVersion("2.39.3.2.16", "2.45.0"))
+	require.Equal(t, "2.39.3.2.16", serverVersion("v2.39.3.2.16", "2.45.0"))
+	require.Equal(t, "2.45.0", serverVersion("latest", "2.45.0"))
+	require.Equal(t, "2.45.0", serverVersion("N/A", "2.45.0"))
 }
 
 func Test_GetLatestVersion(t *testing.T) {
@@ -111,7 +126,7 @@ func Test_GetLatestVersion(t *testing.T) {
 
 func Test_refreshLatestVersion(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, err := w.Write([]byte(`{"tag_name":"2.21.0"}`))
+		_, err := w.Write([]byte(`{"results":[{"name":"latest"},{"name":"2.39.3.2.9"},{"name":"2.39.3.2.16"},{"name":"2.39.3.2.15"}]}`))
 		assert.NoError(t, err)
 	}))
 	defer server.Close()
@@ -119,7 +134,7 @@ func Test_refreshLatestVersion(t *testing.T) {
 	// a successful fetch caches the tag name
 	cachedLatestVersion.Store(nil)
 	refreshLatestVersion(server.URL)
-	require.Equal(t, "2.21.0", GetLatestVersion())
+	require.Equal(t, "2.39.3.2.16", GetLatestVersion())
 
 	errServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -128,7 +143,7 @@ func Test_refreshLatestVersion(t *testing.T) {
 
 	// a non-200 response leaves the cache untouched
 	refreshLatestVersion(errServer.URL)
-	require.Equal(t, "2.21.0", GetLatestVersion())
+	require.Equal(t, "2.39.3.2.16", GetLatestVersion())
 
 	badJSONServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte(`not-json`))
@@ -138,17 +153,17 @@ func Test_refreshLatestVersion(t *testing.T) {
 
 	// an invalid JSON body leaves the cache untouched
 	refreshLatestVersion(badJSONServer.URL)
-	require.Equal(t, "2.21.0", GetLatestVersion())
+	require.Equal(t, "2.39.3.2.16", GetLatestVersion())
 
 	// an unreachable URL leaves the cache untouched
 	refreshLatestVersion("http://127.0.0.1:0")
-	require.Equal(t, "2.21.0", GetLatestVersion())
+	require.Equal(t, "2.39.3.2.16", GetLatestVersion())
 
 	featureflags.Parse([]string{libclient.DisableExternalRequests}, []featureflags.Feature{libclient.DisableExternalRequests})
 
 	// external requests being disabled leaves the cache untouched
 	refreshLatestVersion(server.URL)
-	require.Equal(t, "2.21.0", GetLatestVersion())
+	require.Equal(t, "2.39.3.2.16", GetLatestVersion())
 
 	featureflags.Parse(nil, []featureflags.Feature{libclient.DisableExternalRequests})
 }
@@ -167,7 +182,7 @@ func Test_StartVersionCheckService(t *testing.T) {
 	featureflags.Parse(nil, []featureflags.Feature{libclient.DisableExternalRequests})
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, err := w.Write([]byte(`{"tag_name":"2.22.0"}`))
+		_, err := w.Write([]byte(`{"results":[{"name":"2.39.3.2.16"}]}`))
 		assert.NoError(t, err)
 	}))
 	defer server.Close()
@@ -180,6 +195,6 @@ func Test_StartVersionCheckService(t *testing.T) {
 	StartVersionCheckService(ctx, server.URL)
 
 	require.Eventually(t, func() bool {
-		return GetLatestVersion() == "2.22.0"
+		return GetLatestVersion() == "2.39.3.2.16"
 	}, time.Second, 10*time.Millisecond)
 }

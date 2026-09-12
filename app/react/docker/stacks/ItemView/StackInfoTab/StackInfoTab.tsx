@@ -57,6 +57,14 @@ export function StackInfoTab({
         isOrphaned={isOrphaned || isOrphanedRunning}
       />
 
+      {stack?.ReadOnly && (
+        <Alert color="info" title="Read-only stack access">
+          You can inspect this stack and read its configuration. Changes,
+          redeployments, start/stop operations, and deletion are restricted to
+          the owning users or teams.
+        </Alert>
+      )}
+
       {stack && (
         <DeploymentStatusSection
           status={stack.Status}

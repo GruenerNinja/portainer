@@ -29,8 +29,7 @@ export function BuildInfoModalButton() {
     return null;
   }
 
-  const { Version } = statusQuery.data;
-  const { VersionSupport } = versionQuery.data;
+  const { ServerVersion } = versionQuery.data;
 
   return (
     <>
@@ -41,7 +40,7 @@ export function BuildInfoModalButton() {
         onClick={() => setIsBuildInfoVisible(true)}
         title="About Portainer"
       >
-        {`${Version} ${VersionSupport}`}
+        {ServerVersion}
       </button>
       {isBuildInfoVisible && (
         <BuildInfoModal closeModal={() => setIsBuildInfoVisible(false)} />
@@ -60,14 +59,8 @@ function BuildInfoModal({ closeModal }: { closeModal: () => void }) {
   }
 
   const { Edition } = statusQuery.data;
-  const {
-    ServerVersion,
-    DatabaseVersion,
-    Build,
-    Dependencies,
-    Runtime,
-    VersionSupport,
-  } = versionQuery.data;
+  const { ServerVersion, DatabaseVersion, Build, Dependencies, Runtime } =
+    versionQuery.data;
 
   return (
     <Modal onDismiss={closeModal} aria-label="build-info-modal">
@@ -80,7 +73,7 @@ function BuildInfoModal({ closeModal }: { closeModal: () => void }) {
                 <td>
                   <span className="inline-flex flex-wrap items-center">
                     <Server size="13" className="space-right" />
-                    Server Version: {ServerVersion} {VersionSupport}
+                    Server Version: {ServerVersion}
                   </span>
                 </td>
                 <td>

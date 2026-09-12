@@ -58,7 +58,7 @@ export function StackActions({
 
   return (
     <div className="flex items-center gap-2">
-      {isRegular && (
+      {!stack.ReadOnly && isRegular && (
         <Authorized authorizations="PortainerStackUpdate">
           {(status === StackStatus.Active || status === StackStatus.Error) && (
             <Button
@@ -87,18 +87,20 @@ export function StackActions({
         </Authorized>
       )}
 
-      <Authorized authorizations="PortainerStackDelete">
-        <Button
-          icon={Trash2Icon}
-          color="dangerlight"
-          size="small"
-          onClick={() => handleDelete()}
-          disabled={isMutating || isDeploying}
-          data-cy="stack-delete-btn"
-        >
-          Delete this stack
-        </Button>
-      </Authorized>
+      {!stack.ReadOnly && (
+        <Authorized authorizations="PortainerStackDelete">
+          <Button
+            icon={Trash2Icon}
+            color="dangerlight"
+            size="small"
+            onClick={() => handleDelete()}
+            disabled={isMutating || isDeploying}
+            data-cy="stack-delete-btn"
+          >
+            Delete this stack
+          </Button>
+        </Authorized>
+      )}
 
       {!!(isRegular && fileContent) && (
         <Button
@@ -119,7 +121,7 @@ export function StackActions({
         </Button>
       )}
 
-      {!!stack.GitConfig && !stack.FromAppTemplate && (
+      {!stack.ReadOnly && !!stack.GitConfig && !stack.FromAppTemplate && (
         <>
           <EditGitSettingsButton stack={stack} />
 

@@ -12,6 +12,7 @@ import (
 
 	portainer "github.com/portainer/portainer/api"
 	"github.com/portainer/portainer/api/dataservices"
+	proxycache "github.com/portainer/portainer/api/http/proxy/cache"
 	"github.com/portainer/portainer/api/http/security"
 	"github.com/portainer/portainer/api/kubernetes/cli"
 
@@ -27,6 +28,7 @@ type baseTransport struct {
 	k8sClientFactory *cli.ClientFactory
 	dataStore        dataservices.DataStore
 	jwtService       portainer.JWTService
+	overviewCache    *proxycache.Cache
 }
 
 func newBaseTransport(httpTransport *http.Transport, tokenManager *tokenManager, endpoint *portainer.Endpoint, k8sClientFactory *cli.ClientFactory, dataStore dataservices.DataStore, jwtService portainer.JWTService) *baseTransport {
@@ -112,6 +114,29 @@ func (transport *baseTransport) addTokenForExec(request *http.Request) error {
 }
 
 func (transport *baseTransport) executeKubernetesRequest(request *http.Request) (*http.Response, error) {
+	if transport.overviewCache != nil && isKubernetesOverviewRequest(request) {
+		tokenData, err := security.RetrieveTokenData(request)
+		if err == nil {
+			key := proxycache.Key(
+				"kubernetes",
+				strconv.Itoa(int(transport.endpoint.ID)),
+				strconv.Itoa(int(tokenData.ID)),
+				strconv.Itoa(int(tokenData.Role)),
+				request.Method,
+				request.URL.Path,
+				request.URL.Query().Encode(),
+				request.Header.Get("Accept"),
+				request.Header.Get("Accept-Encoding"),
+			)
+			fetch := proxycache.NewRequestFetcher(request, transport.executeKubernetesRequestUncached)
+			return transport.overviewCache.Get(request.Context(), key, request, fetch)
+		}
+	}
+
+	return transport.executeKubernetesRequestUncached(request)
+}
+
+func (transport *baseTransport) executeKubernetesRequestUncached(request *http.Request) (*http.Response, error) {
 
 	resp, err := transport.httpTransport.RoundTrip(request)
 
@@ -128,6 +153,45 @@ func (transport *baseTransport) executeKubernetesRequest(request *http.Request) 
 	}
 
 	return resp, err
+}
+
+func (transport *baseTransport) SetOverviewCache(cache *proxycache.Cache) {
+	transport.overviewCache = cache
+}
+
+func isKubernetesOverviewRequest(request *http.Request) bool {
+	if request.Method != http.MethodGet {
+		return false
+	}
+
+	watch := request.URL.Query().Get("watch")
+	if watch == "1" || strings.EqualFold(watch, "true") {
+		return false
+	}
+
+	requestPath := strings.TrimPrefix(request.URL.Path, "/kubernetes")
+	segments := strings.Split(strings.Trim(requestPath, "/"), "/")
+
+	var resourceSegments []string
+	switch {
+	case len(segments) >= 3 && segments[0] == "api":
+		resourceSegments = segments[2:]
+	case len(segments) >= 4 && segments[0] == "apis":
+		resourceSegments = segments[3:]
+	default:
+		return false
+	}
+
+	// Cluster-scoped collection: /api/v1/nodes
+	// Namespaced collection: /apis/apps/v1/namespaces/default/deployments
+	isCollection := len(resourceSegments) == 1 ||
+		(len(resourceSegments) == 3 && resourceSegments[0] == "namespaces")
+	if !isCollection {
+		return false
+	}
+
+	resource := resourceSegments[len(resourceSegments)-1]
+	return resource != "configmaps" && resource != "secrets"
 }
 
 // #endregion

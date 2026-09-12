@@ -93,6 +93,7 @@ function InnerForm({ environmentId }: { environmentId: EnvironmentId }) {
         onChange={(newValues) => setFieldValue('accessControl', newValues)}
         hideTitle
         environmentId={environmentId}
+        allowReadOnlyAccess
         errors={errors.accessControl}
       />
       <div className="form-group">

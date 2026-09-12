@@ -253,3 +253,23 @@ func TestCalculateContainerStatsForSwarm(t *testing.T) {
 	assert.Equal(t, 1, stats.Unhealthy)
 	assert.Equal(t, 6, stats.Total)
 }
+
+func TestCalculateContainerStatsFromCache(t *testing.T) {
+	t.Parallel()
+
+	containers := []container.Summary{{ID: "visible-1"}, {ID: "visible-2"}, {ID: "removed"}}
+	cachedStats := ContainerStatsCache{
+		"visible-1": {Running: 1, Healthy: 1, Total: 1},
+		"visible-2": {Stopped: 1, Total: 1},
+		"hidden":    {Running: 1, Unhealthy: 1, Total: 1},
+	}
+
+	actual := CalculateContainerStatsFromCache(containers, cachedStats)
+
+	assert.Equal(t, ContainerStats{
+		Running: 1,
+		Stopped: 1,
+		Healthy: 1,
+		Total:   2,
+	}, actual)
+}

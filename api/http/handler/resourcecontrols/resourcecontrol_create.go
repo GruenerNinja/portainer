@@ -24,6 +24,10 @@ type resourceControlCreatePayload struct {
 	Users []int `example:"1,4"`
 	// List of team identifiers with access to the associated resource
 	Teams []int `example:"56,7"`
+	// List of user identifiers with read-only access to a stack
+	ReadOnlyUsers []int `example:"8,9"`
+	// List of team identifiers with read-only access to a stack
+	ReadOnlyTeams []int `example:"10,11"`
 	// List of Docker resources that will inherit this access control
 	SubResourceIDs []string `example:"617c5f22bb9b023d6daab7cba43a57576f83492867bc767d1c59416b065e5f08"`
 }
@@ -45,6 +49,14 @@ func (payload *resourceControlCreatePayload) Validate(r *http.Request) error {
 
 	if payload.Public && payload.AdministratorsOnly {
 		return errors.New("invalid payload: cannot set both public and administrators only flags to true")
+	}
+
+	if (len(payload.ReadOnlyUsers) > 0 || len(payload.ReadOnlyTeams) > 0) && payload.Type != portainer.StackResourceControl {
+		return errors.New("invalid payload: read-only access is only supported for stacks")
+	}
+
+	if err := validateDistinctResourceAccesses(payload.Users, payload.ReadOnlyUsers, payload.Teams, payload.ReadOnlyTeams); err != nil {
+		return err
 	}
 	return nil
 }
@@ -87,6 +99,12 @@ func (handler *Handler) resourceControlCreate(w http.ResponseWriter, r *http.Req
 		}
 		userAccesses = append(userAccesses, userAccess)
 	}
+	for _, v := range payload.ReadOnlyUsers {
+		userAccesses = append(userAccesses, portainer.UserResourceAccess{
+			UserID:      portainer.UserID(v),
+			AccessLevel: portainer.ReadOnlyAccessLevel,
+		})
+	}
 
 	var teamAccesses = make([]portainer.TeamResourceAccess, 0)
 	for _, v := range payload.Teams {
@@ -95,6 +113,12 @@ func (handler *Handler) resourceControlCreate(w http.ResponseWriter, r *http.Req
 			AccessLevel: portainer.ReadWriteAccessLevel,
 		}
 		teamAccesses = append(teamAccesses, teamAccess)
+	}
+	for _, v := range payload.ReadOnlyTeams {
+		teamAccesses = append(teamAccesses, portainer.TeamResourceAccess{
+			TeamID:      portainer.TeamID(v),
+			AccessLevel: portainer.ReadOnlyAccessLevel,
+		})
 	}
 
 	resourceControl := portainer.ResourceControl{

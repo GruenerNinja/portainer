@@ -122,6 +122,31 @@ describe('AccessTab', () => {
     });
   });
 
+  test('assigns any predefined role to a selected user', async () => {
+    const onUpdate = setupMocks({
+      users: [{ Id: 6, Username: 'new-operator', Role: 2 }],
+    });
+    renderAccessTab();
+
+    const selector = await screen.findByLabelText(
+      'Select user(s) and/or team(s)'
+    );
+    await userEvent.click(selector);
+    await userEvent.click(await screen.findByText('new-operator'));
+    await userEvent.click(screen.getByLabelText('Role'));
+    await userEvent.click(await screen.findByText('Operator'));
+    await userEvent.click(
+      screen.getByRole('button', { name: /Create access/ })
+    );
+
+    await waitFor(() => {
+      expect(onUpdate).toHaveBeenCalledWith({
+        UserAccessPolicies: { 6: { RoleId: 5 } },
+        TeamAccessPolicies: {},
+      });
+    });
+  });
+
   test('creating access leaves the remove button idle', async () => {
     // never resolves, so the create request stays in flight while we assert
     setupMocks({

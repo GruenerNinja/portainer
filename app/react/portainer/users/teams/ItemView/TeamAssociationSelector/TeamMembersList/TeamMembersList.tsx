@@ -19,11 +19,18 @@ import { columns } from './columns';
 interface Props {
   users: User[];
   roles: Record<UserId, TeamRole>;
-  disabled?: boolean;
+  membershipChangesDisabled?: boolean;
+  roleChangesDisabled?: boolean;
   teamId: TeamId;
 }
 
-export function TeamMembersList({ users, roles, disabled, teamId }: Props) {
+export function TeamMembersList({
+  users,
+  roles,
+  membershipChangesDisabled,
+  roleChangesDisabled,
+  teamId,
+}: Props) {
   const membershipsQuery = useTeamMemberships(teamId);
 
   const removeMemberMutation = useRemoveMemberMutation(
@@ -43,10 +50,11 @@ export function TeamMembersList({ users, roles, disabled, teamId }: Props) {
       getRole(userId: UserId) {
         return roles[userId];
       },
-      disabled,
+      membershipChangesDisabled,
+      roleChangesDisabled,
       teamId,
     }),
-    [roles, disabled, teamId]
+    [roles, membershipChangesDisabled, roleChangesDisabled, teamId]
   );
 
   return (
@@ -60,7 +68,7 @@ export function TeamMembersList({ users, roles, disabled, teamId }: Props) {
           isPureAdmin && (
             <Button
               onClick={() => handleRemoveMembers(users.map((user) => user.Id))}
-              disabled={disabled || users.length === 0}
+              disabled={membershipChangesDisabled || users.length === 0}
               icon={UserX}
               data-cy="remove-all-users-button"
             >

@@ -85,6 +85,10 @@ function allowSelection(
     return false;
   }
 
+  if ('ReadOnly' in item && item.ReadOnly) {
+    return false;
+  }
+
   if (isBE && isOrphanedStack(item) && !isAdmin) {
     return false;
   }

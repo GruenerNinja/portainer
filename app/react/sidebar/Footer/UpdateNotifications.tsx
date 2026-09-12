@@ -53,7 +53,7 @@ export function UpdateNotification() {
         <a
           className="hyperlink space-left"
           target="_blank"
-          href={`https://github.com/portainer/portainer/releases/tag/${LatestVersion}`}
+          href={`https://hub.docker.com/r/themodcrafttmc/portainer/tags?name=${LatestVersion}`}
           rel="noreferrer"
         >
           See what&apos;s new

@@ -10,18 +10,28 @@ interface Props {
   value: number[];
   onChange(value: number[]): void;
   errors?: string | string[];
+  label?: string;
+  tooltip?: string;
+  inputId?: string;
+  dataCy?: string;
 }
 
-export function UsersField({ name, users, value, onChange, errors }: Props) {
+export function UsersField({
+  name,
+  users,
+  value,
+  onChange,
+  errors,
+  label = 'Authorized users',
+  tooltip = 'You can select which user(s) will be able to manage this resource.',
+  inputId = 'authorized-users-selector',
+  dataCy = 'users-selector',
+}: Props) {
   return (
     <FormControl
-      label="Authorized users"
-      tooltip={
-        users.length > 0
-          ? 'You can select which user(s) will be able to manage this resource.'
-          : undefined
-      }
-      inputId="authorized-users-selector"
+      label={label}
+      tooltip={users.length > 0 ? tooltip : undefined}
+      inputId={inputId}
       errors={errors}
     >
       {users.length > 0 ? (
@@ -30,8 +40,8 @@ export function UsersField({ name, users, value, onChange, errors }: Props) {
           users={users}
           onChange={onChange}
           value={value}
-          inputId="authorized-users-selector"
-          dataCy="users-selector"
+          inputId={inputId}
+          dataCy={dataCy}
         />
       ) : (
         <span className="small text-muted">

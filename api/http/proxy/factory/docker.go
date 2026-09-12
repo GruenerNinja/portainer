@@ -56,6 +56,7 @@ func (factory *ProxyFactory) newDockerHTTPProxy(endpoint *portainer.Endpoint) (h
 		ReverseTunnelService: factory.reverseTunnelService,
 		SignatureService:     factory.signatureService,
 		DockerClientFactory:  factory.dockerClientFactory,
+		OverviewCache:        factory.overviewCache,
 	}
 
 	var innerTransport *http.Transport

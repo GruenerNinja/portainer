@@ -17,6 +17,7 @@ import (
 	portainer "github.com/portainer/portainer/api"
 	"github.com/portainer/portainer/api/dataservices"
 	"github.com/portainer/portainer/api/docker/client"
+	proxycache "github.com/portainer/portainer/api/http/proxy/cache"
 	"github.com/portainer/portainer/api/http/proxy/factory/utils"
 	"github.com/portainer/portainer/api/http/security"
 	"github.com/portainer/portainer/api/internal/authorization"
@@ -47,6 +48,7 @@ type (
 		snapshotService      portainer.SnapshotService
 		dockerID             string
 		mu                   sync.Mutex
+		overviewCache        *proxycache.Cache
 	}
 
 	// TransportParameters is used to create a new Transport
@@ -56,6 +58,7 @@ type (
 		SignatureService     portainer.DigitalSignatureService
 		ReverseTunnelService portainer.ReverseTunnelService
 		DockerClientFactory  *client.ClientFactory
+		OverviewCache        *proxycache.Cache
 	}
 
 	restrictedDockerOperationContext struct {
@@ -85,6 +88,7 @@ func NewTransport(parameters *TransportParameters, httpTransport *http.Transport
 		HTTPTransport:        httpTransport,
 		gitService:           gitService,
 		snapshotService:      snapshotService,
+		overviewCache:        parameters.OverviewCache,
 	}
 
 	return transport, nil
@@ -180,6 +184,25 @@ func (transport *Transport) proxyDockerRequest(request *http.Request, fipsMode b
 }
 
 func (transport *Transport) executeDockerRequest(request *http.Request) (*http.Response, error) {
+	if transport.overviewCache != nil && isDockerOverviewRequest(request) {
+		key := proxycache.Key(
+			"docker",
+			strconv.Itoa(int(transport.endpoint.ID)),
+			request.Header.Get(portainer.PortainerAgentTargetHeader),
+			request.Method,
+			request.URL.Path,
+			request.URL.Query().Encode(),
+			request.Header.Get("Accept"),
+			request.Header.Get("Accept-Encoding"),
+		)
+		fetch := proxycache.NewRequestFetcher(request, transport.executeDockerRequestUncached)
+		return transport.overviewCache.Get(request.Context(), key, request, fetch)
+	}
+
+	return transport.executeDockerRequestUncached(request)
+}
+
+func (transport *Transport) executeDockerRequestUncached(request *http.Request) (*http.Response, error) {
 	response, err := transport.HTTPTransport.RoundTrip(request)
 
 	if transport.endpoint.Type != portainer.EdgeAgentOnDockerEnvironment {
@@ -191,6 +214,26 @@ func (transport *Transport) executeDockerRequest(request *http.Request) (*http.R
 	}
 
 	return response, err
+}
+
+var dockerOverviewPaths = map[string]struct{}{
+	"/containers/json": {},
+	"/images/json":     {},
+	"/networks":        {},
+	"/nodes":           {},
+	"/services":        {},
+	"/tasks":           {},
+	"/volumes":         {},
+}
+
+func isDockerOverviewRequest(request *http.Request) bool {
+	if request.Method != http.MethodGet {
+		return false
+	}
+
+	unversionedPath := httprequest.TrimDockerVersion(request.URL.Path)
+	_, ok := dockerOverviewPaths[unversionedPath]
+	return ok
 }
 
 func (transport *Transport) proxyAgentRequest(r *http.Request, unversionedPath string) (*http.Response, error) {

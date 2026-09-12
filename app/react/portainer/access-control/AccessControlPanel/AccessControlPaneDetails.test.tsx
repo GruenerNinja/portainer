@@ -12,6 +12,7 @@ import { withTestQueryProvider } from '@/react/test-utils/withTestQuery';
 import {
   ResourceControlOwnership,
   ResourceControlType,
+  ResourceAccessLevel,
   TeamResourceAccess,
   UserResourceAccess,
 } from '../types';
@@ -141,6 +142,28 @@ test('when resource is limited to specific teams, show comma separated list of t
   await expect(findByLabelText('authorized-teams')).resolves.toHaveTextContent(
     restrictedToTeams.map((team) => team.Name).join(', ')
   );
+});
+
+test('shows read-only users and teams separately from owners', async () => {
+  const resourceControl = buildViewModel(
+    ResourceControlOwnership.PRIVATE,
+    ResourceControlType.Stack,
+    [
+      { UserId: 1, AccessLevel: ResourceAccessLevel.ReadWriteAccessLevel },
+      { UserId: 2, AccessLevel: ResourceAccessLevel.ReadOnlyAccessLevel },
+    ],
+    [{ TeamId: 3, AccessLevel: ResourceAccessLevel.ReadOnlyAccessLevel }]
+  );
+
+  const { findByLabelText } = await renderComponent(
+    ResourceControlType.Stack,
+    resourceControl
+  );
+
+  await expect(findByLabelText('read-only-users')).resolves.toHaveTextContent(
+    '1 user'
+  );
+  await expect(findByLabelText('read-only-teams')).resolves.toBeVisible();
 });
 
 async function renderComponent(

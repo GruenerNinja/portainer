@@ -84,6 +84,10 @@ func (handler *Handler) stackList(w http.ResponseWriter, r *http.Request) *httpe
 	err = handler.DataStore.ViewTx(func(tx dataservices.DataStoreTx) error {
 		userContext := source.NewUserContext(securityContext.User, securityContext.UserMemberships)
 		for i := range stacks {
+			if stacks[i].ReadOnly {
+				sanitizeReadOnlyStack(&stacks[i])
+				continue
+			}
 			if err := fillStackGitConfig(tx, userContext, &stacks[i]); err != nil {
 				return httperror.InternalServerError("Unable to load git config for stack", err)
 			}

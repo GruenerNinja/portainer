@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strconv"
@@ -9,6 +10,7 @@ import (
 	portainer "github.com/portainer/portainer/api"
 	"github.com/portainer/portainer/api/dataservices"
 	dockerclient "github.com/portainer/portainer/api/docker/client"
+	proxycache "github.com/portainer/portainer/api/http/proxy/cache"
 	"github.com/portainer/portainer/api/http/proxy/factory"
 	"github.com/portainer/portainer/api/http/proxy/factory/kubernetes"
 	"github.com/portainer/portainer/api/kubernetes/cli"
@@ -21,17 +23,30 @@ type Manager struct {
 	proxyFactory     *factory.ProxyFactory
 	endpointProxies  sync.Map
 	k8sClientFactory *cli.ClientFactory
+	overviewCache    *proxycache.Cache
 }
 
 // NewManager initializes a new proxy Service
 func NewManager(kubernetesClientFactory *cli.ClientFactory) *Manager {
 	return &Manager{
 		k8sClientFactory: kubernetesClientFactory,
+		overviewCache:    proxycache.New(),
 	}
 }
 
+// Start starts background refreshes for cached environment overview requests.
+func (manager *Manager) Start(ctx context.Context) {
+	if manager.overviewCache == nil {
+		manager.overviewCache = proxycache.New()
+	}
+	manager.overviewCache.Start(ctx)
+}
+
 func (manager *Manager) NewProxyFactory(dataStore dataservices.DataStore, signatureService portainer.DigitalSignatureService, tunnelService portainer.ReverseTunnelService, clientFactory *dockerclient.ClientFactory, kubernetesClientFactory *cli.ClientFactory, kubernetesTokenCacheManager *kubernetes.TokenCacheManager, gitService portainer.GitService, snapshotService portainer.SnapshotService, jwtService portainer.JWTService) {
-	manager.proxyFactory = factory.NewProxyFactory(dataStore, signatureService, tunnelService, clientFactory, kubernetesClientFactory, kubernetesTokenCacheManager, gitService, snapshotService, jwtService)
+	if manager.overviewCache == nil {
+		manager.overviewCache = proxycache.New()
+	}
+	manager.proxyFactory = factory.NewProxyFactory(dataStore, signatureService, tunnelService, clientFactory, kubernetesClientFactory, kubernetesTokenCacheManager, gitService, snapshotService, jwtService, manager.overviewCache)
 }
 
 // CreateAndRegisterEndpointProxy creates a new HTTP reverse proxy based on environment(endpoint) properties and adds it to the registered proxies.
@@ -76,6 +91,11 @@ func (manager *Manager) GetEndpointProxy(endpoint *portainer.Endpoint) http.Hand
 // is currently only called for edge connection clean up and when endpoint is updated
 func (manager *Manager) DeleteEndpointProxy(endpointID portainer.EndpointID) {
 	manager.endpointProxies.Delete(strconv.Itoa(int(endpointID)))
+	if manager.overviewCache != nil {
+		endpointKey := strconv.Itoa(int(endpointID))
+		manager.overviewCache.DeletePrefix(proxycache.Key("docker", endpointKey))
+		manager.overviewCache.DeletePrefix(proxycache.Key("kubernetes", endpointKey))
+	}
 
 	if manager.k8sClientFactory != nil {
 		manager.k8sClientFactory.RemoveKubeClient(endpointID)

@@ -491,6 +491,7 @@ func buildServer(flags *portainer.CLIFlags, shutdownCtx context.Context, shutdow
 	kubeClusterAccessService := kubernetes.NewKubeClusterAccessService(*flags.BaseURL, *flags.AddrHTTPS, sslSettings.CertPath)
 
 	proxyManager := proxy.NewManager(kubernetesClientFactory)
+	proxyManager.Start(shutdownCtx)
 
 	reverseTunnelService.ProxyManager = proxyManager
 

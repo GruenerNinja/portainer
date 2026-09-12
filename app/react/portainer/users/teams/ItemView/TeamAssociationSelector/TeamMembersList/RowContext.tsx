@@ -5,7 +5,8 @@ import { createRowContext } from '@@/datatables/RowContext';
 
 export interface RowContext {
   getRole(userId: UserId): TeamRole;
-  disabled?: boolean;
+  membershipChangesDisabled?: boolean;
+  roleChangesDisabled?: boolean;
   teamId: TeamId;
 }
 

@@ -25,7 +25,7 @@ export function NameCell({
   row: { original: user },
 }: CellContext<User, string>) {
   const name = getValue();
-  const { disabled, teamId } = useRowContext();
+  const { membershipChangesDisabled, teamId } = useRowContext();
 
   const membershipsQuery = useTeamMemberships(teamId);
 
@@ -43,7 +43,7 @@ export function NameCell({
         data-cy={`remove-member-${user.Username}`}
         className="space-left !p-0"
         onClick={() => handleRemoveMember(user.Id)}
-        disabled={disabled}
+        disabled={membershipChangesDisabled}
         icon={MinusCircle}
       >
         Remove

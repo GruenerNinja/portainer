@@ -15,6 +15,7 @@ var (
 	NewPublicResourceControl              = authorization.NewPublicResourceControl
 	NewRestrictedResourceControl          = authorization.NewRestrictedResourceControl
 	UserCanAccessResource                 = authorization.UserCanAccessResource
+	UserCanReadResource                   = authorization.UserCanReadResource
 	GetResourceControlByResourceIDAndType = authorization.GetResourceControlByResourceIDAndType
 	TeamIDs                               = authorization.TeamIDs
 )
@@ -54,7 +55,8 @@ func FilterAuthorizedStacks(stacks []portainer.Stack, userID portainer.UserID, u
 	authorizedStacks := make([]portainer.Stack, 0)
 
 	for _, stack := range stacks {
-		if stack.ResourceControl != nil && UserCanAccessResource(userID, userTeamIDs, stack.ResourceControl) {
+		if stack.ResourceControl != nil && UserCanReadResource(userID, userTeamIDs, stack.ResourceControl) {
+			stack.ReadOnly = !UserCanAccessResource(userID, userTeamIDs, stack.ResourceControl)
 			authorizedStacks = append(authorizedStacks, stack)
 		}
 	}

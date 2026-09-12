@@ -4,11 +4,6 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/api/types/swarm"
 	"github.com/docker/docker/api/types/volume"
 	portainer "github.com/portainer/portainer/api"
 	"github.com/portainer/portainer/api/dataservices"
@@ -48,97 +43,64 @@ type dashboardResponse struct {
 // @failure 500 "Internal server error"
 // @router /docker/{environmentId}/dashboard [get]
 func (h *Handler) dashboard(w http.ResponseWriter, r *http.Request) *httperror.HandlerError {
-	var resp dashboardResponse
-	err := h.dataStore.ViewTx(func(tx dataservices.DataStoreTx) error {
-		cli, httpErr := utils.GetClient(r, h.dockerClientFactory)
-		if httpErr != nil {
-			return httpErr
-		}
+	requestContext, err := security.RetrieveRestrictedRequestContext(r)
+	if err != nil {
+		return httperror.InternalServerError("Unable to retrieve user details from request context", err)
+	}
 
-		context, err := security.RetrieveRestrictedRequestContext(r)
-		if err != nil {
-			return httperror.InternalServerError("Unable to retrieve user details from request context", err)
-		}
-		user, err := tx.User().Read(context.UserID)
+	endpoint, err := middlewares.FetchEndpoint(r)
+	if err != nil {
+		return httperror.InternalServerError("Unable to retrieve environment", err)
+	}
+
+	cacheKey := dashboardCacheKey{
+		endpointID:  endpoint.ID,
+		endpointURL: endpoint.URL,
+		agentTarget: r.Header.Get(portainer.PortainerAgentTargetHeader),
+	}
+	cachedData, err := h.dashboardCache.get(r.Context(), cacheKey)
+	if err != nil {
+		return httperror.InternalServerError("Unable to retrieve Docker dashboard data", err)
+	}
+
+	var resp dashboardResponse
+	err = h.dataStore.ViewTx(func(tx dataservices.DataStoreTx) error {
+		user, err := tx.User().Read(requestContext.UserID)
 		if err != nil {
 			return httperror.InternalServerError("Unable to retrieve user", err)
 		}
 
-		endpoint, err := middlewares.FetchEndpoint(r)
+		containers, err := uac.FilterByResourceControl(cachedData.containers, user, requestContext.UserMemberships, uac.ContainerResourceControlGetter(tx, endpoint.ID))
 		if err != nil {
 			return err
 		}
 
-		containers, err := cli.ContainerList(r.Context(), container.ListOptions{All: true})
-		if err != nil {
-			return httperror.InternalServerError("Unable to retrieve Docker containers", err)
-		}
-
-		if containers, err = uac.FilterByResourceControl(containers, user, context.UserMemberships, uac.ContainerResourceControlGetter(tx, endpoint.ID)); err != nil {
-			return err
-		}
-
-		images, err := cli.ImageList(r.Context(), image.ListOptions{})
-		if err != nil {
-			return httperror.InternalServerError("Unable to retrieve Docker images", err)
-		}
-
-		var totalSize int64
-		for _, image := range images {
-			totalSize += image.Size
-		}
-
-		info, err := cli.Info(r.Context())
-		if err != nil {
-			return httperror.InternalServerError("Unable to retrieve Docker info", err)
-		}
-
-		isSwarmManager := info.Swarm.ControlAvailable && info.Swarm.NodeID != ""
-
-		var services []swarm.Service
-		if isSwarmManager {
-			servicesRes, err := cli.ServiceList(r.Context(), types.ServiceListOptions{})
+		services := cachedData.services
+		if cachedData.isSwarmManager {
+			services, err = uac.FilterByResourceControl(services, user, requestContext.UserMemberships, uac.ServiceResourceControlGetter(tx, endpoint.ID))
 			if err != nil {
-				return httperror.InternalServerError("Unable to retrieve Docker services", err)
-			}
-
-			if services, err = uac.FilterByResourceControl(servicesRes, user, context.UserMemberships, uac.ServiceResourceControlGetter(tx, endpoint.ID)); err != nil {
 				return err
 			}
 		}
 
-		volumesRes, err := cli.VolumeList(r.Context(), volume.ListOptions{})
-		if err != nil {
-			return httperror.InternalServerError("Unable to retrieve Docker volumes", err)
-		}
-
-		var volumes []*volume.Volume
-		if volumes, err = uac.FilterByResourceControl(volumesRes.Volumes, user, context.UserMemberships, func(item *volume.Volume) (*portainer.ResourceControl, error) {
+		volumes, err := uac.FilterByResourceControl(cachedData.volumes, user, requestContext.UserMemberships, func(item *volume.Volume) (*portainer.ResourceControl, error) {
 			if item == nil {
 				return nil, errors.New("Found nil volume in volumes list")
 			}
 			return uac.VolumeResourceControlGetter(tx, endpoint.ID)(*item)
-		}); err != nil {
+		})
+		if err != nil {
 			return err
 		}
 
-		networks, err := cli.NetworkList(r.Context(), network.ListOptions{})
+		networks, err := uac.FilterByResourceControl(cachedData.networks, user, requestContext.UserMemberships, uac.NetworkResourceControlGetter(tx, endpoint.ID))
 		if err != nil {
-			return httperror.InternalServerError("Unable to retrieve Docker networks", err)
-		}
-
-		if networks, err = uac.FilterByResourceControl(networks, user, context.UserMemberships, uac.NetworkResourceControlGetter(tx, endpoint.ID)); err != nil {
 			return err
-		}
-
-		environment, err := middlewares.FetchEndpoint(r)
-		if err != nil {
-			return httperror.InternalServerError("Unable to retrieve environment", err)
 		}
 
 		stackCount := 0
-		if environment.SecuritySettings.AllowStackManagementForRegularUsers || context.IsAdmin {
-			stacks, err := utils.GetDockerStacks(tx, context, environment.ID, containers, services)
+		if endpoint.SecuritySettings.AllowStackManagementForRegularUsers || requestContext.IsAdmin {
+			stacks, err := utils.GetDockerStacks(tx, requestContext, endpoint.ID, containers, services)
 			if err != nil {
 				return httperror.InternalServerError("Unable to retrieve stacks", err)
 			}
@@ -146,16 +108,13 @@ func (h *Handler) dashboard(w http.ResponseWriter, r *http.Request) *httperror.H
 			stackCount = len(stacks)
 		}
 
-		containersStats, err := stats.CalculateContainerStats(r.Context(), cli, info.Swarm.ControlAvailable, containers)
-		if err != nil {
-			return httperror.InternalServerError("Unable to retrieve Docker containers stats", err)
+		containersStats := stats.CalculateContainerStatsFromCache(containers, cachedData.containerStats)
+		if cachedData.isSwarm {
+			containersStats = stats.CalculateContainerStatsForSwarm(containers)
 		}
 
 		resp = dashboardResponse{
-			Images: imagesCounters{
-				Total: len(images),
-				Size:  totalSize,
-			},
+			Images:     cachedData.images,
 			Services:   len(services),
 			Containers: containersStats,
 			Networks:   len(networks),

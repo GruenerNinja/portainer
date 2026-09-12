@@ -197,6 +197,23 @@ test('when isAdmin and restricted ownership is selected, show team and users sel
   expect(await extraQueries.findByText(/Authorized teams/)).toBeVisible();
 });
 
+test('when read-only stack sharing is enabled, admin sees viewer selectors', async () => {
+  const values = buildFormData(ResourceControlOwnership.RESTRICTED);
+
+  const { findByLabelText, findByText } = await renderComponent(
+    values,
+    vi.fn(),
+    {
+      isAdmin: true,
+      allowReadOnlyAccess: true,
+    }
+  );
+
+  expect(await findByLabelText('read-only-options')).toBeVisible();
+  expect(await findByText('Read-only users')).toBeVisible();
+  expect(await findByText('Read-only teams')).toBeVisible();
+});
+
 test('when user is not an admin, there are more then 1 team and ownership is restricted, team selector should be visible', async () => {
   const values = buildFormData(ResourceControlOwnership.RESTRICTED);
 
@@ -298,12 +315,19 @@ interface AdditionalProps {
   isAdmin?: boolean;
   hideTitle?: boolean;
   resourceControl?: ResourceControlViewModel;
+  allowReadOnlyAccess?: boolean;
 }
 
 async function renderComponent(
   values: AccessControlFormData,
   onChange = vi.fn(),
-  { isAdmin = false, hideTitle = false, teams, users }: AdditionalProps = {}
+  {
+    isAdmin = false,
+    hideTitle = false,
+    teams,
+    users,
+    allowReadOnlyAccess = false,
+  }: AdditionalProps = {}
 ) {
   const user = new UserViewModel({ Username: 'user', Role: isAdmin ? 1 : 2 });
 
@@ -326,6 +350,7 @@ async function renderComponent(
       values={values}
       onChange={onChange}
       hideTitle={hideTitle}
+      allowReadOnlyAccess={allowReadOnlyAccess}
     />
   );
 

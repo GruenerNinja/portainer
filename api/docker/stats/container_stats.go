@@ -18,6 +18,11 @@ type ContainerStats struct {
 	Total     int `json:"total"`
 }
 
+// ContainerStatsCache contains the inspected status of each container. Keeping
+// the per-container values allows callers to apply access-control filtering
+// before aggregating the cached statistics.
+type ContainerStatsCache map[string]ContainerStats
+
 type DockerClient interface {
 	ContainerInspect(ctx context.Context, containerID string) (container.InspectResponse, error)
 }
@@ -27,16 +32,21 @@ func CalculateContainerStats(ctx context.Context, cli DockerClient, isSwarm bool
 		return CalculateContainerStatsForSwarm(containers), nil
 	}
 
-	var running, stopped, healthy, unhealthy int
+	cachedStats, err := InspectContainerStats(ctx, cli, containers)
+	return CalculateContainerStatsFromCache(containers, cachedStats), err
+}
+
+// InspectContainerStats inspects containers concurrently and retains their
+// individual statistics for later aggregation.
+func InspectContainerStats(ctx context.Context, cli DockerClient, containers []container.Summary) (ContainerStatsCache, error) {
+	cachedStats := make(ContainerStatsCache, len(containers))
 
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 	semaphore := make(chan struct{}, 5)
 
 	var aggErr error
-	var aggMu sync.Mutex
 
-	var processedCount int
 	for i := range containers {
 		id := containers[i].ID
 
@@ -55,33 +65,46 @@ func CalculateContainerStats(ctx context.Context, cli DockerClient, isSwarm bool
 					return
 				}
 
-				aggMu.Lock()
+				mu.Lock()
 				aggErr = errors.Join(aggErr, err)
-				processedCount++
-				aggMu.Unlock()
+				stat.Total = 1
+				cachedStats[id] = stat
+				mu.Unlock()
 				return
 			}
 			stat = getContainerStatus(containerInspection.State)
+			stat.Total = 1
 
 			mu.Lock()
-			running += stat.Running
-			stopped += stat.Stopped
-			healthy += stat.Healthy
-			unhealthy += stat.Unhealthy
-			processedCount++
+			cachedStats[id] = stat
 			mu.Unlock()
 		})
 	}
 
 	wg.Wait()
 
-	return ContainerStats{
-		Running:   running,
-		Stopped:   stopped,
-		Healthy:   healthy,
-		Unhealthy: unhealthy,
-		Total:     processedCount,
-	}, aggErr
+	return cachedStats, aggErr
+}
+
+// CalculateContainerStatsFromCache aggregates previously inspected statistics
+// for the supplied containers. Containers absent from the cache are ignored,
+// matching the existing behaviour for containers removed during inspection.
+func CalculateContainerStatsFromCache(containers []container.Summary, cachedStats ContainerStatsCache) ContainerStats {
+	result := ContainerStats{}
+	for i := range containers {
+		stat, ok := cachedStats[containers[i].ID]
+		if !ok {
+			continue
+		}
+
+		result.Running += stat.Running
+		result.Stopped += stat.Stopped
+		result.Healthy += stat.Healthy
+		result.Unhealthy += stat.Unhealthy
+		result.Total += stat.Total
+	}
+
+	return result
 }
 
 func getContainerStatus(state *container.State) ContainerStats {

@@ -51,6 +51,8 @@ export class StackViewModel implements IResource {
 
   FromAppTemplate: boolean;
 
+  ReadOnly: boolean;
+
   AdditionalFiles: string[] | undefined;
 
   AutoUpdate: AutoUpdateResponse | undefined;
@@ -93,6 +95,7 @@ export class StackViewModel implements IResource {
 
     this.GitConfig = stack.GitConfig;
     this.FromAppTemplate = stack.FromAppTemplate;
+    this.ReadOnly = !!stack.ReadOnly;
     this.AdditionalFiles = stack.AdditionalFiles || undefined;
     this.AutoUpdate = stack.AutoUpdate || undefined;
     this.Webhook = stack.Webhook;

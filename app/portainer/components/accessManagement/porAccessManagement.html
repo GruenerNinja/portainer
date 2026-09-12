@@ -28,11 +28,10 @@
                     class="form-control"
                     data-cy="access-management-role-select"
                     ng-model="ctrl.formValues.selectedRole"
-                    ng-options="role as ctrl.roleLabel(role) disable when ctrl.isRoleLimitedToBE(role) for role in ctrl.roles"
+                    ng-options="role as ctrl.roleLabel(role) for role in ctrl.roles"
                   >
                   </select>
                 </div>
-                <be-feature-indicator feature="ctrl.limitedFeature" class="space-left"></be-feature-indicator>
               </div>
             </div>
           </div>

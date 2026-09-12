@@ -87,6 +87,7 @@ export function ItemView() {
             resourceId={`${stack.EndpointId}_${stack.Name}`}
             resourceControl={resourceControl}
             resourceType={ResourceControlType.Stack}
+            disableOwnershipChange={stack.ReadOnly}
             onUpdateSuccess={() =>
               queryClient.invalidateQueries(queryKeys.stack(stackId))
             }

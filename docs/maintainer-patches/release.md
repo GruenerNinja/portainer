@@ -5,16 +5,18 @@ The release version is stored in `RELEASE_VERSION`. The build script produces a 
 ```sh
 ./scripts/build-release-context.sh
 cd dist/release-context
-docker build --platform linux/arm64 -t themodcrafttmc/portainer:2.39.3.2.14 -t themodcrafttmc/portainer:latest .
+docker buildx build --platform linux/amd64,linux/arm64 \
+  -t themodcrafttmc/portainer:2.39.3.2.17 --push .
 ```
 
-The script installs the locked frontend dependencies, builds the production UI, builds a static Linux backend with the release version embedded, and copies only the runtime artifacts plus a small Dockerfile into the context. Set `TARGETARCH=amd64` or `TARGETARCH=arm64` before running it when building for a different target than the current host. The generated Docker command includes the matching `--platform` value so the base image and binary architecture cannot be mixed accidentally.
+The script installs the locked frontend dependencies, builds the production UI once, builds static Linux backends for both AMD64 and ARM64 with the release version embedded, and copies only the runtime artifacts plus a small multi-architecture Dockerfile into the context. The generated build command publishes an immutable manifest containing both platforms.
 
 Push the immutable version first and `latest` second:
 
 ```sh
-docker push themodcrafttmc/portainer:2.39.3.2.14
-docker push themodcrafttmc/portainer:latest
+docker buildx imagetools create \
+  -t themodcrafttmc/portainer:latest \
+  themodcrafttmc/portainer:2.39.3.2.17
 ```
 
-Both tags must refer to the same locally built image. Verify with `docker image inspect` locally and compare registry digests after pushing. Increment `RELEASE_VERSION` for every release; never reuse a published version tag.
+Publish the immutable version before moving `latest`. Verify that both registry tags resolve to the same manifest digest and contain `linux/amd64` plus `linux/arm64`. Increment `RELEASE_VERSION` for every release; never reuse a published version tag.

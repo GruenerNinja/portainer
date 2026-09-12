@@ -282,6 +282,7 @@ func (m *Migrator) initMigrations() {
 	m.addMigrations("2.45.0",
 		m.cleanOrphanedWorkflowReferences_2_45_0,
 		m.pruneOrphanedStackArtifacts_2_45_0,
+		m.restorePredefinedRoles,
 	)
 
 	// WARNING: do not change migrations that have already been released!
@@ -292,7 +293,6 @@ func (m *Migrator) initMigrations() {
 
 // Always is always run at the end of migrations
 func (m *Migrator) Always() error {
-	// currently nothing to be done in CE... yet
 	return nil
 }
 

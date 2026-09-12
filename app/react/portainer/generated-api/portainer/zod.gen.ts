@@ -836,11 +836,6 @@ export const zPortainerApiKey = z.object({
   userId: z.int().optional(),
 });
 
-export const zPortainerAccessPolicy = z.object({
-  Namespaces: z.array(z.string()).optional(),
-  RoleId: z.int(),
-});
-
 export const zPortainerActivityLog = z.object({
   action: z.string().optional(),
   context: z.string().optional(),
@@ -1343,6 +1338,7 @@ export const zPortainerRegistryType = z.union([
 export const zPortainerResourceAccessLevel = z.union([
   z.literal(0),
   z.literal(1),
+  z.literal(2),
 ]);
 
 export const zPortainerResourceControlType = z.union([
@@ -1358,10 +1354,23 @@ export const zPortainerResourceControlType = z.union([
   z.literal(9),
 ]);
 
+export const zPortainerRoleId = z.union([
+  z.literal(1),
+  z.literal(2),
+  z.literal(3),
+  z.literal(4),
+  z.literal(5),
+]);
+
+export const zPortainerAccessPolicy = z.object({
+  Namespaces: z.array(z.string()).optional(),
+  RoleId: zPortainerRoleId,
+});
+
 export const zPortainerRole = z.object({
   Authorizations: zPortainerAuthorizations.optional(),
   Description: z.string().optional(),
-  Id: z.int().optional(),
+  Id: zPortainerRoleId.optional(),
   Name: z.string().optional(),
   Priority: z.int().optional(),
 });
@@ -1833,6 +1842,7 @@ export const zPortainerStack = z.object({
   Namespace: z.string().optional(),
   Option: zPortainerStackOption.optional(),
   ProjectPath: z.string().optional(),
+  ReadOnly: z.boolean().optional(),
   ResourceControl: zPortainerResourceControl.optional(),
   SecretMappings: z.array(zPortainerStackSecretMapping).optional(),
   Status: zPortainerStackStatus.optional(),
@@ -2113,6 +2123,8 @@ export const zResourceQuantity = z.object({
 export const zResourcecontrolsResourceControlCreatePayload = z.object({
   AdministratorsOnly: z.boolean().optional(),
   Public: z.boolean().optional(),
+  ReadOnlyTeams: z.array(z.int()).optional(),
+  ReadOnlyUsers: z.array(z.int()).optional(),
   ResourceID: z.string(),
   SubResourceIDs: z.array(z.string()).optional(),
   Teams: z.array(z.int()).optional(),
@@ -2133,6 +2145,8 @@ export const zResourcecontrolsResourceControlCreatePayload = z.object({
 export const zResourcecontrolsResourceControlUpdatePayload = z.object({
   AdministratorsOnly: z.boolean().optional(),
   Public: z.boolean().optional(),
+  ReadOnlyTeams: z.array(z.int()).optional(),
+  ReadOnlyUsers: z.array(z.int()).optional(),
   Teams: z.array(z.int()).optional(),
   Users: z.array(z.int()).optional(),
 });
@@ -2413,6 +2427,7 @@ export const zStacksStackResponse = z.object({
   Namespace: z.string().optional(),
   Option: zPortainerStackOption.optional(),
   ProjectPath: z.string().optional(),
+  ReadOnly: z.boolean().optional(),
   ResourceControl: zPortainerResourceControl.optional(),
   SecretMappings: z.array(zPortainerStackSecretMapping).optional(),
   Status: zPortainerStackStatus.optional(),
@@ -2590,7 +2605,7 @@ export const zUsersEffectiveAccessEntry = z.object({
   endpointName: z.string().optional(),
   groupId: z.int().optional(),
   groupName: z.string().optional(),
-  roleId: z.int().optional(),
+  roleId: zPortainerRoleId.optional(),
   roleName: z.string().optional(),
   rolePriority: z.int().optional(),
   teamId: z.int().optional(),

@@ -29,14 +29,14 @@ func AuthorizedResourceControlAccess(resourceControl *portainer.ResourceControl,
 
 	for _, access := range resourceControl.TeamAccesses {
 		for _, membership := range context.UserMemberships {
-			if membership.TeamID == access.TeamID {
+			if membership.TeamID == access.TeamID && isReadWriteAccess(access.AccessLevel) {
 				return true
 			}
 		}
 	}
 
 	for _, access := range resourceControl.UserAccesses {
-		if context.UserID == access.UserID {
+		if context.UserID == access.UserID && isReadWriteAccess(access.AccessLevel) {
 			return true
 		}
 	}
@@ -61,8 +61,14 @@ func AuthorizedResourceControlUpdate(resourceControl *portainer.ResourceControl,
 		return false
 	}
 
-	userAccessesCount := len(resourceControl.UserAccesses)
-	teamAccessesCount := len(resourceControl.TeamAccesses)
+	userAccesses := slices.DeleteFunc(slices.Clone(resourceControl.UserAccesses), func(access portainer.UserResourceAccess) bool {
+		return !isReadWriteAccess(access.AccessLevel)
+	})
+	teamAccesses := slices.DeleteFunc(slices.Clone(resourceControl.TeamAccesses), func(access portainer.TeamResourceAccess) bool {
+		return !isReadWriteAccess(access.AccessLevel)
+	})
+	userAccessesCount := len(userAccesses)
+	teamAccessesCount := len(teamAccesses)
 
 	if userAccessesCount == 0 && teamAccessesCount == 0 {
 		return false
@@ -73,14 +79,14 @@ func AuthorizedResourceControlUpdate(resourceControl *portainer.ResourceControl,
 	}
 
 	if userAccessesCount == 1 {
-		access := resourceControl.UserAccesses[0]
+		access := userAccesses[0]
 		if access.UserID == context.UserID {
 			return true
 		}
 	}
 
 	if teamAccessesCount > 0 {
-		for _, access := range resourceControl.TeamAccesses {
+		for _, access := range teamAccesses {
 			if !slices.ContainsFunc(context.UserMemberships, func(m portainer.TeamMembership) bool {
 				return m.TeamID == access.TeamID
 			}) {
@@ -92,6 +98,10 @@ func AuthorizedResourceControlUpdate(resourceControl *portainer.ResourceControl,
 	}
 
 	return false
+}
+
+func isReadWriteAccess(accessLevel portainer.ResourceAccessLevel) bool {
+	return accessLevel == 0 || accessLevel == portainer.ReadWriteAccessLevel
 }
 
 // AuthorizedTeamManagement ensure that access to the management of the specified team is granted.

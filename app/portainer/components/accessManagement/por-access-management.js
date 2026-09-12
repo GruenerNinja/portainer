@@ -9,6 +9,5 @@ export const porAccessManagement = {
     updateAccess: '<',
     actionInProgress: '<',
     filterUsers: '<',
-    limitedFeature: '<',
   },
 };

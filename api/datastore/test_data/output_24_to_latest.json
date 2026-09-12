@@ -311,7 +311,7 @@
         "DockerVolumeList": true,
         "DockerVolumePrune": true,
         "EndpointResourcesAccess": true,
-        "IntegrationStoridgeAdmin": true,
+        "PortainerRegistryUpdateAccess": true,
         "PortainerResourceControlCreate": true,
         "PortainerResourceControlUpdate": true,
         "PortainerStackCreate": true,
@@ -326,9 +326,9 @@
         "PortainerWebhookList": true,
         "PortainerWebsocketExec": true
       },
-      "Description": "Full control of all resources in an endpoint",
+      "Description": "Full control of all resources in an environment",
       "Id": 1,
-      "Name": "Endpoint administrator",
+      "Name": "Environment administrator",
       "Priority": 1
     },
     {
@@ -379,10 +379,10 @@
         "PortainerStackList": true,
         "PortainerWebhookList": true
       },
-      "Description": "Read-only access of all resources in an endpoint",
+      "Description": "Read-only access of all resources in an environment",
       "Id": 2,
       "Name": "Helpdesk",
-      "Priority": 2
+      "Priority": 3
     },
     {
       "Authorizations": {
@@ -504,10 +504,10 @@
         "PortainerWebhookList": true,
         "PortainerWebsocketExec": true
       },
-      "Description": "Full control of assigned resources in an endpoint",
+      "Description": "Full control of assigned resources in an environment",
       "Id": 3,
       "Name": "Standard user",
-      "Priority": 3
+      "Priority": 4
     },
     {
       "Authorizations": {
@@ -556,10 +556,75 @@
         "PortainerStackList": true,
         "PortainerWebhookList": true
       },
-      "Description": "Read-only access of assigned resources in an endpoint",
+      "Description": "Read-only access of assigned resources in an environment",
       "Id": 4,
       "Name": "Read-only user",
-      "Priority": 4
+      "Priority": 5
+    },
+    {
+      "Authorizations": {
+        "DockerAgentHostInfo": true,
+        "DockerAgentList": true,
+        "DockerAgentPing": true,
+        "DockerConfigInspect": true,
+        "DockerConfigList": true,
+        "DockerContainerArchiveInfo": true,
+        "DockerContainerAttach": true,
+        "DockerContainerChanges": true,
+        "DockerContainerExec": true,
+        "DockerContainerInspect": true,
+        "DockerContainerKill": true,
+        "DockerContainerList": true,
+        "DockerContainerLogs": true,
+        "DockerContainerPause": true,
+        "DockerContainerResize": true,
+        "DockerContainerRestart": true,
+        "DockerContainerStart": true,
+        "DockerContainerStats": true,
+        "DockerContainerStop": true,
+        "DockerContainerTop": true,
+        "DockerContainerUnpause": true,
+        "DockerDistributionInspect": true,
+        "DockerEvents": true,
+        "DockerExecResize": true,
+        "DockerExecStart": true,
+        "DockerImageGet": true,
+        "DockerImageGetAll": true,
+        "DockerImageHistory": true,
+        "DockerImageInspect": true,
+        "DockerImageList": true,
+        "DockerImageSearch": true,
+        "DockerInfo": true,
+        "DockerNetworkInspect": true,
+        "DockerNetworkList": true,
+        "DockerNodeInspect": true,
+        "DockerNodeList": true,
+        "DockerPing": true,
+        "DockerPluginList": true,
+        "DockerSecretInspect": true,
+        "DockerSecretList": true,
+        "DockerServiceInspect": true,
+        "DockerServiceList": true,
+        "DockerServiceLogs": true,
+        "DockerSwarmInspect": true,
+        "DockerSystem": true,
+        "DockerTaskInspect": true,
+        "DockerTaskList": true,
+        "DockerTaskLogs": true,
+        "DockerVersion": true,
+        "DockerVolumeInspect": true,
+        "DockerVolumeList": true,
+        "EndpointResourcesAccess": true,
+        "PortainerStackFile": true,
+        "PortainerStackInspect": true,
+        "PortainerStackList": true,
+        "PortainerWebhookList": true,
+        "PortainerWebsocketExec": true
+      },
+      "Description": "Operational control of all existing resources in an environment",
+      "Id": 5,
+      "Name": "Operator",
+      "Priority": 2
     }
   ],
   "schedules": [
@@ -925,7 +990,7 @@
     }
   ],
   "version": {
-    "VERSION": "{\"SchemaVersion\":\"2.45.0\",\"MigratorCount\":2,\"Edition\":1,\"InstanceID\":\"463d5c47-0ea5-4aca-85b1-405ceefee254\"}"
+    "VERSION": "{\"SchemaVersion\":\"2.45.0\",\"MigratorCount\":3,\"Edition\":1,\"InstanceID\":\"463d5c47-0ea5-4aca-85b1-405ceefee254\"}"
   },
   "webhooks": null,
   "workflows": null

@@ -3,6 +3,8 @@ package system
 import (
 	"context"
 	"net/http"
+	"strconv"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -15,7 +17,6 @@ import (
 	"github.com/portainer/portainer/pkg/libhttp/response"
 	"github.com/portainer/portainer/pkg/schedule"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/rs/zerolog/log"
 	"github.com/segmentio/encoding/json"
 )
@@ -56,7 +57,7 @@ func (handler *Handler) version(w http.ResponseWriter, r *http.Request) *httperr
 	}
 
 	result := &versionResponse{
-		ServerVersion:   portainer.APIVersion,
+		ServerVersion:   serverVersion(build.ImageTag, portainer.APIVersion),
 		VersionSupport:  portainer.APIVersionSupport,
 		DatabaseVersion: portainer.APIVersion,
 		ServerEdition:   portainer.Edition.GetEditionLabel(),
@@ -69,7 +70,7 @@ func (handler *Handler) version(w http.ResponseWriter, r *http.Request) *httperr
 	}
 
 	latestVersion := GetLatestVersion()
-	if HasNewerVersion(portainer.APIVersion, latestVersion) {
+	if HasNewerVersion(result.ServerVersion, latestVersion) {
 		result.UpdateAvailable = true
 		result.LatestVersion = latestVersion
 	}
@@ -101,7 +102,9 @@ func refreshLatestVersion(versionCheckURL string) {
 	}
 
 	var data struct {
-		TagName string `json:"tag_name"`
+		Results []struct {
+			Name string `json:"name"`
+		} `json:"results"`
 	}
 
 	if err := json.Unmarshal(body, &data); err != nil {
@@ -109,7 +112,23 @@ func refreshLatestVersion(versionCheckURL string) {
 		return
 	}
 
-	cachedLatestVersion.Store(&data.TagName)
+	latestVersion := ""
+	for _, tag := range data.Results {
+		if _, valid := parseNumericVersion(tag.Name); !valid {
+			continue
+		}
+
+		if latestVersion == "" || HasNewerVersion(latestVersion, tag.Name) {
+			latestVersion = tag.Name
+		}
+	}
+
+	if latestVersion == "" {
+		log.Debug().Msg("couldn't find a valid maintained Portainer version")
+		return
+	}
+
+	cachedLatestVersion.Store(&latestVersion)
 }
 
 func GetLatestVersion() string {
@@ -122,19 +141,61 @@ func GetLatestVersion() string {
 }
 
 func HasNewerVersion(currentVersion, latestVersion string) bool {
-	currentVersionSemver, err := semver.NewVersion(currentVersion)
-	if err != nil {
-		log.Debug().Str("version", currentVersion).Msg("current Portainer version isn't a semver")
+	currentParts, valid := parseNumericVersion(currentVersion)
+	if !valid {
+		log.Debug().Str("version", currentVersion).Msg("current Portainer version isn't a numeric release version")
 
 		return false
 	}
 
-	latestVersionSemver, err := semver.NewVersion(latestVersion)
-	if err != nil {
-		log.Debug().Str("version", latestVersion).Msg("latest Portainer version isn't a semver")
+	latestParts, valid := parseNumericVersion(latestVersion)
+	if !valid {
+		log.Debug().Str("version", latestVersion).Msg("latest Portainer version isn't a numeric release version")
 
 		return false
 	}
 
-	return currentVersionSemver.LessThan(latestVersionSemver)
+	partCount := max(len(currentParts), len(latestParts))
+	for i := range partCount {
+		var currentPart, latestPart uint64
+		if i < len(currentParts) {
+			currentPart = currentParts[i]
+		}
+		if i < len(latestParts) {
+			latestPart = latestParts[i]
+		}
+
+		if currentPart != latestPart {
+			return currentPart < latestPart
+		}
+	}
+
+	return false
+}
+
+func serverVersion(imageTag, apiVersion string) string {
+	if _, valid := parseNumericVersion(imageTag); valid {
+		return strings.TrimPrefix(strings.TrimSpace(imageTag), "v")
+	}
+
+	return apiVersion
+}
+
+func parseNumericVersion(version string) ([]uint64, bool) {
+	version = strings.TrimPrefix(strings.TrimSpace(version), "v")
+	parts := strings.Split(version, ".")
+	if len(parts) < 3 {
+		return nil, false
+	}
+
+	parsed := make([]uint64, len(parts))
+	for i, part := range parts {
+		value, err := strconv.ParseUint(part, 10, 64)
+		if err != nil {
+			return nil, false
+		}
+		parsed[i] = value
+	}
+
+	return parsed, true
 }

@@ -46,8 +46,7 @@ export async function getSystemVersion() {
 
 export function useSystemVersion() {
   return useQuery(queryKey, () => getSystemVersion(), {
-    // 24 hour stale time to reduce the number of requests to avoid github api rate limits
-    // a hard refresh of the browser will still trigger a new request
+    // Version data changes slowly; a hard refresh still triggers a new request.
     staleTime: 24 * 60 * 60 * 1000,
   });
 }

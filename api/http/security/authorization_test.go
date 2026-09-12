@@ -171,3 +171,38 @@ func TestAuthorizedResourceControlUpdate_UserAndTeamAccessCombinationDenied(t *t
 
 	require.False(t, AuthorizedResourceControlUpdate(rc, ctx))
 }
+
+func TestAuthorizedResourceControlAccess_ReadOnlyAccessDenied(t *testing.T) {
+	t.Parallel()
+
+	rc := &portainer.ResourceControl{
+		UserAccesses: []portainer.UserResourceAccess{
+			{UserID: 1, AccessLevel: portainer.ReadOnlyAccessLevel},
+		},
+		TeamAccesses: []portainer.TeamResourceAccess{
+			{TeamID: 2, AccessLevel: portainer.ReadOnlyAccessLevel},
+		},
+	}
+
+	require.False(t, AuthorizedResourceControlAccess(rc, &RestrictedRequestContext{UserID: 1}))
+	require.False(t, AuthorizedResourceControlAccess(rc, &RestrictedRequestContext{
+		UserID:          9,
+		UserMemberships: []portainer.TeamMembership{{TeamID: 2}},
+	}))
+}
+
+func TestAuthorizedResourceControlUpdate_IgnoresReadOnlyViewersForOwnerRules(t *testing.T) {
+	t.Parallel()
+
+	rc := &portainer.ResourceControl{
+		UserAccesses: []portainer.UserResourceAccess{
+			{UserID: 1, AccessLevel: portainer.ReadWriteAccessLevel},
+			{UserID: 2, AccessLevel: portainer.ReadOnlyAccessLevel},
+		},
+		TeamAccesses: []portainer.TeamResourceAccess{
+			{TeamID: 3, AccessLevel: portainer.ReadOnlyAccessLevel},
+		},
+	}
+
+	require.True(t, AuthorizedResourceControlUpdate(rc, &RestrictedRequestContext{UserID: 1}))
+}

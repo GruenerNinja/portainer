@@ -11,6 +11,9 @@ interface Props {
   overrideTooltip?: string;
   onChange(value: number[]): void;
   errors?: string | string[];
+  label?: string;
+  inputId?: string;
+  dataCy?: string;
 }
 
 export function TeamsField({
@@ -20,17 +23,20 @@ export function TeamsField({
   overrideTooltip,
   onChange,
   errors,
+  label = 'Authorized teams',
+  inputId = 'authorized-teams-selector',
+  dataCy = 'teams-selector',
 }: Props) {
   return (
     <FormControl
-      label="Authorized teams"
+      label={label}
       tooltip={
         teams.length > 0
           ? overrideTooltip ||
             'You can select which team(s) will be able to manage this resource.'
           : undefined
       }
-      inputId="authorized-teams-selector"
+      inputId={inputId}
       errors={errors}
     >
       {teams.length > 0 ? (
@@ -39,8 +45,8 @@ export function TeamsField({
           teams={teams}
           onChange={onChange}
           value={value}
-          inputId="authorized-teams-selector"
-          dataCy="teams-selector"
+          inputId={inputId}
+          dataCy={dataCy}
         />
       ) : (
         <span className="small text-muted">

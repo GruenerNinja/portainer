@@ -98,6 +98,7 @@ export function AccessControlPanelForm({
             isPublicVisible
             errors={errors.accessControl}
             environmentId={environmentId}
+            allowReadOnlyAccess={resourceType === ResourceControlType.Stack}
           />
 
           <div className="form-group">

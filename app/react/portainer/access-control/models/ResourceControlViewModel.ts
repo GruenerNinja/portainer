@@ -6,6 +6,7 @@ import {
   ResourceId,
   TeamResourceAccess,
   UserResourceAccess,
+  isReadWriteResourceAccess,
 } from '../types';
 
 export class ResourceControlViewModel {
@@ -42,17 +43,18 @@ export function determineOwnership(resourceControl: ResourceControlResponse) {
     return ResourceControlOwnership.PUBLIC;
   }
 
-  if (
-    resourceControl.UserAccesses.length === 1 &&
-    resourceControl.TeamAccesses.length === 0
-  ) {
+  const readWriteUsers = resourceControl.UserAccesses.filter((access) =>
+    isReadWriteResourceAccess(access.AccessLevel)
+  );
+  const readWriteTeams = resourceControl.TeamAccesses.filter((access) =>
+    isReadWriteResourceAccess(access.AccessLevel)
+  );
+
+  if (readWriteUsers.length === 1 && readWriteTeams.length === 0) {
     return ResourceControlOwnership.PRIVATE;
   }
 
-  if (
-    resourceControl.UserAccesses.length > 1 ||
-    resourceControl.TeamAccesses.length > 0
-  ) {
+  if (readWriteUsers.length > 1 || readWriteTeams.length > 0) {
     return ResourceControlOwnership.RESTRICTED;
   }
 

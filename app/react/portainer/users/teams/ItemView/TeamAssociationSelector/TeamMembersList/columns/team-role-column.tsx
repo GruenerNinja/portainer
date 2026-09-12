@@ -29,7 +29,7 @@ function RoleCell({
 }: CellContext<User, User['Id']>) {
   const id = getValue();
 
-  const { getRole, disabled, teamId } = useRowContext();
+  const { getRole, roleChangesDisabled, teamId } = useRowContext();
   const membershipsQuery = useTeamMemberships(teamId);
   const updateRoleMutation = useUpdateRoleMutation(
     teamId,
@@ -46,7 +46,7 @@ function RoleCell({
     <Cell
       isAdmin={isPureAdmin}
       onClick={handleUpdateRole}
-      disabled={disabled}
+      disabled={roleChangesDisabled}
       username={user.Username}
     />
   );

@@ -15598,10 +15598,11 @@ components:
             type: string
           type: array
         RoleId:
+          allOf:
+            - $ref: "#/components/schemas/portainer.RoleID"
           description: Role identifier. Reference the role that will be associated to this
             access policy
           example: 1
-          type: integer
       required:
         - RoleId
       type: object
@@ -17004,10 +17005,12 @@ components:
       enum:
         - 0
         - 1
+        - 2
       type: integer
       x-enum-varnames:
         - _
         - ReadWriteAccessLevel
+        - ReadOnlyAccessLevel
     portainer.ResourceControl:
       properties:
         AccessLevel:
@@ -17096,9 +17099,10 @@ components:
           example: Read-only access of all resources in an environment(endpoint)
           type: string
         Id:
+          allOf:
+            - $ref: "#/components/schemas/portainer.RoleID"
           description: Role Identifier
           example: 1
-          type: integer
         Name:
           description: Role name
           example: HelpDesk
@@ -17106,6 +17110,20 @@ components:
         Priority:
           type: integer
       type: object
+    portainer.RoleID:
+      enum:
+        - 1
+        - 2
+        - 3
+        - 4
+        - 5
+      type: integer
+      x-enum-varnames:
+        - RoleIDEndpointAdmin
+        - RoleIDHelpdesk
+        - RoleIDStandardUser
+        - RoleIDReadonly
+        - RoleIDOperator
     portainer.SSLSettings:
       properties:
         certPath:
@@ -17410,6 +17428,14 @@ components:
           description: Path on disk to the repository hosting the Stack file
           example: /data/compose/myStack_jpofkc0i9uo9wtx1zesuk649w
           type: string
+        ReadOnly:
+          description: >-
+            ReadOnly indicates that the requesting user can inspect this stack
+            but cannot mutate it.
+
+            It is populated on API responses and is not used as persisted authorization state.
+          example: true
+          type: boolean
         ResourceControl:
           $ref: "#/components/schemas/portainer.ResourceControl"
         SecretMappings:
@@ -18544,6 +18570,22 @@ components:
           description: Permit access to the associated resource to any user
           example: true
           type: boolean
+        ReadOnlyTeams:
+          description: List of team identifiers with read-only access to a stack
+          example:
+            - 10
+            - 11
+          items:
+            type: integer
+          type: array
+        ReadOnlyUsers:
+          description: List of user identifiers with read-only access to a stack
+          example:
+            - 8
+            - 9
+          items:
+            type: integer
+          type: array
         ResourceID:
           example: 617c5f22bb9b023d6daab7cba43a57576f83492867bc767d1c59416b065e5f08
           type: string
@@ -18602,6 +18644,22 @@ components:
           description: Permit access to the associated resource to any user
           example: true
           type: boolean
+        ReadOnlyTeams:
+          description: List of team identifiers with read-only access to a stack
+          example:
+            - 10
+            - 11
+          items:
+            type: integer
+          type: array
+        ReadOnlyUsers:
+          description: List of user identifiers with read-only access to a stack
+          example:
+            - 8
+            - 9
+          items:
+            type: integer
+          type: array
         Teams:
           description: List of team identifiers with access to the associated resource
           example:
@@ -19498,6 +19556,14 @@ components:
           description: Path on disk to the repository hosting the Stack file
           example: /data/compose/myStack_jpofkc0i9uo9wtx1zesuk649w
           type: string
+        ReadOnly:
+          description: >-
+            ReadOnly indicates that the requesting user can inspect this stack
+            but cannot mutate it.
+
+            It is populated on API responses and is not used as persisted authorization state.
+          example: true
+          type: boolean
         ResourceControl:
           $ref: "#/components/schemas/portainer.ResourceControl"
         SecretMappings:
@@ -19921,7 +19987,7 @@ components:
         groupName:
           type: string
         roleId:
-          type: integer
+          $ref: "#/components/schemas/portainer.RoleID"
         roleName:
           type: string
         rolePriority:

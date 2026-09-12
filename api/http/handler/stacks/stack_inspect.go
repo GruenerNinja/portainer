@@ -11,8 +11,6 @@ import (
 	httperror "github.com/portainer/portainer/pkg/libhttp/error"
 	"github.com/portainer/portainer/pkg/libhttp/request"
 	"github.com/portainer/portainer/pkg/libhttp/response"
-
-	"github.com/pkg/errors"
 )
 
 // @id StackInspect
@@ -57,15 +55,6 @@ func (handler *Handler) stackInspect(w http.ResponseWriter, r *http.Request) *ht
 		return httperror.InternalServerError("Unable to find an environment with the specified identifier inside the database", err)
 	}
 
-	canManage, err := handler.userCanManageStacks(securityContext, endpoint)
-	if err != nil {
-		return httperror.InternalServerError("Unable to verify user authorizations to validate stack deletion", err)
-	}
-	if !canManage {
-		errMsg := "Stack management is disabled for non-admin users"
-		return httperror.Forbidden(errMsg, errors.New(errMsg))
-	}
-
 	if endpoint != nil {
 		err = handler.requestBouncer.AuthorizedEndpointOperation(r, endpoint)
 		if err != nil {
@@ -78,7 +67,7 @@ func (handler *Handler) stackInspect(w http.ResponseWriter, r *http.Request) *ht
 				return httperror.InternalServerError("Unable to retrieve a resource control associated to the stack", err)
 			}
 
-			access, err := handler.userCanAccessStack(securityContext, resourceControl)
+			access, err := handler.userCanReadStack(securityContext, resourceControl)
 			if err != nil {
 				return httperror.InternalServerError("Unable to verify user authorizations to validate stack access", err)
 			}
@@ -89,7 +78,18 @@ func (handler *Handler) stackInspect(w http.ResponseWriter, r *http.Request) *ht
 			if resourceControl != nil {
 				stack.ResourceControl = resourceControl
 			}
+
+			canWrite, err := handler.userCanAccessStack(securityContext, resourceControl)
+			if err != nil {
+				return httperror.InternalServerError("Unable to verify user authorizations to validate stack write access", err)
+			}
+			stack.ReadOnly = !canWrite
 		}
+	}
+
+	if stack.ReadOnly {
+		sanitizeReadOnlyStack(stack)
+		return response.JSON(w, &stackResponse{Stack: *stack})
 	}
 
 	userContext := source.NewUserContext(securityContext.User, securityContext.UserMemberships)
@@ -99,4 +99,14 @@ func (handler *Handler) stackInspect(w http.ResponseWriter, r *http.Request) *ht
 	}
 
 	return response.JSON(w, resp)
+}
+
+func sanitizeReadOnlyStack(stack *portainer.Stack) {
+	stack.GitConfig = nil
+	if stack.AutoUpdate != nil {
+		autoUpdate := *stack.AutoUpdate
+		autoUpdate.Webhook = ""
+		autoUpdate.JobID = ""
+		stack.AutoUpdate = &autoUpdate
+	}
 }

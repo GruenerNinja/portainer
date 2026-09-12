@@ -26,12 +26,7 @@ export function SettingsSidebar({
   isAdmin,
   isTeamLeader = false,
 }: Props) {
-  const teamSyncQuery = usePublicSettings<boolean>({
-    select: (settings) => settings.TeamSync,
-  });
-
-  const isPureAdminOrTeamLeader =
-    isPureAdmin || (isTeamLeader && !teamSyncQuery.data && !isAdmin);
+  const isPureAdminOrTeamLeader = isPureAdmin || (isTeamLeader && !isAdmin);
   const showUsersSection = !window.ddExtension && isPureAdminOrTeamLeader;
 
   return (

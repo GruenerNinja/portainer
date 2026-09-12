@@ -5,7 +5,7 @@ import { useCallback } from 'react';
 import { Stack, StackType } from '@/react/common/stacks/types';
 import { PruneField } from '@/react/common/stacks/PruneField';
 import { EnvironmentType } from '@/react/portainer/environments/types';
-import { Authorized, useAuthorizations } from '@/react/hooks/useUser';
+import { useAuthorizations } from '@/react/hooks/useUser';
 
 import { CodeEditor } from '@@/CodeEditor';
 import { StackEnvironmentVariablesPanel } from '@@/form-components/EnvironmentVariablesFieldset';
@@ -29,6 +29,7 @@ interface StackEditorTabInnerProps {
   isSaved: boolean;
   isSubmitting: boolean;
   webhookId: string;
+  isReadOnly?: boolean;
 }
 
 export function StackEditorTabInner({
@@ -42,6 +43,7 @@ export function StackEditorTabInner({
   isSaved,
   isSubmitting,
   webhookId,
+  isReadOnly = false,
 }: StackEditorTabInnerProps) {
   const { authorized: isAuthorizedToUpdate } = useAuthorizations(
     'PortainerStackUpdate'
@@ -69,7 +71,8 @@ export function StackEditorTabInner({
     onLoad: handleLoadFile,
   });
 
-  const isDeployDisabled = isOrphaned;
+  const canUpdate = isAuthorizedToUpdate && !isReadOnly;
+  const isDeployDisabled = isOrphaned || isReadOnly;
 
   return (
     <Form className="form-horizontal">
@@ -115,7 +118,7 @@ export function StackEditorTabInner({
             type="yaml"
             onChange={(value) => setFieldValue('stackFileContent', value)}
             value={values.stackFileContent}
-            readonly={isOrphaned || !isAuthorizedToUpdate}
+            readonly={isOrphaned || !canUpdate}
             schema={schema}
             data-cy="stack-editor"
             onVersionChange={handleVersionChange}
@@ -132,7 +135,7 @@ export function StackEditorTabInner({
         isFoldable
       />
 
-      {envType !== EnvironmentType.EdgeAgentOnDocker && (
+      {!isReadOnly && envType !== EnvironmentType.EdgeAgentOnDocker && (
         <WebhookFieldset
           onChange={(value) => setFieldValue('enabledWebhook', value)}
           value={values.enabledWebhook}
@@ -140,15 +143,15 @@ export function StackEditorTabInner({
         />
       )}
 
-      <Authorized authorizations="PortainerStackUpdate">
+      {canUpdate && (
         <PruneField
           stackType={stackType}
           checked={values.prune}
           onChange={(checked) => setFieldValue('prune', checked)}
         />
-      </Authorized>
+      )}
 
-      <Authorized authorizations="PortainerStackUpdate">
+      {canUpdate && (
         <FormActions
           isValid={isValid && !isDeployDisabled}
           isLoading={isSubmitting}
@@ -156,7 +159,7 @@ export function StackEditorTabInner({
           submitLabel="Update the stack"
           data-cy="stack-deploy-button"
         />
-      </Authorized>
+      )}
     </Form>
   );
 

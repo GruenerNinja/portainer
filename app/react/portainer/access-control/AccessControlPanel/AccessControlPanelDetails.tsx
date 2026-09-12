@@ -17,8 +17,10 @@ import { Icon } from '@@/Icon';
 
 import {
   ResourceControlOwnership,
+  ResourceAccessLevel,
   ResourceControlType,
   ResourceId,
+  isReadWriteResourceAccess,
 } from '../types';
 import { ResourceControlViewModel } from '../models/ResourceControlViewModel';
 
@@ -42,15 +44,33 @@ export function AccessControlPanelDetails({
 
   const {
     Ownership: ownership = ResourceControlOwnership.ADMINISTRATORS,
-    UserAccesses: restrictedToUsers = [],
-    TeamAccesses: restrictedToTeams = [],
+    UserAccesses = [],
+    TeamAccesses = [],
   } = resourceControl || {};
+
+  const restrictedToUsers = UserAccesses.filter((access) =>
+    isReadWriteResourceAccess(access.AccessLevel)
+  );
+  const restrictedToTeams = TeamAccesses.filter((access) =>
+    isReadWriteResourceAccess(access.AccessLevel)
+  );
+  const readOnlyUsers = UserAccesses.filter(
+    (access) => access.AccessLevel === ResourceAccessLevel.ReadOnlyAccessLevel
+  );
+  const readOnlyTeams = TeamAccesses.filter(
+    (access) => access.AccessLevel === ResourceAccessLevel.ReadOnlyAccessLevel
+  );
 
   const users = useAuthorizedUsers(
     restrictedToUsers.map((ra) => ra.UserId),
     isAuthorisedToFetchUsers
   );
   const teams = useAuthorizedTeams(restrictedToTeams.map((ra) => ra.TeamId));
+  const viewerUsers = useAuthorizedUsers(
+    readOnlyUsers.map((ra) => ra.UserId),
+    isAuthorisedToFetchUsers
+  );
+  const viewerTeams = useAuthorizedTeams(readOnlyTeams.map((ra) => ra.TeamId));
 
   const teamsLength = teams.data ? teams.data.length : 0;
   const unauthoisedTeams = restrictedToTeams.length - teamsLength;
@@ -70,6 +90,19 @@ export function AccessControlPanelDetails({
         restrictedToUsers.length,
         'user'
       )}`;
+  const viewerUserMessage = viewerUsers.data
+    ? viewerUsers.data.join(', ')
+    : `${readOnlyUsers.length} ${pluralize(readOnlyUsers.length, 'user')}`;
+  const viewerTeamsLength = viewerTeams.data?.length || 0;
+  const unavailableViewerTeams = readOnlyTeams.length - viewerTeamsLength;
+  let viewerTeamMessage = viewerTeams.data?.join(', ') || '';
+  if (unavailableViewerTeams > 0 && viewerTeams.isFetched) {
+    viewerTeamMessage += viewerTeamsLength > 0 ? ' and' : '';
+    viewerTeamMessage += ` ${unavailableViewerTeams} ${pluralize(
+      unavailableViewerTeams,
+      'team'
+    )} you are not part of`;
+  }
 
   return (
     <table className="table">
@@ -97,6 +130,18 @@ export function AccessControlPanelDetails({
           <tr data-cy="access-authorisedTeams">
             <td>Authorized teams</td>
             <td aria-label="authorized-teams">{teamsMessage}</td>
+          </tr>
+        )}
+        {readOnlyUsers.length > 0 && (
+          <tr data-cy="access-readOnlyUsers">
+            <td>Read-only users</td>
+            <td aria-label="read-only-users">{viewerUserMessage}</td>
+          </tr>
+        )}
+        {readOnlyTeams.length > 0 && (
+          <tr data-cy="access-readOnlyTeams">
+            <td>Read-only teams</td>
+            <td aria-label="read-only-teams">{viewerTeamMessage}</td>
           </tr>
         )}
       </tbody>

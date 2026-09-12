@@ -1,5 +1,9 @@
 import { ResourceControlViewModel } from './models/ResourceControlViewModel';
-import { ResourceControlOwnership, ResourceControlType } from './types';
+import {
+  ResourceAccessLevel,
+  ResourceControlOwnership,
+  ResourceControlType,
+} from './types';
 import { parseAccessControlFormData } from './utils';
 
 describe('parseAccessControlFormData', () => {
@@ -62,6 +66,26 @@ describe('parseAccessControlFormData', () => {
 
     const actual = parseAccessControlFormData(true, 0, resourceControl);
     expect(actual.ownership).toBe(ResourceControlOwnership.RESTRICTED);
+  });
+
+  test('separates read-write owners from read-only viewers', () => {
+    const resourceControl = buildResourceControl(
+      ResourceControlOwnership.RESTRICTED
+    );
+    resourceControl.UserAccesses = [
+      { UserId: 1, AccessLevel: ResourceAccessLevel.ReadWriteAccessLevel },
+      { UserId: 2, AccessLevel: ResourceAccessLevel.ReadOnlyAccessLevel },
+    ];
+    resourceControl.TeamAccesses = [
+      { TeamId: 3, AccessLevel: ResourceAccessLevel.ReadWriteAccessLevel },
+      { TeamId: 4, AccessLevel: ResourceAccessLevel.ReadOnlyAccessLevel },
+    ];
+
+    const actual = parseAccessControlFormData(true, 1, resourceControl);
+    expect(actual.authorizedUsers).toEqual([1]);
+    expect(actual.authorizedTeams).toEqual([3]);
+    expect(actual.readOnlyAuthorizedUsers).toEqual([2]);
+    expect(actual.readOnlyAuthorizedTeams).toEqual([4]);
   });
 
   function buildResourceControl(

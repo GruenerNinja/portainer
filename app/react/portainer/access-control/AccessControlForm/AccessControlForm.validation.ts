@@ -12,6 +12,8 @@ export function validationSchema(
         .required(),
       authorizedUsers: array(number().default(0)),
       authorizedTeams: array(number().default(0)),
+      readOnlyAuthorizedUsers: array(number().default(0)),
+      readOnlyAuthorizedTeams: array(number().default(0)),
     })
     .test(
       'user-and-team',

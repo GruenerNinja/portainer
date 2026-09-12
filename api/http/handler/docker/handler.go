@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
@@ -26,6 +27,7 @@ type Handler struct {
 	dockerClientFactory  *dockerclient.ClientFactory
 	authorizationService *authorization.Service
 	containerService     *docker.ContainerService
+	dashboardCache       *dashboardDataCache
 }
 
 // NewHandler creates a handler to process non-proxied requests to docker APIs directly.
@@ -38,6 +40,7 @@ func NewHandler(bouncer security.BouncerService, authorizationService *authoriza
 		dockerClientFactory:  dockerClientFactory,
 		containerService:     containerService,
 	}
+	h.dashboardCache = newDashboardDataCache(h.fetchDashboardData, dashboardCacheRefreshInterval)
 
 	// endpoints
 	endpointRouter := h.PathPrefix("/docker/{id}").Subrouter()
@@ -54,6 +57,11 @@ func NewHandler(bouncer security.BouncerService, authorizationService *authoriza
 	imagesHandler := images.NewHandler("/docker/{id}/images", bouncer, dockerClientFactory)
 	endpointRouter.PathPrefix("/images").Handler(imagesHandler)
 	return h
+}
+
+// Start starts background work owned by the Docker handler.
+func (h *Handler) Start(ctx context.Context) {
+	h.dashboardCache.start(ctx)
 }
 
 func dockerOnlyMiddleware(next http.Handler) http.Handler {

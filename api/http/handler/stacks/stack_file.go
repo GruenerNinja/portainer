@@ -1,6 +1,7 @@
 package stacks
 
 import (
+	"errors"
 	"net/http"
 
 	portainer "github.com/portainer/portainer/api"
@@ -13,8 +14,6 @@ import (
 	httperror "github.com/portainer/portainer/pkg/libhttp/error"
 	"github.com/portainer/portainer/pkg/libhttp/request"
 	"github.com/portainer/portainer/pkg/libhttp/response"
-
-	"github.com/pkg/errors"
 )
 
 type stackFileResponse struct {
@@ -55,6 +54,7 @@ func (handler *Handler) stackFile(w http.ResponseWriter, r *http.Request) *httpe
 	if err != nil {
 		return httperror.InternalServerError("Unable to retrieve info from request context", err)
 	}
+	readOnly := false
 
 	endpoint, err := handler.DataStore.Endpoint().Endpoint(stack.EndpointID)
 	if handler.DataStore.IsErrObjectNotFound(err) {
@@ -63,15 +63,6 @@ func (handler *Handler) stackFile(w http.ResponseWriter, r *http.Request) *httpe
 		}
 	} else if err != nil {
 		return httperror.InternalServerError("Unable to find an environment with the specified identifier inside the database", err)
-	}
-
-	canManage, err := handler.userCanManageStacks(securityContext, endpoint)
-	if err != nil {
-		return httperror.InternalServerError("Unable to verify user authorizations to validate stack deletion", err)
-	}
-	if !canManage {
-		errMsg := "Stack management is disabled for non-admin users"
-		return httperror.Forbidden(errMsg, errors.New(errMsg))
 	}
 
 	if endpoint != nil {
@@ -86,18 +77,23 @@ func (handler *Handler) stackFile(w http.ResponseWriter, r *http.Request) *httpe
 				return httperror.InternalServerError("Unable to retrieve a resource control associated to the stack", err)
 			}
 
-			access, err := handler.userCanAccessStack(securityContext, resourceControl)
+			access, err := handler.userCanReadStack(securityContext, resourceControl)
 			if err != nil {
 				return httperror.InternalServerError("Unable to verify user authorizations to validate stack access", err)
 			}
 			if !access {
 				return httperror.Forbidden("Access denied to resource", httperrors.ErrResourceAccessDenied)
 			}
+			canWrite, err := handler.userCanAccessStack(securityContext, resourceControl)
+			if err != nil {
+				return httperror.InternalServerError("Unable to verify user authorizations to validate stack write access", err)
+			}
+			readOnly = !canWrite
 		}
 	}
 
 	var gitConfig *gittypes.RepoConfig
-	if stack.WorkflowID != 0 {
+	if stack.WorkflowID != 0 && !readOnly {
 		if err := handler.DataStore.ViewTx(func(tx dataservices.DataStoreTx) error {
 			var err error
 			userContext := source.NewUserContext(securityContext.User, securityContext.UserMemberships)

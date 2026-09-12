@@ -6,15 +6,26 @@
 
 Portainer consists of a single container that can run on any cluster. It can be deployed as a Linux container or a Windows native container.
 
+## TheModCraft maintained fork
+
+This repository is the TheModCraft Portainer CE fork. It preserves upstream API and datastore compatibility while adding maintained GitOps, Vault, access-control, performance, registry, audit, and release-engineering features. The current release is read from [`RELEASE_VERSION`](./RELEASE_VERSION) and published as both an immutable version tag and `latest` at [`themodcrafttmc/portainer`](https://hub.docker.com/r/themodcrafttmc/portainer).
+
+[![TheModCraft release](https://img.shields.io/github/v/release/GruenerNinja/portainer?color=%2344cc11&label=TheModCraft%20release&style=for-the-badge)](https://github.com/GruenerNinja/portainer/releases/latest)
+
+- [Recent feature catalog](./docs/recent-features/README.md)
+- [TheModCraft architecture and operations guide](./docs/themodcraft/README.md)
+- [Maintainer patch guide](./docs/maintainer-patches/README.md)
+- [Release and deployment instructions](./docs/themodcraft/release-and-deployment.md)
+
 **Portainer Business Edition** builds on the open-source base and includes a range of advanced features and functions (like RBAC and Support) that are specific to the needs of business users.
 
 - [Compare Portainer CE and Compare Portainer BE](https://www.portainer.io/features)
 - [Take3 – get 3 free nodes of Portainer Business for as long as you want them](https://www.portainer.io/take-3)
 - [Portainer BE install guide](https://academy.portainer.io/install/)
 
-## Latest Version
+## Upstream Portainer
 
-Portainer CE is updated regularly. We aim to do an update release every couple of months.
+This fork is based on Portainer Community Edition. Upstream Portainer CE is updated regularly and remains the source for general product documentation.
 
 [![latest version](https://img.shields.io/github/v/release/portainer/portainer?color=%2344cc11&label=Latest%20release&style=for-the-badge)](https://github.com/portainer/portainer/releases/latest)
 

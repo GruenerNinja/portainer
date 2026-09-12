@@ -20,6 +20,8 @@ export interface OwnershipParameters {
   public: boolean;
   users: UserId[];
   teams: TeamId[];
+  readOnlyUsers: UserId[];
+  readOnlyTeams: TeamId[];
   subResourcesIds: ResourceId[];
 }
 
@@ -45,7 +47,16 @@ export enum ResourceControlType {
 }
 
 export enum ResourceAccessLevel {
+  LegacyReadWriteAccessLevel = 0,
   ReadWriteAccessLevel = 1,
+  ReadOnlyAccessLevel,
+}
+
+export function isReadWriteResourceAccess(level: ResourceAccessLevel) {
+  return (
+    level === ResourceAccessLevel.LegacyReadWriteAccessLevel ||
+    level === ResourceAccessLevel.ReadWriteAccessLevel
+  );
 }
 
 export interface UserResourceAccess {
@@ -73,4 +84,6 @@ export interface AccessControlFormData {
   ownership: ResourceControlOwnership;
   authorizedUsers: UserId[];
   authorizedTeams: TeamId[];
+  readOnlyAuthorizedUsers?: UserId[];
+  readOnlyAuthorizedTeams?: TeamId[];
 }

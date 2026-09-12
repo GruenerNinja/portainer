@@ -1,8 +1,6 @@
 import { useRouter } from '@uirouter/react';
 import { Users } from 'lucide-react';
 
-import { usePublicSettings } from '@/react/portainer/settings/queries';
-
 import { Widget } from '@@/Widget';
 import { DeleteButton } from '@@/buttons/DeleteButton';
 
@@ -18,10 +16,6 @@ interface Props {
 export function Details({ team, memberships, isAdmin }: Props) {
   const deleteMutation = useDeleteTeamMutation();
   const router = useRouter();
-  const teamSyncQuery = usePublicSettings<boolean>({
-    select: (settings) => settings.TeamSync,
-  });
-
   const leaderCount = memberships.filter(
     (m) => m.Role === TeamRole.Leader
   ).length;
@@ -39,7 +33,7 @@ export function Details({ team, memberships, isAdmin }: Props) {
                   <td>Name</td>
                   <td>
                     <div className="flex gap-2">
-                      {!teamSyncQuery.data && team.Name}
+                      {team.Name}
                       {isAdmin && (
                         <DeleteButton
                           size="xsmall"
@@ -55,7 +49,7 @@ export function Details({ team, memberships, isAdmin }: Props) {
                 </tr>
                 <tr>
                   <td>Leaders</td>
-                  <td>{!teamSyncQuery.data && leaderCount}</td>
+                  <td>{leaderCount}</td>
                 </tr>
                 <tr>
                   <td>Total users in team</td>

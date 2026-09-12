@@ -96,6 +96,18 @@ func NewHandler(bouncer security.BouncerService, teardownService teardown.Servic
 }
 
 func (handler *Handler) userCanAccessStack(securityContext *security.RestrictedRequestContext, resourceControl *portainer.ResourceControl) (bool, error) {
+	return handler.userCanUseStackResourceControl(securityContext, resourceControl, authorization.UserCanAccessResource)
+}
+
+func (handler *Handler) userCanReadStack(securityContext *security.RestrictedRequestContext, resourceControl *portainer.ResourceControl) (bool, error) {
+	return handler.userCanUseStackResourceControl(securityContext, resourceControl, authorization.UserCanReadResource)
+}
+
+func (handler *Handler) userCanUseStackResourceControl(
+	securityContext *security.RestrictedRequestContext,
+	resourceControl *portainer.ResourceControl,
+	canUseResource func(portainer.UserID, []portainer.TeamID, *portainer.ResourceControl) bool,
+) (bool, error) {
 	user, err := handler.DataStore.User().Read(securityContext.UserID)
 	if err != nil {
 		return false, err
@@ -103,7 +115,7 @@ func (handler *Handler) userCanAccessStack(securityContext *security.RestrictedR
 
 	userTeamIDs := authorization.TeamIDs(securityContext.UserMemberships)
 
-	if resourceControl != nil && authorization.UserCanAccessResource(securityContext.UserID, userTeamIDs, resourceControl) {
+	if resourceControl != nil && canUseResource(securityContext.UserID, userTeamIDs, resourceControl) {
 		return true, nil
 	}
 

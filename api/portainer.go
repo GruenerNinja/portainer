@@ -1358,6 +1358,9 @@ type (
 		CurrentDeploymentInfo *StackDeploymentInfo `json:"CurrentDeploymentInfo,omitempty"`
 		// Whether the stack is from a app template
 		FromAppTemplate bool `example:"false"`
+		// ReadOnly indicates that the requesting user can inspect this stack but cannot mutate it.
+		// It is populated on API responses and is not used as persisted authorization state.
+		ReadOnly bool `json:"ReadOnly,omitempty" example:"true"`
 		// Kubernetes namespace if stack is a kube application
 		Namespace string `example:"default"`
 		// DeploymentStatus records the status progression of the current deployment.
@@ -2182,8 +2185,8 @@ const (
 	MessageOfTheDayURL = AssetsServerURL + "/motd.json"
 	// ReleasesURL represents the URL used to retrieve all releases of Portainer
 	ReleasesURL = "https://api.github.com/repos/portainer/portainer/releases"
-	// VersionCheckURL represents the URL used to retrieve the latest version of Portainer
-	VersionCheckURL = ReleasesURL + "/latest"
+	// VersionCheckURL represents the URL used to retrieve releases maintained by this fork.
+	VersionCheckURL = "https://hub.docker.com/v2/repositories/themodcrafttmc/portainer/tags?page_size=100&ordering=last_updated"
 	// PortainerAgentHeader represents the name of the header available in any agent response
 	PortainerAgentHeader = "Portainer-Agent"
 	// PortainerAgentEdgeIDHeader represent the name of the header containing the Edge ID associated to an agent/agent cluster
@@ -2458,6 +2461,8 @@ const (
 	_ ResourceAccessLevel = iota
 	// ReadWriteAccessLevel represents an access level with read-write permissions on a resource
 	ReadWriteAccessLevel
+	// ReadOnlyAccessLevel represents an access level that permits inspection without mutation.
+	ReadOnlyAccessLevel
 )
 
 const (
@@ -2526,6 +2531,19 @@ const (
 	AdministratorRole
 	// StandardUserRole represents a regular user role
 	StandardUserRole
+)
+
+const (
+	// RoleIDEndpointAdmin represents the environment administrator role.
+	RoleIDEndpointAdmin RoleID = iota + 1
+	// RoleIDHelpdesk represents the helpdesk role.
+	RoleIDHelpdesk
+	// RoleIDStandardUser represents the standard user role.
+	RoleIDStandardUser
+	// RoleIDReadonly represents the read-only user role.
+	RoleIDReadonly
+	// RoleIDOperator represents the operator role.
+	RoleIDOperator
 )
 
 const (

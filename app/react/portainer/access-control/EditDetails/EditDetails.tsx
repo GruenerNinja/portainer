@@ -21,6 +21,7 @@ interface Props {
   formNamespace?: string;
   resourceName?: string;
   environmentId?: EnvironmentId;
+  allowReadOnlyAccess?: boolean;
 }
 
 export function EditDetails({
@@ -31,14 +32,24 @@ export function EditDetails({
   formNamespace,
   resourceName = 'resource',
   environmentId,
+  allowReadOnlyAccess = false,
 }: Props) {
   const { user, isPureAdmin } = useCurrentUser();
 
   const { users, teams, isLoading } = useLoadState(environmentId);
+  const readOnlyAuthorizedUsers = values.readOnlyAuthorizedUsers || [];
+  const readOnlyAuthorizedTeams = values.readOnlyAuthorizedTeams || [];
 
   const handleChange = useCallback(
     (partialValues: Partial<typeof values>) => {
-      onChange({ ...values, ...partialValues });
+      const nextValues = { ...values, ...partialValues };
+      nextValues.readOnlyAuthorizedUsers = (
+        nextValues.readOnlyAuthorizedUsers || []
+      ).filter((id) => !nextValues.authorizedUsers.includes(id));
+      nextValues.readOnlyAuthorizedTeams = (
+        nextValues.readOnlyAuthorizedTeams || []
+      ).filter((id) => !nextValues.authorizedTeams.includes(id));
+      onChange(nextValues);
     },
 
     [values, onChange]
@@ -99,6 +110,46 @@ export function EditDetails({
           )}
         </div>
       )}
+
+      {allowReadOnlyAccess &&
+        isPureAdmin &&
+        [
+          ResourceControlOwnership.PRIVATE,
+          ResourceControlOwnership.RESTRICTED,
+        ].includes(values.ownership) && (
+          <div aria-label="read-only-options">
+            <UsersField
+              name={withNamespace('readOnlyAuthorizedUsers')}
+              users={(users || []).filter(
+                (candidate) => !values.authorizedUsers.includes(candidate.Id)
+              )}
+              onChange={(readOnlyAuthorizedUsers) =>
+                handleChange({ readOnlyAuthorizedUsers })
+              }
+              value={readOnlyAuthorizedUsers}
+              errors={errors?.readOnlyAuthorizedUsers}
+              label="Read-only users"
+              tooltip="These users can inspect this stack and read its configuration, but cannot update, redeploy, start, stop, or delete it."
+              inputId="read-only-users-selector"
+              dataCy="read-only-users-selector"
+            />
+            <TeamsField
+              name={withNamespace('readOnlyAuthorizedTeams')}
+              teams={teams.filter(
+                (candidate) => !values.authorizedTeams.includes(candidate.Id)
+              )}
+              onChange={(readOnlyAuthorizedTeams) =>
+                handleChange({ readOnlyAuthorizedTeams })
+              }
+              value={readOnlyAuthorizedTeams}
+              errors={errors?.readOnlyAuthorizedTeams}
+              label="Read-only teams"
+              overrideTooltip="These teams can inspect this stack and read its configuration, but cannot update, redeploy, start, stop, or delete it."
+              inputId="read-only-teams-selector"
+              dataCy="read-only-teams-selector"
+            />
+          </div>
+        )}
     </>
   );
 
@@ -123,6 +174,20 @@ export function EditDetails({
       if (!isPureAdmin && teams && teams.length === 1) {
         authorizedTeams = teams.map((team) => team.Id);
       }
+    }
+
+    if (
+      ownership === ResourceControlOwnership.PUBLIC ||
+      ownership === ResourceControlOwnership.ADMINISTRATORS
+    ) {
+      handleChange({
+        ownership,
+        authorizedTeams,
+        authorizedUsers,
+        readOnlyAuthorizedTeams: [],
+        readOnlyAuthorizedUsers: [],
+      });
+      return;
     }
 
     handleChange({ ownership, authorizedTeams, authorizedUsers });

@@ -10,14 +10,16 @@ import { TeamMembersList } from './TeamMembersList';
 interface Props {
   users: User[];
   memberships: TeamMembership[];
-  disabled?: boolean;
+  membershipChangesDisabled?: boolean;
+  roleChangesDisabled?: boolean;
   teamId: TeamId;
 }
 
 export function TeamAssociationSelector({
   users,
   memberships,
-  disabled,
+  membershipChangesDisabled,
+  roleChangesDisabled,
   teamId,
 }: Props) {
   const teamUsers = _.compact(
@@ -33,12 +35,17 @@ export function TeamAssociationSelector({
   return (
     <div className="flex">
       <div className="w-1/2">
-        <UsersList users={usersNotInTeam} disabled={disabled} teamId={teamId} />
+        <UsersList
+          users={usersNotInTeam}
+          disabled={membershipChangesDisabled}
+          teamId={teamId}
+        />
       </div>
       <div className="w-1/2">
         <TeamMembersList
           teamId={teamId}
-          disabled={disabled}
+          membershipChangesDisabled={membershipChangesDisabled}
+          roleChangesDisabled={roleChangesDisabled}
           users={teamUsers}
           roles={userRoles}
         />

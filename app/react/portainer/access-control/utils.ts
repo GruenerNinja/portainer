@@ -5,7 +5,9 @@ import {
   AccessControlFormData,
   OwnershipParameters,
   ResourceControlOwnership,
+  ResourceAccessLevel,
   ResourceId,
+  isReadWriteResourceAccess,
 } from './types';
 import { ResourceControlViewModel } from './models/ResourceControlViewModel';
 
@@ -19,13 +21,21 @@ export function parseOwnershipParameters(
   formValues: AccessControlFormData,
   subResourcesIds: ResourceId[] = []
 ): OwnershipParameters {
-  const { ownership, authorizedTeams, authorizedUsers } = formValues;
+  const {
+    ownership,
+    authorizedTeams,
+    authorizedUsers,
+    readOnlyAuthorizedTeams = [],
+    readOnlyAuthorizedUsers = [],
+  } = formValues;
 
   const adminOnly = ownership === ResourceControlOwnership.ADMINISTRATORS;
   const publicOnly = ownership === ResourceControlOwnership.PUBLIC;
 
   let users = authorizedUsers;
   let teams = authorizedTeams;
+  let readOnlyUsers = readOnlyAuthorizedUsers;
+  let readOnlyTeams = readOnlyAuthorizedTeams;
   if (
     [
       ResourceControlOwnership.ADMINISTRATORS,
@@ -34,6 +44,8 @@ export function parseOwnershipParameters(
   ) {
     users = [];
     teams = [];
+    readOnlyUsers = [];
+    readOnlyTeams = [];
   }
 
   return {
@@ -41,6 +53,8 @@ export function parseOwnershipParameters(
     public: publicOnly,
     users,
     teams,
+    readOnlyUsers,
+    readOnlyTeams,
     subResourcesIds,
   };
 }
@@ -54,6 +68,8 @@ export function defaultValues(
       ownership: ResourceControlOwnership.PRIVATE,
       authorizedTeams: [],
       authorizedUsers: [currentUserId],
+      readOnlyAuthorizedTeams: [],
+      readOnlyAuthorizedUsers: [],
     };
   }
 
@@ -61,6 +77,8 @@ export function defaultValues(
     ownership: ResourceControlOwnership.ADMINISTRATORS,
     authorizedTeams: [],
     authorizedUsers: [],
+    readOnlyAuthorizedTeams: [],
+    readOnlyAuthorizedUsers: [],
   };
 }
 
@@ -80,15 +98,33 @@ export function parseAccessControlFormData(
 
   let authorizedTeams: TeamId[] = [];
   let authorizedUsers: UserId[] = [];
+  let readOnlyAuthorizedTeams: TeamId[] = [];
+  let readOnlyAuthorizedUsers: UserId[] = [];
   if (
     [
       ResourceControlOwnership.PRIVATE,
       ResourceControlOwnership.RESTRICTED,
     ].includes(ownership)
   ) {
-    authorizedTeams = resourceControl.TeamAccesses.map((ra) => ra.TeamId);
-    authorizedUsers = resourceControl.UserAccesses.map((ra) => ra.UserId);
+    authorizedTeams = resourceControl.TeamAccesses.filter((ra) =>
+      isReadWriteResourceAccess(ra.AccessLevel)
+    ).map((ra) => ra.TeamId);
+    authorizedUsers = resourceControl.UserAccesses.filter((ra) =>
+      isReadWriteResourceAccess(ra.AccessLevel)
+    ).map((ra) => ra.UserId);
+    readOnlyAuthorizedTeams = resourceControl.TeamAccesses.filter(
+      (ra) => ra.AccessLevel === ResourceAccessLevel.ReadOnlyAccessLevel
+    ).map((ra) => ra.TeamId);
+    readOnlyAuthorizedUsers = resourceControl.UserAccesses.filter(
+      (ra) => ra.AccessLevel === ResourceAccessLevel.ReadOnlyAccessLevel
+    ).map((ra) => ra.UserId);
   }
 
-  return { ownership, authorizedUsers, authorizedTeams };
+  return {
+    ownership,
+    authorizedUsers,
+    authorizedTeams,
+    readOnlyAuthorizedUsers,
+    readOnlyAuthorizedTeams,
+  };
 }

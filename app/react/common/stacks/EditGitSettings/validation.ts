@@ -64,18 +64,16 @@ function validateUniqueSecretKeys(
 
   for (const [index, mapping] of (mappings ?? []).entries()) {
     const key = mapping.key?.trim();
-    if (!key) {
-      continue;
-    }
+    if (key) {
+      if (seen.has(key)) {
+        return ctx.createError({
+          path: `${ctx.path}[${index}].key`,
+          message: 'This secret key is already defined',
+        });
+      }
 
-    if (seen.has(key)) {
-      return ctx.createError({
-        path: `${ctx.path}[${index}].key`,
-        message: 'This secret key is already defined',
-      });
+      seen.add(key);
     }
-
-    seen.add(key);
   }
 
   return true;

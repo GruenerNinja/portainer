@@ -56,8 +56,8 @@ export function ItemView() {
         <div className="row">
           <div className="col-sm-12">
             <TextTip color="orange">
-              The team leader feature is disabled as external authentication is
-              currently enabled with team sync.
+              Team membership is managed by external authentication. Team leader
+              roles can still be assigned here.
             </TextTip>
           </div>
         </div>
@@ -68,7 +68,7 @@ export function ItemView() {
           teamId={teamId}
           memberships={membershipsQuery.data}
           users={usersQuery.data}
-          disabled={teamSyncQuery.data}
+          membershipChangesDisabled={teamSyncQuery.data}
         />
       )}
     </>

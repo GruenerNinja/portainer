@@ -1,7 +1,5 @@
 import angular from 'angular';
 
-import { FeatureId } from '@/react/portainer/feature-flags/enums';
-
 class EndpointAccessController {
   /* @ngInject */
   constructor($state, $transition$, Notifications, EndpointService, GroupService, $async) {
@@ -11,8 +9,6 @@ class EndpointAccessController {
     this.EndpointService = EndpointService;
     this.GroupService = GroupService;
     this.$async = $async;
-
-    this.limitedFeature = FeatureId.RBAC_ROLES;
 
     this.updateAccess = this.updateAccess.bind(this);
     this.updateAccessAsync = this.updateAccessAsync.bind(this);

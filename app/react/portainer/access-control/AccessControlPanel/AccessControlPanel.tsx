@@ -13,7 +13,11 @@ import { useCurrentUser, useIsEdgeAdmin } from '@/react/hooks/useUser';
 import { TableContainer, TableTitle } from '@@/datatables';
 import { Button } from '@@/buttons';
 
-import { ResourceControlType, ResourceId } from '../types';
+import {
+  ResourceControlType,
+  ResourceId,
+  isReadWriteResourceAccess,
+} from '../types';
 import { ResourceControlViewModel } from '../models/ResourceControlViewModel';
 
 import { AccessControlPanelDetails } from './AccessControlPanelDetails';
@@ -140,7 +144,11 @@ function useRestrictions(resourceControl?: ResourceControlViewModel) {
     };
   }
 
-  if (resourceControl.UserAccesses.some((ua) => ua.UserId === user.Id)) {
+  if (
+    resourceControl.UserAccesses.some(
+      (ua) => ua.UserId === user.Id && isReadWriteResourceAccess(ua.AccessLevel)
+    )
+  ) {
     return {
       isPartOfRestrictedUsers: true,
       isLeaderOfAnyRestrictedTeams: false,
@@ -165,6 +173,10 @@ function isLeaderOfAnyRestrictedTeams(
   return userMemberships.some(
     (membership) =>
       membership.Role === TeamRole.Leader &&
-      resourceControl.TeamAccesses.some((ta) => ta.TeamId === membership.TeamID)
+      resourceControl.TeamAccesses.some(
+        (ta) =>
+          ta.TeamId === membership.TeamID &&
+          isReadWriteResourceAccess(ta.AccessLevel)
+      )
   );
 }

@@ -20,9 +20,9 @@ import { Checkbox } from '@@/form-components/Checkbox';
 import { StackEnvironmentVariablesPanel } from '@@/form-components/EnvironmentVariablesFieldset';
 
 import { PruneField } from '../PruneField';
+import { SecretMappingsFieldset } from '../SecretMappingsFieldset';
 
 import { FormValues } from './types';
-import { SecretMappingsFieldset } from '../SecretMappingsFieldset';
 
 export function InnerForm({
   stackName,

@@ -2102,7 +2102,7 @@ export type PortainerAccessPolicy = {
   /**
    * Role identifier. Reference the role that will be associated to this access policy
    */
-  RoleId: number;
+  RoleId: PortainerRoleId;
 };
 
 export type PortainerActivityLog = {
@@ -3213,10 +3213,15 @@ export const PortainerResourceAccessLevel = {
   /**
    * _
    */
-  '': 0 /**
+  '': 0,
+  /**
    * ReadWriteAccessLevel
-   */,
+   */
   READ_WRITE_ACCESS_LEVEL: 1,
+  /**
+   * ReadOnlyAccessLevel
+   */
+  READ_ONLY_ACCESS_LEVEL: 2,
 } as const;
 
 export type PortainerResourceAccessLevel =
@@ -3318,13 +3323,39 @@ export type PortainerRole = {
   /**
    * Role Identifier
    */
-  Id?: number;
+  Id?: PortainerRoleId;
   /**
    * Role name
    */
   Name?: string;
   Priority?: number;
 };
+
+export const PortainerRoleId = {
+  /**
+   * RoleIDEndpointAdmin
+   */
+  ROLE_ID_ENDPOINT_ADMIN: 1,
+  /**
+   * RoleIDHelpdesk
+   */
+  ROLE_ID_HELPDESK: 2,
+  /**
+   * RoleIDStandardUser
+   */
+  ROLE_ID_STANDARD_USER: 3,
+  /**
+   * RoleIDReadonly
+   */
+  ROLE_ID_READONLY: 4,
+  /**
+   * RoleIDOperator
+   */
+  ROLE_ID_OPERATOR: 5,
+} as const;
+
+export type PortainerRoleId =
+  (typeof PortainerRoleId)[keyof typeof PortainerRoleId];
 
 export type PortainerSslSettings = {
   certPath?: string;
@@ -3574,6 +3605,11 @@ export type PortainerStack = {
    * Path on disk to the repository hosting the Stack file
    */
   ProjectPath?: string;
+  /**
+   * ReadOnly indicates that the requesting user can inspect this stack but cannot mutate it.
+   * It is populated on API responses and is not used as persisted authorization state.
+   */
+  ReadOnly?: boolean;
   ResourceControl?: PortainerResourceControl;
   /**
    * SecretMappings are resolved at deployment time and injected into the stack environment.
@@ -4602,6 +4638,14 @@ export type ResourcecontrolsResourceControlCreatePayload = {
    * Permit access to the associated resource to any user
    */
   Public?: boolean;
+  /**
+   * List of team identifiers with read-only access to a stack
+   */
+  ReadOnlyTeams?: Array<number>;
+  /**
+   * List of user identifiers with read-only access to a stack
+   */
+  ReadOnlyUsers?: Array<number>;
   ResourceID: string;
   /**
    * List of Docker resources that will inherit this access control
@@ -4631,6 +4675,14 @@ export type ResourcecontrolsResourceControlUpdatePayload = {
    * Permit access to the associated resource to any user
    */
   Public?: boolean;
+  /**
+   * List of team identifiers with read-only access to a stack
+   */
+  ReadOnlyTeams?: Array<number>;
+  /**
+   * List of user identifiers with read-only access to a stack
+   */
+  ReadOnlyUsers?: Array<number>;
   /**
    * List of team identifiers with access to the associated resource
    */
@@ -5278,6 +5330,11 @@ export type StacksStackResponse = {
    * Path on disk to the repository hosting the Stack file
    */
   ProjectPath?: string;
+  /**
+   * ReadOnly indicates that the requesting user can inspect this stack but cannot mutate it.
+   * It is populated on API responses and is not used as persisted authorization state.
+   */
+  ReadOnly?: boolean;
   ResourceControl?: PortainerResourceControl;
   /**
    * SecretMappings are resolved at deployment time and injected into the stack environment.
@@ -5598,7 +5655,7 @@ export type UsersEffectiveAccessEntry = {
   endpointName?: string;
   groupId?: number;
   groupName?: string;
-  roleId?: number;
+  roleId?: PortainerRoleId;
   roleName?: string;
   rolePriority?: number;
   teamId?: number;

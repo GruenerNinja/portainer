@@ -178,7 +178,7 @@ describe('SettingsSidebar', () => {
       ).not.toBeInTheDocument();
     });
 
-    it('should not render user-related section when TeamSync is enabled', () => {
+    it('should render user-related section when TeamSync is enabled', () => {
       vi.mocked(usePublicSettings).mockReturnValue({
         data: true,
         isLoading: false,
@@ -192,8 +192,8 @@ describe('SettingsSidebar', () => {
       });
 
       expect(
-        screen.queryByTestId('portainerSidebar-userRelated')
-      ).not.toBeInTheDocument();
+        screen.getByTestId('portainerSidebar-userRelated')
+      ).toBeInTheDocument();
     });
 
     it('should not render admin-only sections for team leader', () => {

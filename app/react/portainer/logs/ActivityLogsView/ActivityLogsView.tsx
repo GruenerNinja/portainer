@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { PageHeader } from '@@/PageHeader';
 import { useTableStateWithoutStorage } from '@@/datatables/useTableState';
+
 import { ActivityLogsTable } from './ActivityLogsTable';
 import { useActivityLogs, getSortType } from './useActivityLogs';
 import { useExportMutation } from './useExportMutation';
@@ -41,8 +42,7 @@ export function ActivityLogsView() {
       />
 
       <div className="mx-4">
-        <>
-          <div className="row">
+        <div className="row">
             <div className="col-sm-12">
               <FilterBar
                 value={range}
@@ -65,7 +65,6 @@ export function ActivityLogsView() {
             totalItems={logsQuery.data?.totalCount || 0}
             dataset={logsQuery.data?.logs}
           />
-        </>
       </div>
     </>
   );

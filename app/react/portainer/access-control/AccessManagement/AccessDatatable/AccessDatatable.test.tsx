@@ -7,10 +7,6 @@ import { withTestQueryProvider } from '@/react/test-utils/withTestQuery';
 import { AccessDatatable } from './AccessDatatable';
 import { Access } from './types';
 
-vi.mock('@/react/portainer/feature-flags/feature-flags.service', () => ({
-  isBE: true,
-}));
-
 function createMockAccess(overrides: Partial<Access> = {}): Access {
   return {
     Id: 1,

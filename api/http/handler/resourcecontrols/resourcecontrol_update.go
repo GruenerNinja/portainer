@@ -19,6 +19,10 @@ type resourceControlUpdatePayload struct {
 	Users []int `example:"4"`
 	// List of team identifiers with access to the associated resource
 	Teams []int `example:"7"`
+	// List of user identifiers with read-only access to a stack
+	ReadOnlyUsers []int `example:"8,9"`
+	// List of team identifiers with read-only access to a stack
+	ReadOnlyTeams []int `example:"10,11"`
 	// Permit access to resource only to admins
 	AdministratorsOnly bool `example:"true"`
 }
@@ -30,6 +34,10 @@ func (payload *resourceControlUpdatePayload) Validate(r *http.Request) error {
 
 	if payload.Public && payload.AdministratorsOnly {
 		return errors.New("invalid payload: cannot set public and administrators only")
+	}
+
+	if err := validateDistinctResourceAccesses(payload.Users, payload.ReadOnlyUsers, payload.Teams, payload.ReadOnlyTeams); err != nil {
+		return err
 	}
 
 	return nil
@@ -79,6 +87,17 @@ func (handler *Handler) resourceControlUpdate(w http.ResponseWriter, r *http.Req
 		return httperror.Forbidden("Permission denied to access the resource control", httperrors.ErrResourceAccessDenied)
 	}
 
+	if (len(payload.ReadOnlyUsers) > 0 || len(payload.ReadOnlyTeams) > 0) && resourceControl.Type != portainer.StackResourceControl {
+		return httperror.BadRequest("Read-only access is only supported for stacks", errors.New("read-only access is only supported for stacks"))
+	}
+
+	if !securityContext.IsAdmin {
+		existingReadOnlyUsers, existingReadOnlyTeams := readOnlyAccessIDs(resourceControl)
+		if !equalIntSets(existingReadOnlyUsers, payload.ReadOnlyUsers) || !equalIntSets(existingReadOnlyTeams, payload.ReadOnlyTeams) {
+			return httperror.Forbidden("Only administrators can change read-only access", httperrors.ErrResourceAccessDenied)
+		}
+	}
+
 	resourceControl.Public = payload.Public
 	resourceControl.AdministratorsOnly = payload.AdministratorsOnly
 
@@ -90,6 +109,12 @@ func (handler *Handler) resourceControlUpdate(w http.ResponseWriter, r *http.Req
 		}
 		userAccesses = append(userAccesses, userAccess)
 	}
+	for _, v := range payload.ReadOnlyUsers {
+		userAccesses = append(userAccesses, portainer.UserResourceAccess{
+			UserID:      portainer.UserID(v),
+			AccessLevel: portainer.ReadOnlyAccessLevel,
+		})
+	}
 	resourceControl.UserAccesses = userAccesses
 
 	var teamAccesses = make([]portainer.TeamResourceAccess, 0)
@@ -99,6 +124,12 @@ func (handler *Handler) resourceControlUpdate(w http.ResponseWriter, r *http.Req
 			AccessLevel: portainer.ReadWriteAccessLevel,
 		}
 		teamAccesses = append(teamAccesses, teamAccess)
+	}
+	for _, v := range payload.ReadOnlyTeams {
+		teamAccesses = append(teamAccesses, portainer.TeamResourceAccess{
+			TeamID:      portainer.TeamID(v),
+			AccessLevel: portainer.ReadOnlyAccessLevel,
+		})
 	}
 	resourceControl.TeamAccesses = teamAccesses
 

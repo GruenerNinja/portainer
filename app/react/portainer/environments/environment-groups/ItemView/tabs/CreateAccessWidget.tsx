@@ -3,8 +3,6 @@ import { UserPlus, Plus } from 'lucide-react';
 
 import { RoleTypes } from '@/portainer/rbac/models/role';
 import { RoleService } from '@/portainer/rbac/services/role.service';
-import { FeatureId } from '@/react/portainer/feature-flags/enums';
-import { isLimitedToBE } from '@/react/portainer/feature-flags/feature-flags.service';
 import {
   Option,
   PorAccessManagementUsersSelector,
@@ -15,7 +13,6 @@ import { TextTip } from '@@/Tip/TextTip';
 import { LoadingButton } from '@@/buttons';
 import { FormControl } from '@@/form-components/FormControl';
 import { PortainerSelect } from '@@/form-components/PortainerSelect';
-import { BEFeatureIndicator } from '@@/BEFeatureIndicator';
 
 interface Props {
   availableUsersAndTeams: Array<Option>;
@@ -34,7 +31,6 @@ export function CreateAccessWidget({
   isUpdating,
   onSubmit,
 }: Props) {
-  const rolesLimitedToBE = isLimitedToBE(FeatureId.RBAC_ROLES);
   const [selectedUsersAndTeams, setSelectedUsersAndTeams] = useState<
     Array<Option>
   >([]);
@@ -45,9 +41,8 @@ export function CreateAccessWidget({
   const roleOptions = RoleService()
     .roles()
     .map((role) => ({
-      label: getRoleLabel(role.ID, role.Name),
+      label: role.Name,
       value: role.ID as number,
-      disabled: isRoleLimited(role.ID),
     }));
 
   return (
@@ -68,23 +63,15 @@ export function CreateAccessWidget({
           />
 
           <FormControl label="Role" inputId="role-selector">
-            <div className="flex items-center gap-2">
-              <div className="flex-1">
-                <PortainerSelect
-                  inputId="role-selector"
-                  value={selectedRoleId}
-                  onChange={(roleId) =>
-                    setSelectedRoleId(roleId ?? RoleTypes.STANDARD)
-                  }
-                  options={roleOptions}
-                  data-cy="access-management-role-select"
-                />
-              </div>
-              <BEFeatureIndicator
-                featureId={FeatureId.RBAC_ROLES}
-                className="shrink-0"
-              />
-            </div>
+            <PortainerSelect
+              inputId="role-selector"
+              value={selectedRoleId}
+              onChange={(roleId) =>
+                setSelectedRoleId(roleId ?? RoleTypes.STANDARD)
+              }
+              options={roleOptions}
+              data-cy="access-management-role-select"
+            />
           </FormControl>
 
           <div className="form-group">
@@ -112,19 +99,5 @@ export function CreateAccessWidget({
     onSubmit(selectedUsersAndTeams, selectedRoleId, () =>
       setSelectedUsersAndTeams([])
     );
-  }
-
-  function isRoleLimited(roleId: number) {
-    return rolesLimitedToBE && roleId !== RoleTypes.STANDARD;
-  }
-
-  function getRoleLabel(roleId: number, roleName: string) {
-    if (!rolesLimitedToBE) {
-      return roleName;
-    }
-
-    return isRoleLimited(roleId)
-      ? `${roleName} (Business Feature)`
-      : `${roleName} (Default)`;
   }
 }

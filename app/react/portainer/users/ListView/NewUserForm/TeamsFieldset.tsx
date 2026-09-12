@@ -45,8 +45,8 @@ function TeamSyncMessage() {
     <div className="form-group">
       <div className="col-sm-12">
         <TextTip color="orange">
-          The team leader feature is disabled as external authentication is
-          currently enabled with team sync.
+          Team membership assignment is managed by external authentication while
+          team sync is enabled.
         </TextTip>
       </div>
     </div>

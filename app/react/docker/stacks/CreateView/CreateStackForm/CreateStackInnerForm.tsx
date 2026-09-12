@@ -120,6 +120,7 @@ export function CreateStackInnerForm({
           setFieldValue('accessControl', accessControl)
         }
         environmentId={environment.Id}
+        allowReadOnlyAccess
         errors={errors.accessControl}
       />
 

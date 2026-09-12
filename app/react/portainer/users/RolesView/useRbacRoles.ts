@@ -4,14 +4,18 @@ import axios, { parseAxiosError } from '@/portainer/services/axios/axios';
 
 import { RbacRole } from './types';
 
+export const roleQueryKeys = {
+  all: ['roles'] as const,
+};
+
 export function useRbacRoles<T = Array<RbacRole>>({
   select,
 }: {
-  select: (roles: Array<RbacRole>) => T;
-}) {
+  select?: (roles: Array<RbacRole>) => T;
+} = {}) {
   return useQuery({
     select,
-    queryKey: ['roles'],
+    queryKey: roleQueryKeys.all,
     queryFn: async () => {
       try {
         const { data } = await axios.get<Array<RbacRole>>('/roles');

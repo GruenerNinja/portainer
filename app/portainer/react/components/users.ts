@@ -15,4 +15,7 @@ export const usersModule = angular
       'userId',
     ])
   )
-  .component('rbacRolesDatatable', r2a(RbacRolesDatatable, ['dataset'])).name;
+  .component(
+    'rbacRolesDatatable',
+    r2a(withReactQuery(RbacRolesDatatable), [])
+  ).name;

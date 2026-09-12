@@ -9392,6 +9392,122 @@ paths:
       summary: List roles
       tags:
         - roles
+    post:
+      description: >-
+        Create a custom environment role. Built-in roles remain managed by
+        Portainer.
+
+        **Access policy**: administrator
+      operationId: RoleCreate
+      requestBody:
+        $ref: "#/components/requestBodies/roles.rolePayload"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/portainer.Role"
+        "400":
+          description: Invalid request
+        "409":
+          description: Role name already exists
+        "500":
+          description: Server error
+      security:
+        - ApiKeyAuth: []
+        - jwt: []
+      summary: Create a custom role
+      tags:
+        - roles
+  "/roles/{id}":
+    delete:
+      description: |-
+        Built-in or assigned roles cannot be deleted.
+        **Access policy**: administrator
+      operationId: RoleDelete
+      parameters:
+        - description: Role identifier
+          in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Success
+        "403":
+          description: Built-in role
+        "404":
+          description: Role not found
+        "409":
+          description: Role is in use
+      security:
+        - ApiKeyAuth: []
+        - jwt: []
+      summary: Delete a custom role
+      tags:
+        - roles
+    get:
+      description: "**Access policy**: administrator"
+      operationId: RoleInspect
+      parameters:
+        - description: Role identifier
+          in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/portainer.Role"
+        "404":
+          description: Role not found
+      security:
+        - ApiKeyAuth: []
+        - jwt: []
+      summary: Inspect a role
+      tags:
+        - roles
+    put:
+      description: |-
+        Built-in roles cannot be modified.
+        **Access policy**: administrator
+      operationId: RoleUpdate
+      parameters:
+        - description: Role identifier
+          in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        $ref: "#/components/requestBodies/roles.rolePayload"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/portainer.Role"
+        "400":
+          description: Invalid request
+        "403":
+          description: Built-in role
+        "404":
+          description: Role not found
+        "409":
+          description: Role name already exists
+      security:
+        - ApiKeyAuth: []
+        - jwt: []
+      summary: Update a custom role
+      tags:
+        - roles
   /settings:
     get:
       description: |-
@@ -12298,6 +12414,13 @@ components:
           schema:
             $ref: "#/components/schemas/kubernetes.K8sServiceInfo"
       description: Service definition
+      required: true
+    roles.rolePayload:
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/roles.rolePayload"
+      description: Role details
       required: true
   securitySchemes:
     ApiKeyAuth:
@@ -15598,13 +15721,17 @@ components:
             type: string
           type: array
         RoleId:
-          allOf:
-            - $ref: "#/components/schemas/portainer.RoleID"
-          description: Role identifier. Reference the role that will be associated to this
+          description: >-
+            Role identifier. Reference the role that will be associated to this
             access policy
+
+            Zero is a valid value for policies that grant access without an
+
+            environment role (for example registry access). Values above the
+
+            predefined range identify custom roles.
           example: 1
-      required:
-        - RoleId
+          type: integer
       type: object
     portainer.ActivityLog:
       properties:
@@ -17099,10 +17226,9 @@ components:
           example: Read-only access of all resources in an environment(endpoint)
           type: string
         Id:
-          allOf:
-            - $ref: "#/components/schemas/portainer.RoleID"
           description: Role Identifier
           example: 1
+          type: integer
         Name:
           description: Role name
           example: HelpDesk
@@ -17110,20 +17236,6 @@ components:
         Priority:
           type: integer
       type: object
-    portainer.RoleID:
-      enum:
-        - 1
-        - 2
-        - 3
-        - 4
-        - 5
-      type: integer
-      x-enum-varnames:
-        - RoleIDEndpointAdmin
-        - RoleIDHelpdesk
-        - RoleIDStandardUser
-        - RoleIDReadonly
-        - RoleIDOperator
     portainer.SSLSettings:
       properties:
         certPath:
@@ -18677,6 +18789,25 @@ components:
       type: object
     roar.Roar-portainer_EndpointID:
       type: object
+    roles.rolePayload:
+      properties:
+        Authorizations:
+          $ref: "#/components/schemas/portainer.Authorizations"
+        Description:
+          example: Read-only access for automation accounts
+          type: string
+        Name:
+          example: Automation reader
+          type: string
+        Priority:
+          example: 5
+          maximum: 1000
+          minimum: 1
+          type: integer
+      required:
+        - Name
+        - Priority
+      type: object
     settings.publicSettingsResponse:
       properties:
         AuthenticationMethod:
@@ -19987,7 +20118,7 @@ components:
         groupName:
           type: string
         roleId:
-          $ref: "#/components/schemas/portainer.RoleID"
+          type: integer
         roleName:
           type: string
         rolePriority:

@@ -10,10 +10,10 @@ The generated `BUILD-IMAGE.txt` contains the exact commands for the release:
 ./scripts/build-release-context.sh
 cd dist/release-context
 docker buildx build --platform linux/amd64,linux/arm64 \
-  -t themodcrafttmc/portainer:2.39.3.2.17 --push .
+  -t themodcrafttmc/portainer:2.39.3.2.18 --push .
 docker buildx imagetools create \
   -t themodcrafttmc/portainer:latest \
-  themodcrafttmc/portainer:2.39.3.2.17
+  themodcrafttmc/portainer:2.39.3.2.18
 ```
 
 The immutable version is published and verified before `latest` is moved. Both registry references must resolve to the same OCI index digest and contain `linux/amd64` and `linux/arm64` manifests.

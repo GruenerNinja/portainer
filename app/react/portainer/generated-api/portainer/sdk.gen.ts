@@ -635,9 +635,21 @@ import type {
   RestoreData,
   RestoreErrors,
   RestoreResponses,
+  RoleCreateData,
+  RoleCreateErrors,
+  RoleCreateResponses,
+  RoleDeleteData,
+  RoleDeleteErrors,
+  RoleDeleteResponses,
+  RoleInspectData,
+  RoleInspectErrors,
+  RoleInspectResponses,
   RoleListData,
   RoleListErrors,
   RoleListResponses,
+  RoleUpdateData,
+  RoleUpdateErrors,
+  RoleUpdateResponses,
   RollbackKubernetesDeploymentData,
   RollbackKubernetesDeploymentErrors,
   RollbackKubernetesDeploymentResponses,
@@ -1345,7 +1357,16 @@ import {
   zRestartKubernetesPodResponse,
   zRestoreBody,
   zRestoreHeaders,
+  zRoleCreateBody,
+  zRoleCreateResponse,
+  zRoleDeletePath,
+  zRoleDeleteResponse,
+  zRoleInspectPath,
+  zRoleInspectResponse,
   zRoleListResponse,
+  zRoleUpdateBody,
+  zRoleUpdatePath,
+  zRoleUpdateResponse,
   zRollbackKubernetesDeploymentBody,
   zRollbackKubernetesDeploymentPath,
   zRollbackKubernetesDeploymentResponse,
@@ -9523,6 +9544,144 @@ export const roleList = <ThrowOnError extends boolean = true>(
     ],
     url: '/roles',
     ...options,
+  });
+
+/**
+ * Create a custom role
+ *
+ * Create a custom environment role. Built-in roles remain managed by Portainer.
+ * **Access policy**: administrator
+ */
+export const roleCreate = <ThrowOnError extends boolean = true>(
+  options: Options<RoleCreateData, ThrowOnError>
+): RequestResult<RoleCreateResponses, RoleCreateErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    RoleCreateResponses,
+    RoleCreateErrors,
+    ThrowOnError
+  >({
+    requestValidator: async (data) =>
+      await z
+        .object({
+          body: zRoleCreateBody,
+          path: z.never().optional(),
+          query: z.never().optional(),
+        })
+        .parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) =>
+      await zRoleCreateResponse.parseAsync(data),
+    security: [
+      { name: 'X-API-KEY', type: 'apiKey' },
+      { name: 'Authorization', type: 'apiKey' },
+    ],
+    url: '/roles',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Delete a custom role
+ *
+ * Built-in or assigned roles cannot be deleted.
+ * **Access policy**: administrator
+ */
+export const roleDelete = <ThrowOnError extends boolean = true>(
+  options: Options<RoleDeleteData, ThrowOnError>
+): RequestResult<RoleDeleteResponses, RoleDeleteErrors, ThrowOnError> =>
+  (options.client ?? client).delete<
+    RoleDeleteResponses,
+    RoleDeleteErrors,
+    ThrowOnError
+  >({
+    requestValidator: async (data) =>
+      await z
+        .object({
+          body: z.never().optional(),
+          path: zRoleDeletePath,
+          query: z.never().optional(),
+        })
+        .parseAsync(data),
+    responseValidator: async (data) =>
+      await zRoleDeleteResponse.parseAsync(data),
+    security: [
+      { name: 'X-API-KEY', type: 'apiKey' },
+      { name: 'Authorization', type: 'apiKey' },
+    ],
+    url: '/roles/{id}',
+    ...options,
+  });
+
+/**
+ * Inspect a role
+ *
+ * **Access policy**: administrator
+ */
+export const roleInspect = <ThrowOnError extends boolean = true>(
+  options: Options<RoleInspectData, ThrowOnError>
+): RequestResult<RoleInspectResponses, RoleInspectErrors, ThrowOnError> =>
+  (options.client ?? client).get<
+    RoleInspectResponses,
+    RoleInspectErrors,
+    ThrowOnError
+  >({
+    requestValidator: async (data) =>
+      await z
+        .object({
+          body: z.never().optional(),
+          path: zRoleInspectPath,
+          query: z.never().optional(),
+        })
+        .parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) =>
+      await zRoleInspectResponse.parseAsync(data),
+    security: [
+      { name: 'X-API-KEY', type: 'apiKey' },
+      { name: 'Authorization', type: 'apiKey' },
+    ],
+    url: '/roles/{id}',
+    ...options,
+  });
+
+/**
+ * Update a custom role
+ *
+ * Built-in roles cannot be modified.
+ * **Access policy**: administrator
+ */
+export const roleUpdate = <ThrowOnError extends boolean = true>(
+  options: Options<RoleUpdateData, ThrowOnError>
+): RequestResult<RoleUpdateResponses, RoleUpdateErrors, ThrowOnError> =>
+  (options.client ?? client).put<
+    RoleUpdateResponses,
+    RoleUpdateErrors,
+    ThrowOnError
+  >({
+    requestValidator: async (data) =>
+      await z
+        .object({
+          body: zRoleUpdateBody,
+          path: zRoleUpdatePath,
+          query: z.never().optional(),
+        })
+        .parseAsync(data),
+    responseType: 'json',
+    responseValidator: async (data) =>
+      await zRoleUpdateResponse.parseAsync(data),
+    security: [
+      { name: 'X-API-KEY', type: 'apiKey' },
+      { name: 'Authorization', type: 'apiKey' },
+    ],
+    url: '/roles/{id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
   });
 
 /**

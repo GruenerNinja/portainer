@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { UserPlus, Plus } from 'lucide-react';
 
 import { RoleTypes } from '@/portainer/rbac/models/role';
-import { RoleService } from '@/portainer/rbac/services/role.service';
+import { useRbacRoles } from '@/react/portainer/users/RolesView/useRbacRoles';
 import {
   Option,
   PorAccessManagementUsersSelector,
@@ -38,12 +38,11 @@ export function CreateAccessWidget({
     RoleTypes.STANDARD
   );
 
-  const roleOptions = RoleService()
-    .roles()
-    .map((role) => ({
-      label: role.Name,
-      value: role.ID as number,
-    }));
+  const rolesQuery = useRbacRoles();
+  const roleOptions = (rolesQuery.data || []).map((role) => ({
+    label: role.Name,
+    value: role.Id,
+  }));
 
   return (
     <Widget aria-label="Create access">
@@ -70,6 +69,7 @@ export function CreateAccessWidget({
                 setSelectedRoleId(roleId ?? RoleTypes.STANDARD)
               }
               options={roleOptions}
+              disabled={rolesQuery.isLoading}
               data-cy="access-management-role-select"
             />
           </FormControl>

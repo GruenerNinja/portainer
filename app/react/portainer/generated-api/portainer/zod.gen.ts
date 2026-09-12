@@ -836,6 +836,11 @@ export const zPortainerApiKey = z.object({
   userId: z.int().optional(),
 });
 
+export const zPortainerAccessPolicy = z.object({
+  Namespaces: z.array(z.string()).optional(),
+  RoleId: z.int().optional(),
+});
+
 export const zPortainerActivityLog = z.object({
   action: z.string().optional(),
   context: z.string().optional(),
@@ -1354,23 +1359,10 @@ export const zPortainerResourceControlType = z.union([
   z.literal(9),
 ]);
 
-export const zPortainerRoleId = z.union([
-  z.literal(1),
-  z.literal(2),
-  z.literal(3),
-  z.literal(4),
-  z.literal(5),
-]);
-
-export const zPortainerAccessPolicy = z.object({
-  Namespaces: z.array(z.string()).optional(),
-  RoleId: zPortainerRoleId,
-});
-
 export const zPortainerRole = z.object({
   Authorizations: zPortainerAuthorizations.optional(),
   Description: z.string().optional(),
-  Id: zPortainerRoleId.optional(),
+  Id: z.int().optional(),
   Name: z.string().optional(),
   Priority: z.int().optional(),
 });
@@ -2163,6 +2155,13 @@ export const zPortainerEdgeGroup = z.object({
   TagIds: z.array(z.int()).optional(),
 });
 
+export const zRolesRolePayload = z.object({
+  Authorizations: zPortainerAuthorizations.optional(),
+  Description: z.string().optional(),
+  Name: z.string(),
+  Priority: z.int().gte(1).lte(1000),
+});
+
 export const zSettingsPublicSettingsResponse = z.object({
   AuthenticationMethod: zPortainerAuthenticationMethod.optional(),
   Edge: z
@@ -2605,7 +2604,7 @@ export const zUsersEffectiveAccessEntry = z.object({
   endpointName: z.string().optional(),
   groupId: z.int().optional(),
   groupName: z.string().optional(),
-  roleId: zPortainerRoleId.optional(),
+  roleId: z.int().optional(),
   roleName: z.string().optional(),
   rolePriority: z.int().optional(),
   teamId: z.int().optional(),
@@ -4637,6 +4636,8 @@ export const zKubernetesK8sSecretWriteRequest2 =
   zKubernetesK8sSecretWriteRequest;
 
 export const zKubernetesK8sServiceInfo2 = zKubernetesK8sServiceInfo;
+
+export const zRolesRolePayload2 = zRolesRolePayload;
 
 /**
  * Credentials used for authentication
@@ -7258,6 +7259,48 @@ export const zRestoreHeaders = z.object({
  * Success
  */
 export const zRoleListResponse = z.array(zPortainerRole);
+
+/**
+ * Role details
+ */
+export const zRoleCreateBody = zRolesRolePayload2;
+
+/**
+ * Success
+ */
+export const zRoleCreateResponse = zPortainerRole;
+
+export const zRoleDeletePath = z.object({
+  id: z.int(),
+});
+
+/**
+ * Success
+ */
+export const zRoleDeleteResponse = z.void();
+
+export const zRoleInspectPath = z.object({
+  id: z.int(),
+});
+
+/**
+ * Success
+ */
+export const zRoleInspectResponse = zPortainerRole;
+
+/**
+ * Role details
+ */
+export const zRoleUpdateBody = zRolesRolePayload2;
+
+export const zRoleUpdatePath = z.object({
+  id: z.int(),
+});
+
+/**
+ * Success
+ */
+export const zRoleUpdateResponse = zPortainerRole;
 
 /**
  * Success

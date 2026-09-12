@@ -3104,13 +3104,13 @@ definitions:
           type: string
         type: array
       RoleId:
-        allOf:
-        - $ref: '#/definitions/portainer.RoleID'
-        description: Role identifier. Reference the role that will be associated to
-          this access policy
+        description: |-
+          Role identifier. Reference the role that will be associated to this access policy
+          Zero is a valid value for policies that grant access without an
+          environment role (for example registry access). Values above the
+          predefined range identify custom roles.
         example: 1
-    required:
-    - RoleId
+        type: integer
     type: object
   portainer.ActivityLog:
     properties:
@@ -4587,10 +4587,9 @@ definitions:
         example: Read-only access of all resources in an environment(endpoint)
         type: string
       Id:
-        allOf:
-        - $ref: '#/definitions/portainer.RoleID'
         description: Role Identifier
         example: 1
+        type: integer
       Name:
         description: Role name
         example: HelpDesk
@@ -4598,20 +4597,6 @@ definitions:
       Priority:
         type: integer
     type: object
-  portainer.RoleID:
-    enum:
-    - 1
-    - 2
-    - 3
-    - 4
-    - 5
-    type: integer
-    x-enum-varnames:
-    - RoleIDEndpointAdmin
-    - RoleIDHelpdesk
-    - RoleIDStandardUser
-    - RoleIDReadonly
-    - RoleIDOperator
   portainer.SSLSettings:
     properties:
       certPath:
@@ -6131,6 +6116,25 @@ definitions:
     type: object
   roar.Roar-portainer_EndpointID:
     type: object
+  roles.rolePayload:
+    properties:
+      Authorizations:
+        $ref: '#/definitions/portainer.Authorizations'
+      Description:
+        example: Read-only access for automation accounts
+        type: string
+      Name:
+        example: Automation reader
+        type: string
+      Priority:
+        example: 5
+        maximum: 1000
+        minimum: 1
+        type: integer
+    required:
+    - Name
+    - Priority
+    type: object
   settings.publicSettingsResponse:
     properties:
       AuthenticationMethod:
@@ -7409,7 +7413,7 @@ definitions:
       groupName:
         type: string
       roleId:
-        $ref: '#/definitions/portainer.RoleID'
+        type: integer
       roleName:
         type: string
       rolePriority:
@@ -24169,6 +24173,130 @@ paths:
       - ApiKeyAuth: []
       - jwt: []
       summary: List roles
+      tags:
+      - roles
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Create a custom environment role. Built-in roles remain managed by Portainer.
+        **Access policy**: administrator
+      operationId: RoleCreate
+      parameters:
+      - description: Role details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/roles.rolePayload'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success
+          schema:
+            $ref: '#/definitions/portainer.Role'
+        "400":
+          description: Invalid request
+        "409":
+          description: Role name already exists
+        "500":
+          description: Server error
+      security:
+      - ApiKeyAuth: []
+      - jwt: []
+      summary: Create a custom role
+      tags:
+      - roles
+  /roles/{id}:
+    delete:
+      description: |-
+        Built-in or assigned roles cannot be deleted.
+        **Access policy**: administrator
+      operationId: RoleDelete
+      parameters:
+      - description: Role identifier
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: Success
+        "403":
+          description: Built-in role
+        "404":
+          description: Role not found
+        "409":
+          description: Role is in use
+      security:
+      - ApiKeyAuth: []
+      - jwt: []
+      summary: Delete a custom role
+      tags:
+      - roles
+    get:
+      description: '**Access policy**: administrator'
+      operationId: RoleInspect
+      parameters:
+      - description: Role identifier
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success
+          schema:
+            $ref: '#/definitions/portainer.Role'
+        "404":
+          description: Role not found
+      security:
+      - ApiKeyAuth: []
+      - jwt: []
+      summary: Inspect a role
+      tags:
+      - roles
+    put:
+      consumes:
+      - application/json
+      description: |-
+        Built-in roles cannot be modified.
+        **Access policy**: administrator
+      operationId: RoleUpdate
+      parameters:
+      - description: Role identifier
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Role details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/roles.rolePayload'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success
+          schema:
+            $ref: '#/definitions/portainer.Role'
+        "400":
+          description: Invalid request
+        "403":
+          description: Built-in role
+        "404":
+          description: Role not found
+        "409":
+          description: Role name already exists
+      security:
+      - ApiKeyAuth: []
+      - jwt: []
+      summary: Update a custom role
       tags:
       - roles
   /settings:

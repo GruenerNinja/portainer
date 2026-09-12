@@ -2101,8 +2101,11 @@ export type PortainerAccessPolicy = {
   Namespaces?: Array<string>;
   /**
    * Role identifier. Reference the role that will be associated to this access policy
+   * Zero is a valid value for policies that grant access without an
+   * environment role (for example registry access). Values above the
+   * predefined range identify custom roles.
    */
-  RoleId: PortainerRoleId;
+  RoleId?: number;
 };
 
 export type PortainerActivityLog = {
@@ -3323,39 +3326,13 @@ export type PortainerRole = {
   /**
    * Role Identifier
    */
-  Id?: PortainerRoleId;
+  Id?: number;
   /**
    * Role name
    */
   Name?: string;
   Priority?: number;
 };
-
-export const PortainerRoleId = {
-  /**
-   * RoleIDEndpointAdmin
-   */
-  ROLE_ID_ENDPOINT_ADMIN: 1,
-  /**
-   * RoleIDHelpdesk
-   */
-  ROLE_ID_HELPDESK: 2,
-  /**
-   * RoleIDStandardUser
-   */
-  ROLE_ID_STANDARD_USER: 3,
-  /**
-   * RoleIDReadonly
-   */
-  ROLE_ID_READONLY: 4,
-  /**
-   * RoleIDOperator
-   */
-  ROLE_ID_OPERATOR: 5,
-} as const;
-
-export type PortainerRoleId =
-  (typeof PortainerRoleId)[keyof typeof PortainerRoleId];
 
 export type PortainerSslSettings = {
   certPath?: string;
@@ -4697,6 +4674,13 @@ export type RoarRoarPortainerEndpointId = {
   [key: string]: unknown;
 };
 
+export type RolesRolePayload = {
+  Authorizations?: PortainerAuthorizations;
+  Description?: string;
+  Name: string;
+  Priority: number;
+};
+
 export type SettingsPublicSettingsResponse = {
   /**
    * Active authentication method for the Portainer instance. Valid values are: 1 for internal, 2 for LDAP, or 3 for oauth
@@ -5655,7 +5639,7 @@ export type UsersEffectiveAccessEntry = {
   endpointName?: string;
   groupId?: number;
   groupName?: string;
-  roleId?: PortainerRoleId;
+  roleId?: number;
   roleName?: string;
   rolePriority?: number;
   teamId?: number;
@@ -13562,6 +13546,8 @@ export type KubernetesK8sIngressInfo2 = KubernetesK8sIngressInfo;
 export type KubernetesK8sSecretWriteRequest2 = KubernetesK8sSecretWriteRequest;
 
 export type KubernetesK8sServiceInfo2 = KubernetesK8sServiceInfo;
+
+export type RolesRolePayload2 = RolesRolePayload;
 
 export type AuthenticateUserData = {
   /**
@@ -22862,6 +22848,148 @@ export type RoleListResponses = {
 };
 
 export type RoleListResponse = RoleListResponses[keyof RoleListResponses];
+
+export type RoleCreateData = {
+  /**
+   * Role details
+   */
+  body: RolesRolePayload2;
+  path?: never;
+  query?: never;
+  url: '/roles';
+};
+
+export type RoleCreateErrors = {
+  /**
+   * Invalid request
+   */
+  400: unknown;
+  /**
+   * Role name already exists
+   */
+  409: unknown;
+  /**
+   * Server error
+   */
+  500: unknown;
+};
+
+export type RoleCreateResponses = {
+  /**
+   * Success
+   */
+  200: PortainerRole;
+};
+
+export type RoleCreateResponse = RoleCreateResponses[keyof RoleCreateResponses];
+
+export type RoleDeleteData = {
+  body?: never;
+  path: {
+    /**
+     * Role identifier
+     */
+    id: number;
+  };
+  query?: never;
+  url: '/roles/{id}';
+};
+
+export type RoleDeleteErrors = {
+  /**
+   * Built-in role
+   */
+  403: unknown;
+  /**
+   * Role not found
+   */
+  404: unknown;
+  /**
+   * Role is in use
+   */
+  409: unknown;
+};
+
+export type RoleDeleteResponses = {
+  /**
+   * Success
+   */
+  204: void;
+};
+
+export type RoleDeleteResponse = RoleDeleteResponses[keyof RoleDeleteResponses];
+
+export type RoleInspectData = {
+  body?: never;
+  path: {
+    /**
+     * Role identifier
+     */
+    id: number;
+  };
+  query?: never;
+  url: '/roles/{id}';
+};
+
+export type RoleInspectErrors = {
+  /**
+   * Role not found
+   */
+  404: unknown;
+};
+
+export type RoleInspectResponses = {
+  /**
+   * Success
+   */
+  200: PortainerRole;
+};
+
+export type RoleInspectResponse =
+  RoleInspectResponses[keyof RoleInspectResponses];
+
+export type RoleUpdateData = {
+  /**
+   * Role details
+   */
+  body: RolesRolePayload2;
+  path: {
+    /**
+     * Role identifier
+     */
+    id: number;
+  };
+  query?: never;
+  url: '/roles/{id}';
+};
+
+export type RoleUpdateErrors = {
+  /**
+   * Invalid request
+   */
+  400: unknown;
+  /**
+   * Built-in role
+   */
+  403: unknown;
+  /**
+   * Role not found
+   */
+  404: unknown;
+  /**
+   * Role name already exists
+   */
+  409: unknown;
+};
+
+export type RoleUpdateResponses = {
+  /**
+   * Success
+   */
+  200: PortainerRole;
+};
+
+export type RoleUpdateResponse = RoleUpdateResponses[keyof RoleUpdateResponses];
 
 export type SettingsInspectData = {
   body?: never;

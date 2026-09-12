@@ -71,7 +71,7 @@ class PorAccessManagementController {
       this.roles = _.orderBy(roles, 'Priority', 'asc');
       this.formValues = {
         multiselectOutput: [],
-        selectedRole: this.roles.find((role) => role.ID === RoleTypes.STANDARD) || this.roles[0],
+        selectedRole: this.roles.find((role) => role.Id === RoleTypes.STANDARD) || this.roles[0],
       };
 
       const data = await this.AccessService.accesses(entity, parent, this.roles);

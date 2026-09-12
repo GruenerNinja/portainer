@@ -22,6 +22,7 @@ type Handler struct {
 	requestBouncer              security.BouncerService
 	connectionUpgrader          websocket.Upgrader
 	kubernetesTokenCacheManager *kubernetes.TokenCacheManager
+	eventHub                    *eventHub
 }
 
 // NewHandler creates a handler to manage websocket operations.
@@ -31,6 +32,7 @@ func NewHandler(kubernetesTokenCacheManager *kubernetes.TokenCacheManager, bounc
 		connectionUpgrader:          websocket.Upgrader{},
 		requestBouncer:              bouncer,
 		kubernetesTokenCacheManager: kubernetesTokenCacheManager,
+		eventHub:                    newEventHub(),
 	}
 	h.PathPrefix("/websocket/exec").Handler(
 		bouncer.AuthenticatedAccess(httperror.LoggerHandler(h.websocketExec)))
@@ -40,5 +42,13 @@ func NewHandler(kubernetesTokenCacheManager *kubernetes.TokenCacheManager, bounc
 		bouncer.AuthenticatedAccess(httperror.LoggerHandler(h.websocketPodExec)))
 	h.PathPrefix("/websocket/kubernetes-shell").Handler(
 		bouncer.AuthenticatedAccess(httperror.LoggerHandler(h.websocketShellPodExec)))
+	h.Handle("/websocket/events",
+		bouncer.AuthenticatedAccess(httperror.LoggerHandler(h.websocketEvents))).Methods("GET")
 	return h
+}
+
+// PublishMutation notifies connected browsers that cached API data may have
+// changed. The event deliberately carries no resource names or identifiers.
+func (h *Handler) PublishMutation() {
+	h.eventHub.publish()
 }

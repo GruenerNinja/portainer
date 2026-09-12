@@ -11,6 +11,8 @@ import { notifyError } from '@/portainer/services/notifications';
 import { isAxiosError } from '@/react/portainer/services/axios/utils/isAxiosError';
 import { parseAxiosError } from '@/react/portainer/services/axios/utils/parseAxiosError';
 
+import { startRealtimeQuerySync } from './realtime-query-sync';
+
 export function withError(fallbackMessage?: string, title = 'Failure') {
   return {
     meta: {
@@ -73,7 +75,12 @@ export function createQueryClient() {
     defaultOptions: {
       queries: {
         networkMode: 'offlineFirst',
-        staleTime: 20,
+        // Keep recently visited views warm so browser back/forward navigation
+        // does not immediately repeat the same API requests.
+        staleTime: 30_000,
+        cacheTime: 10 * 60_000,
+        keepPreviousData: true,
+        refetchOnWindowFocus: false,
       },
     },
     mutationCache: new MutationCache({
@@ -122,3 +129,4 @@ function extractErrorMeta(errorMeta?: unknown) {
 }
 
 export const queryClient = createQueryClient();
+startRealtimeQuerySync(queryClient);

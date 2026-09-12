@@ -10,6 +10,7 @@ This directory is the maintenance handoff for behavior added by this fork. It ex
 - [Release and deployment](release-and-deployment.md): AMD64/ARM64 image production, Node 4 deployment, and rollback.
 - [Verification](verification.md): focused tests and release checks.
 - [Read-only stack sharing](../maintainer-patches/stack-read-only-access.md): owner/editor versus viewer permissions for selected stacks and agentic accounts.
+- [Roles, registries, and realtime UI](../maintainer-patches/roles-registry-realtime.md): custom-role lifecycle, GHCR browsing, and event-driven client cache synchronization.
 
 The broader patch catalog remains in [the maintainer patch guide](../maintainer-patches/README.md).
 
@@ -21,3 +22,4 @@ The broader patch catalog remains in [the maintainer patch guide](../maintainer-
 4. Keep the upstream API/database compatibility version separate from this fork's release version.
 5. Publish immutable multi-architecture version tags before moving `latest`.
 6. Treat stack viewer grants as configuration visibility only; never inherit them as Docker-resource mutation access or expose redeploy webhook tokens.
+7. Use mutation events only as cache-invalidating signals; never put resource identifiers or user data in the WebSocket payload.

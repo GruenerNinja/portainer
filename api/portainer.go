@@ -32,7 +32,10 @@ type (
 	// AccessPolicy represent a policy that can be associated to a user or team
 	AccessPolicy struct {
 		// Role identifier. Reference the role that will be associated to this access policy
-		RoleID RoleID `json:"RoleId" example:"1" validate:"required"`
+		// Zero is a valid value for policies that grant access without an
+		// environment role (for example registry access). Values above the
+		// predefined range identify custom roles.
+		RoleID RoleID `json:"RoleId" example:"1"`
 		// Namespaces is a list of namespaces that this access policy applies to. Only used for namespaced level roles
 		Namespaces []string `json:"Namespaces,omitempty"`
 	}
@@ -2535,7 +2538,7 @@ const (
 
 const (
 	// RoleIDEndpointAdmin represents the environment administrator role.
-	RoleIDEndpointAdmin RoleID = iota + 1
+	RoleIDEndpointAdmin = iota + 1
 	// RoleIDHelpdesk represents the helpdesk role.
 	RoleIDHelpdesk
 	// RoleIDStandardUser represents the standard user role.

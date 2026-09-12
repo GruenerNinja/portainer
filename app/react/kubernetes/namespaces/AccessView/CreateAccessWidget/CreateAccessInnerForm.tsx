@@ -138,7 +138,7 @@ function useAvailableTeamOrUserOptions(
           type: 'user',
           role: {
             name: 'Standard user',
-            id: userAccessPolicy?.RoleId,
+            id: userAccessPolicy?.RoleId ?? 0,
           },
         };
         return userAccess;
@@ -167,7 +167,7 @@ function useAvailableTeamOrUserOptions(
           type: 'team',
           role: {
             name: 'Standard user',
-            id: teamAccessPolicy?.RoleId,
+            id: teamAccessPolicy?.RoleId ?? 0,
           },
         };
         return teamAccess;

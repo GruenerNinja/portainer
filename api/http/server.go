@@ -302,6 +302,7 @@ func (server *Server) Start(ctx context.Context) error {
 	var userActivityHandler = useractivity.NewHandler(requestBouncer, server.DataStore)
 
 	var websocketHandler = websocket.NewHandler(server.KubernetesTokenCacheManager, requestBouncer)
+	requestBouncer.SetMutationPublisher(websocketHandler.PublishMutation)
 	websocketHandler.DataStore = server.DataStore
 	websocketHandler.SignatureService = server.SignatureService
 	websocketHandler.ReverseTunnelService = server.ReverseTunnelService

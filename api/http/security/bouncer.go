@@ -45,12 +45,13 @@ type (
 
 	// RequestBouncer represents an entity that manages API request accesses
 	RequestBouncer struct {
-		dataStore     dataservices.DataStore
-		jwtService    portainer.JWTService
-		apiKeyService apikey.APIKeyService
-		revokedJWT    sync.Map
-		hsts          bool
-		csp           bool
+		dataStore       dataservices.DataStore
+		jwtService      portainer.JWTService
+		apiKeyService   apikey.APIKeyService
+		revokedJWT      sync.Map
+		hsts            bool
+		csp             bool
+		publishMutation func()
 	}
 
 	// RestrictedRequestContext is a data structure containing information
@@ -85,6 +86,13 @@ func NewRequestBouncer(ctx context.Context, dataStore dataservices.DataStore, jw
 	go schedule.RunOnInterval(ctx, time.Hour, b.cleanUpExpiredJWTPass, nil)
 
 	return b
+}
+
+// SetMutationPublisher registers a lightweight notification that is emitted
+// after an authenticated mutating request reaches the API. The notification
+// contains no resource data; clients use it only to invalidate stale caches.
+func (bouncer *RequestBouncer) SetMutationPublisher(publish func()) {
+	bouncer.publishMutation = publish
 }
 
 // DisableCSP disables Content Security Policy
@@ -286,11 +294,14 @@ func (bouncer *RequestBouncer) mwUpgradeToRestrictedRequest(next http.Handler) h
 		ctx := StoreRestrictedRequestContext(r, requestContext)
 		bouncer.recordActivity(r, requestContext)
 		next.ServeHTTP(w, r.WithContext(ctx))
+		if bouncer.publishMutation != nil && isMutationRequest(r) {
+			bouncer.publishMutation()
+		}
 	})
 }
 
 func (bouncer *RequestBouncer) recordActivity(r *http.Request, requestContext *RestrictedRequestContext) {
-	if r.Method == http.MethodGet || r.Method == http.MethodHead || r.Method == http.MethodOptions || strings.HasPrefix(r.URL.Path, "/useractivity/") {
+	if !isMutationRequest(r) {
 		return
 	}
 	if requestContext.User == nil {
@@ -312,6 +323,10 @@ func (bouncer *RequestBouncer) recordActivity(r *http.Request, requestContext *R
 	if err := service.Create(entry); err != nil {
 		log.Error().Err(err).Msg("failed to record user activity")
 	}
+}
+
+func isMutationRequest(r *http.Request) bool {
+	return r.Method != http.MethodGet && r.Method != http.MethodHead && r.Method != http.MethodOptions && !strings.HasPrefix(r.URL.Path, "/useractivity/")
 }
 
 // mwIsTeamLeader will verify that the user is an admin or a team leader

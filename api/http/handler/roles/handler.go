@@ -23,6 +23,14 @@ func NewHandler(bouncer security.BouncerService) *Handler {
 	}
 	h.Handle("/roles",
 		bouncer.AdminAccess(httperror.LoggerHandler(h.roleList))).Methods(http.MethodGet)
+	h.Handle("/roles",
+		bouncer.AdminAccess(httperror.LoggerHandler(h.roleCreate))).Methods(http.MethodPost)
+	h.Handle("/roles/{id}",
+		bouncer.AdminAccess(httperror.LoggerHandler(h.roleInspect))).Methods(http.MethodGet)
+	h.Handle("/roles/{id}",
+		bouncer.AdminAccess(httperror.LoggerHandler(h.roleUpdate))).Methods(http.MethodPut)
+	h.Handle("/roles/{id}",
+		bouncer.AdminAccess(httperror.LoggerHandler(h.roleDelete))).Methods(http.MethodDelete)
 
 	return h
 }

@@ -1,7 +1,6 @@
 import {
   PortainerTeamAccessPolicies,
   PortainerUserAccessPolicies,
-  PortainerRoleId,
 } from '@api/types.gen';
 
 import { notifySuccess } from '@/portainer/services/notifications';
@@ -110,7 +109,7 @@ export function AccessTab() {
         delete policies[access.Id];
       } else {
         policies[access.Id] = {
-          RoleId: (access.Role?.Id ?? 0) as PortainerRoleId,
+          RoleId: access.Role?.Id ?? 0,
         };
       }
     });

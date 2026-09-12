@@ -25959,6 +25959,61 @@ export type GetWebsocketKubernetesShellResponses = {
   200: unknown;
 };
 
+export type GetWebsocketLogsData = {
+  body?: never;
+  path?: never;
+  query: {
+    /**
+     * Environment identifier
+     */
+    endpointId: number;
+    /**
+     * Docker resource type
+     */
+    resource: 'containers' | 'services' | 'tasks';
+    /**
+     * Docker resource identifier
+     */
+    id: string;
+    /**
+     * Swarm node name
+     */
+    nodeName?: string;
+    /**
+     * Include timestamps
+     */
+    timestamps?: boolean;
+    /**
+     * Unix timestamp
+     */
+    since?: number;
+    /**
+     * Initial line count (maximum 10000)
+     */
+    tail?: number;
+  };
+  url: '/websocket/logs';
+};
+
+export type GetWebsocketLogsErrors = {
+  /**
+   * Bad Request
+   */
+  400: unknown;
+  /**
+   * Forbidden
+   */
+  403: unknown;
+  /**
+   * Not Found
+   */
+  404: unknown;
+  /**
+   * Internal Server Error
+   */
+  500: unknown;
+};
+
 export type GetWebsocketPodData = {
   body?: never;
   path?: never;

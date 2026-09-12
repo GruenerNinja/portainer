@@ -12225,6 +12225,73 @@ paths:
       summary: Execute a websocket on kubectl shell pod
       tags:
         - websocket
+  /websocket/logs:
+    get:
+      description: >-
+        Streams container, service, or task logs through the existing
+        access-controlled Docker proxy.
+
+        **Access policy**: authenticated
+      parameters:
+        - description: Environment identifier
+          in: query
+          name: endpointId
+          required: true
+          schema:
+            type: integer
+        - description: Docker resource type
+          in: query
+          name: resource
+          required: true
+          schema:
+            type: string
+            enum:
+              - containers
+              - services
+              - tasks
+        - description: Docker resource identifier
+          in: query
+          name: id
+          required: true
+          schema:
+            type: string
+        - description: Swarm node name
+          in: query
+          name: nodeName
+          schema:
+            type: string
+        - description: Include timestamps
+          in: query
+          name: timestamps
+          schema:
+            type: boolean
+        - description: Unix timestamp
+          in: query
+          name: since
+          schema:
+            type: integer
+        - description: Initial line count (maximum 10000)
+          in: query
+          name: tail
+          schema:
+            type: integer
+      responses:
+        "101":
+          description: Switching Protocols
+        "400":
+          description: Bad Request
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      security:
+        - ApiKeyAuth: []
+        - jwt: []
+      summary: Stream Docker logs over a websocket
+      tags:
+        - websocket
   /websocket/pod:
     get:
       description: |-

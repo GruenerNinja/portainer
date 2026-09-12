@@ -16,6 +16,7 @@ The consolidated architecture and operations handoff for the current fork is in 
 | Roles and synchronized teams    | Enables all five environment roles and preserves locally assigned team-leader privileges with team sync       | [Roles and team sync](rbac-team-sync.md)             |
 | Per-stack viewer access         | Lets selected users and teams read chosen stack definitions while owners retain exclusive mutation rights     | [Read-only stack sharing](stack-read-only-access.md) |
 | Custom roles and realtime UI    | Custom role CRUD, open-ended policy role IDs, community GHCR browsing, and WebSocket cache invalidation        | [Roles, registries, and realtime UI](roles-registry-realtime.md) |
+| Live logs and node metrics      | WebSocket Docker log streaming and validated, session-scoped Kubernetes node chart history                    | [Live logs and node metrics](live-logs-node-metrics.md)          |
 | Browser security and Cloudflare | Supported Permissions Policy, Cloudflare Web Analytics CSP, English-only i18n fallback, edge settings         | [Browser and Cloudflare](browser-cloudflare.md)      |
 | Release packaging               | Produces a standalone Docker build context and documents version/tag publishing                               | [Release process](release.md)                        |
 

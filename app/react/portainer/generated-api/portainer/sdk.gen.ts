@@ -483,6 +483,8 @@ import type {
   GetWebsocketKubernetesShellData,
   GetWebsocketKubernetesShellErrors,
   GetWebsocketKubernetesShellResponses,
+  GetWebsocketLogsData,
+  GetWebsocketLogsErrors,
   GetWebsocketPodData,
   GetWebsocketPodErrors,
   GetWebsocketPodResponses,
@@ -1247,6 +1249,7 @@ import {
   zGetWebsocketAttachQuery,
   zGetWebsocketExecQuery,
   zGetWebsocketKubernetesShellQuery,
+  zGetWebsocketLogsQuery,
   zGetWebsocketPodQuery,
   zGitOperationRepoFilePreviewBody,
   zGitOperationRepoFilePreviewResponse,
@@ -12485,6 +12488,34 @@ export const getWebsocketKubernetesShell = <
     url: '/websocket/kubernetes-shell',
     ...options,
   });
+
+/**
+ * Stream Docker logs over a websocket
+ *
+ * Streams container, service, or task logs through the existing access-controlled Docker proxy.
+ * **Access policy**: authenticated
+ */
+export const getWebsocketLogs = <ThrowOnError extends boolean = true>(
+  options: Options<GetWebsocketLogsData, ThrowOnError>
+): RequestResult<unknown, GetWebsocketLogsErrors, ThrowOnError> =>
+  (options.client ?? client).get<unknown, GetWebsocketLogsErrors, ThrowOnError>(
+    {
+      requestValidator: async (data) =>
+        await z
+          .object({
+            body: z.never().optional(),
+            path: z.never().optional(),
+            query: zGetWebsocketLogsQuery,
+          })
+          .parseAsync(data),
+      security: [
+        { name: 'X-API-KEY', type: 'apiKey' },
+        { name: 'Authorization', type: 'apiKey' },
+      ],
+      url: '/websocket/logs',
+      ...options,
+    }
+  );
 
 /**
  * Execute a websocket on pod

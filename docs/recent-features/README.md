@@ -1,6 +1,6 @@
 # Features added in the last four weeks
 
-This catalog covers work added, restored, or consolidated in the TheModCraft Portainer fork from **August 15 through September 12, 2026**. The current fork release identifier is **2.39.3.2.21**, while upstream API and database compatibility remain at Portainer **2.45.0**.
+This catalog covers work added, restored, or consolidated in the TheModCraft Portainer fork from **August 15 through September 12, 2026**. The current fork release identifier is **2.39.3.2.22**, while upstream API and database compatibility remain at Portainer **2.45.0**.
 
 ## Feature catalog
 
@@ -28,6 +28,8 @@ This catalog covers work added, restored, or consolidated in the TheModCraft Por
 | Sep 12                | API compatibility    | Open-ended role identifiers                    | Accepts role ID `0` for non-role policies and IDs above `5` for custom roles, eliminating generated-client validation failures in team, registry, and namespace policy responses.                              | [Roles, registries, and realtime UI](../maintainer-patches/roles-registry-realtime.md) |
 | Sep 12                | Container registries | Community GHCR browsing                        | Enables authenticated GitHub Container Registry repository and read-only tag browsing in this Community fork without a Business Feature gate, backed by registry-access-checked API routes.                    | [Roles, registries, and realtime UI](../maintainer-patches/roles-registry-realtime.md) |
 | Sep 12                | UI performance       | Realtime cache synchronization                 | Keeps forward/back navigation data warm, suppresses focus-triggered duplicate requests, and uses an authenticated WebSocket invalidation stream so active views refresh after mutations.                       | [Roles, registries, and realtime UI](../maintainer-patches/roles-registry-realtime.md) |
+| Sep 12                | Log performance      | Live Docker log streaming                      | Replaces three-second HTTP polling on container, service, and task log views with an authenticated, access-controlled WebSocket stream and bounded browser buffers.                                             | [Live logs and node metrics](../maintainer-patches/live-logs-node-metrics.md) |
+| Sep 12                | Metrics performance  | Session-cached node charts                     | Restores up to 600 validated Kubernetes node samples during forward/back navigation, then continues live polling without duplicating the newest sample.                                                        | [Live logs and node metrics](../maintainer-patches/live-logs-node-metrics.md) |
 
 ## Compatibility and maintenance work
 

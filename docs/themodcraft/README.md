@@ -11,6 +11,7 @@ This directory is the maintenance handoff for behavior added by this fork. It ex
 - [Verification](verification.md): focused tests and release checks.
 - [Read-only stack sharing](../maintainer-patches/stack-read-only-access.md): owner/editor versus viewer permissions for selected stacks and agentic accounts.
 - [Roles, registries, and realtime UI](../maintainer-patches/roles-registry-realtime.md): custom-role lifecycle, GHCR browsing, and event-driven client cache synchronization.
+- [Live logs and node metrics](../maintainer-patches/live-logs-node-metrics.md): authenticated Docker log streaming and session-scoped Kubernetes node chart history.
 
 The broader patch catalog remains in [the maintainer patch guide](../maintainer-patches/README.md).
 
@@ -23,3 +24,4 @@ The broader patch catalog remains in [the maintainer patch guide](../maintainer-
 5. Publish immutable multi-architecture version tags before moving `latest`.
 6. Treat stack viewer grants as configuration visibility only; never inherit them as Docker-resource mutation access or expose redeploy webhook tokens.
 7. Use mutation events only as cache-invalidating signals; never put resource identifiers or user data in the WebSocket payload.
+8. Bound realtime browser buffers, close streams with their views, and validate cached session data before rendering it.

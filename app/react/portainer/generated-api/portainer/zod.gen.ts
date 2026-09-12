@@ -8120,6 +8120,16 @@ export const zGetWebsocketKubernetesShellQuery = z.object({
   endpointId: z.int(),
 });
 
+export const zGetWebsocketLogsQuery = z.object({
+  endpointId: z.int(),
+  resource: z.enum(['containers', 'services', 'tasks']),
+  id: z.string(),
+  nodeName: z.string().optional(),
+  timestamps: z.boolean().optional(),
+  since: z.int().optional(),
+  tail: z.int().optional(),
+});
+
 export const zGetWebsocketPodQuery = z.object({
   endpointId: z.int(),
   namespace: z.string(),

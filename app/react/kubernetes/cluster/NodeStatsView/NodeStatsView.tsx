@@ -40,7 +40,8 @@ export function NodeStatsView() {
       data: metricsQuery.data,
       error: metricsQuery.isFetchedAfterMount ? metricsQuery.error : undefined,
     },
-    nodeCPU
+    nodeCPU,
+    `portainer.node-stats.v1.${environmentId}.${encodeURIComponent(nodeName)}`
   );
 
   return (

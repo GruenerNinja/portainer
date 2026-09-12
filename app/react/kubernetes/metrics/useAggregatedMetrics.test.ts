@@ -1,6 +1,7 @@
 import { renderHook } from '@testing-library/react-hooks';
 
 import { useAggregatedMetrics } from './useAggregatedMetrics';
+import { toChartPoint } from './chartPoint';
 
 const point = {
   cpu: '500m',
@@ -17,6 +18,10 @@ function renderMetrics(initialProps: Props, nodeCPU = 4) {
 }
 
 describe('useAggregatedMetrics', () => {
+  beforeEach(() => {
+    sessionStorage.clear();
+  });
+
   it('stays checking until this mount reports a result', () => {
     const { result } = renderMetrics({ data: undefined, error: undefined });
 
@@ -86,5 +91,73 @@ describe('useAggregatedMetrics', () => {
     rerender({ nodeCPU: 8, data: undefined });
 
     expect(result.current.chartData).toHaveLength(0);
+  });
+
+  it('restores and updates a bounded node history from session storage', () => {
+    const cacheKey = 'portainer.node-stats.v1.1.worker-1';
+    sessionStorage.setItem(
+      cacheKey,
+      JSON.stringify({
+        version: 1,
+        nodeCPU: 4,
+        chartData: [{ time: '00:00:00', cpu: 10, memory: 1024 }],
+      })
+    );
+
+    const { result } = renderHook(() =>
+      useAggregatedMetrics({ data: point, error: null }, 4, cacheKey)
+    );
+
+    expect(result.current.chartData).toHaveLength(2);
+    expect(result.current.metricsState).toBe('available');
+    expect(
+      JSON.parse(sessionStorage.getItem(cacheKey) ?? '{}').chartData
+    ).toHaveLength(2);
+  });
+
+  it('ignores corrupt or CPU-incompatible session data', () => {
+    const corruptKey = 'portainer.node-stats.v1.1.corrupt';
+    const changedCpuKey = 'portainer.node-stats.v1.1.changed-cpu';
+    sessionStorage.setItem(corruptKey, '{bad json');
+    sessionStorage.setItem(
+      changedCpuKey,
+      JSON.stringify({
+        version: 1,
+        nodeCPU: 2,
+        chartData: [{ time: '00:00:00', cpu: 10, memory: 1024 }],
+      })
+    );
+
+    const corrupt = renderHook(() =>
+      useAggregatedMetrics({ data: undefined, error: undefined }, 4, corruptKey)
+    );
+    const changedCpu = renderHook(() =>
+      useAggregatedMetrics(
+        { data: undefined, error: undefined },
+        4,
+        changedCpuKey
+      )
+    );
+
+    expect(corrupt.result.current.chartData).toHaveLength(0);
+    expect(changedCpu.result.current.chartData).toHaveLength(0);
+  });
+
+  it('does not duplicate the latest cached sample after navigation', () => {
+    const cacheKey = 'portainer.node-stats.v1.1.worker-2';
+    sessionStorage.setItem(
+      cacheKey,
+      JSON.stringify({
+        version: 1,
+        nodeCPU: 4,
+        chartData: [toChartPoint(point.cpu, point.memory, point.timestamp, 4)],
+      })
+    );
+
+    const { result } = renderHook(() =>
+      useAggregatedMetrics({ data: point, error: null }, 4, cacheKey)
+    );
+
+    expect(result.current.chartData).toHaveLength(1);
   });
 });

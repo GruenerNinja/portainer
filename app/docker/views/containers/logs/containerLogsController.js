@@ -1,96 +1,90 @@
 import moment from 'moment';
 
+import { openDockerLogsStream } from '@/docker/helpers/logHelper';
+
 angular.module('portainer.docker').controller('ContainerLogsController', [
   '$scope',
   '$transition$',
-  '$interval',
   'ContainerService',
   'Notifications',
   'HttpRequestHelper',
   'endpoint',
-  function ($scope, $transition$, $interval, ContainerService, Notifications, HttpRequestHelper, endpoint) {
+  function ($scope, $transition$, ContainerService, Notifications, HttpRequestHelper, endpoint) {
+    let logStream;
+    let collectionEnabled = true;
+    let settingsWatchReady = false;
+
+    $scope.logs = [];
     $scope.state = {
-      refreshRate: 3,
       lineCount: 100,
       sinceTimestamp: '',
       displayTimestamps: false,
     };
 
     $scope.changeLogCollection = function (logCollectionStatus) {
-      if (!logCollectionStatus) {
-        stopRepeater();
+      collectionEnabled = logCollectionStatus;
+      if (collectionEnabled) {
+        startLogStream();
       } else {
-        setUpdateRepeater(!$scope.container.Config.Tty);
+        stopLogStream();
       }
     };
 
-    $scope.$on('$destroy', function () {
-      stopRepeater();
+    const stopSettingsWatch = $scope.$watchGroup(['state.displayTimestamps', 'state.sinceTimestamp', 'state.lineCount'], function () {
+      if (!settingsWatchReady) {
+        settingsWatchReady = true;
+        return;
+      }
+      if (collectionEnabled && $scope.container) {
+        startLogStream();
+      }
     });
 
-    function stopRepeater() {
-      var repeater = $scope.repeater;
-      if (angular.isDefined(repeater)) {
-        $interval.cancel(repeater);
-      }
+    $scope.$on('$destroy', function () {
+      stopSettingsWatch();
+      stopLogStream();
+    });
+
+    function stopLogStream() {
+      logStream?.close();
+      logStream = undefined;
     }
 
-    function setUpdateRepeater(skipHeaders) {
-      var refreshRate = $scope.state.refreshRate;
-      $scope.repeater = $interval(function () {
-        ContainerService.logs(
-          endpoint.Id,
-          $transition$.params().id,
-          1,
-          1,
-          $scope.state.displayTimestamps ? 1 : 0,
-          moment($scope.state.sinceTimestamp).unix(),
-          $scope.state.lineCount,
-          skipHeaders
-        )
-          .then(function success(data) {
-            $scope.logs = data;
-          })
-          .catch(function error(err) {
-            stopRepeater();
-            Notifications.error('Failure', err, 'Unable to retrieve container logs');
+    function startLogStream() {
+      stopLogStream();
+      const since = moment($scope.state.sinceTimestamp).unix();
+      logStream = openDockerLogsStream({
+        environmentId: endpoint.Id,
+        resource: 'containers',
+        resourceId: $transition$.params().id,
+        nodeName: $transition$.params().nodeName,
+        timestamps: $scope.state.displayTimestamps,
+        since: Number.isFinite(since) ? since : 0,
+        tail: $scope.state.lineCount,
+        multiplexed: !$scope.container.Config.Tty,
+        onLogs(logs) {
+          $scope.$evalAsync(() => {
+            $scope.logs = logs;
           });
-      }, refreshRate * 1000);
-    }
-
-    function startLogPolling(skipHeaders) {
-      ContainerService.logs(
-        endpoint.Id,
-        $transition$.params().id,
-        1,
-        1,
-        $scope.state.displayTimestamps ? 1 : 0,
-        moment($scope.state.sinceTimestamp).unix(),
-        $scope.state.lineCount,
-        skipHeaders
-      )
-        .then(function success(data) {
-          $scope.logs = data;
-          setUpdateRepeater(skipHeaders);
-        })
-        .catch(function error(err) {
-          stopRepeater();
-          Notifications.error('Failure', err, 'Unable to retrieve container logs');
-        });
+        },
+        onError(error) {
+          $scope.$evalAsync(() => {
+            stopLogStream();
+            Notifications.error('Failure', error, 'Unable to stream container logs');
+          });
+        },
+      });
     }
 
     function initView() {
       HttpRequestHelper.setPortainerAgentTargetHeader($transition$.params().nodeName);
       ContainerService.container(endpoint.Id, $transition$.params().id)
-        .then(function success(data) {
-          var container = data;
+        .then(function success(container) {
           $scope.container = container;
+          $scope.logsEnabled = container.HostConfig?.LogConfig?.Type && container.HostConfig.LogConfig.Type !== 'none';
 
-          const logsEnabled = container.HostConfig && container.HostConfig.LogConfig && container.HostConfig.LogConfig.Type && container.HostConfig.LogConfig.Type !== 'none';
-          $scope.logsEnabled = logsEnabled;
-
-          if (logsEnabled) {
-            startLogPolling(!container.Config.Tty);
+          if ($scope.logsEnabled) {
+            startLogStream();
           }
         })
         .catch(function error(err) {

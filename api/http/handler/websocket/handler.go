@@ -3,6 +3,7 @@ package websocket
 import (
 	portainer "github.com/portainer/portainer/api"
 	"github.com/portainer/portainer/api/dataservices"
+	"github.com/portainer/portainer/api/http/proxy"
 	"github.com/portainer/portainer/api/http/proxy/factory/kubernetes"
 	"github.com/portainer/portainer/api/http/security"
 	"github.com/portainer/portainer/api/kubernetes/cli"
@@ -19,6 +20,7 @@ type Handler struct {
 	SignatureService            portainer.DigitalSignatureService
 	ReverseTunnelService        portainer.ReverseTunnelService
 	KubernetesClientFactory     *cli.ClientFactory
+	ProxyManager                *proxy.Manager
 	requestBouncer              security.BouncerService
 	connectionUpgrader          websocket.Upgrader
 	kubernetesTokenCacheManager *kubernetes.TokenCacheManager
@@ -44,6 +46,8 @@ func NewHandler(kubernetesTokenCacheManager *kubernetes.TokenCacheManager, bounc
 		bouncer.AuthenticatedAccess(httperror.LoggerHandler(h.websocketShellPodExec)))
 	h.Handle("/websocket/events",
 		bouncer.AuthenticatedAccess(httperror.LoggerHandler(h.websocketEvents))).Methods("GET")
+	h.Handle("/websocket/logs",
+		bouncer.AuthenticatedAccess(httperror.LoggerHandler(h.websocketLogs))).Methods("GET")
 	return h
 }
 

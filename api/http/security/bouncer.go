@@ -326,7 +326,11 @@ func (bouncer *RequestBouncer) recordActivity(r *http.Request, requestContext *R
 }
 
 func isMutationRequest(r *http.Request) bool {
-	return r.Method != http.MethodGet && r.Method != http.MethodHead && r.Method != http.MethodOptions && !strings.HasPrefix(r.URL.Path, "/useractivity/")
+	return r.Method != http.MethodGet &&
+		r.Method != http.MethodHead &&
+		r.Method != http.MethodOptions &&
+		!strings.HasPrefix(r.URL.Path, "/useractivity/") &&
+		!strings.Contains(strings.ToLower(r.URL.Path), "/selfsubjectaccessreviews")
 }
 
 // mwIsTeamLeader will verify that the user is an admin or a team leader

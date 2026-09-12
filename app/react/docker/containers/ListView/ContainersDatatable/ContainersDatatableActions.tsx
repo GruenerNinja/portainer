@@ -4,7 +4,6 @@ import { Pause, Play, RefreshCw, Slash, Square, Trash2 } from 'lucide-react';
 import * as notifications from '@/portainer/services/notifications';
 import { useAuthorizations, Authorized } from '@/react/hooks/useUser';
 import { confirmContainerDeletion } from '@/react/docker/containers/common/confirm-container-delete-modal';
-import { setPortainerAgentTargetHeader } from '@/portainer/services/http-request.helper';
 import {
   ContainerId,
   ContainerStatus,
@@ -25,7 +24,8 @@ import { ButtonGroup, Button, AddButton } from '@@/buttons';
 
 type ContainerServiceAction = (
   endpointId: EnvironmentId,
-  containerId: ContainerId
+  containerId: ContainerId,
+  options: { nodeName?: string }
 ) => Promise<void>;
 
 interface Props {
@@ -267,8 +267,9 @@ export function ContainersDatatableActions({
     for (let i = 0; i < containers.length; i += 1) {
       const container = containers[i];
       try {
-        setPortainerAgentTargetHeader(container.NodeName);
-        await action(endpointId, container.Id);
+        await action(endpointId, container.Id, {
+          nodeName: container.NodeName,
+        });
         notifications.success(successMessage, container.Names[0]);
       } catch (err) {
         notifications.error(

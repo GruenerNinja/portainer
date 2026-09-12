@@ -9,9 +9,10 @@ import { Link } from '@@/Link';
 
 interface Props {
   containerId: ContainerId;
+  nodeName?: string;
 }
 
-export function ActionLinksRow({ containerId }: Props) {
+export function ActionLinksRow({ containerId, nodeName }: Props) {
   const { authorized: canLogs } = useAuthorizations(['DockerContainerLogs']);
   const { authorized: canInspect } = useAuthorizations([
     'DockerContainerInspect',
@@ -40,6 +41,7 @@ export function ActionLinksRow({ containerId }: Props) {
                 to: 'docker.containers.container.logs',
                 params: {
                   id: containerId,
+                  nodeName,
                 },
               }}
               data-cy="container-logs-link"
@@ -56,6 +58,7 @@ export function ActionLinksRow({ containerId }: Props) {
                 to: 'docker.containers.container.inspect',
                 params: {
                   id: containerId,
+                  nodeName,
                 },
               }}
               data-cy="container-inspect-link"
@@ -72,6 +75,7 @@ export function ActionLinksRow({ containerId }: Props) {
                 to: 'docker.containers.container.stats',
                 params: {
                   id: containerId,
+                  nodeName,
                 },
               }}
               data-cy="container-stats-link"
@@ -88,6 +92,7 @@ export function ActionLinksRow({ containerId }: Props) {
                 to: 'docker.containers.container.exec',
                 params: {
                   id: containerId,
+                  nodeName,
                 },
               }}
               data-cy="container-console-link"
@@ -104,6 +109,7 @@ export function ActionLinksRow({ containerId }: Props) {
                 to: 'docker.containers.container.attach',
                 params: {
                   id: containerId,
+                  nodeName,
                 },
               }}
               data-cy="container-attach-link"

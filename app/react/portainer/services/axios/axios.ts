@@ -110,8 +110,9 @@ export function agentInterceptor(config: InternalAxiosRequestConfig) {
   }
 
   const newConfig = { ...config };
-  const target = portainerAgentTargetHeader();
-  if (target) {
+  const explicitTarget = newConfig.headers.get(agentTargetHeader);
+  const target = explicitTarget || portainerAgentTargetHeader();
+  if (target && !explicitTarget) {
     newConfig.headers[agentTargetHeader] = target;
   }
 

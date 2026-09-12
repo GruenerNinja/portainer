@@ -21,6 +21,29 @@ import (
 // testHandler200 is a simple handler which returns HTTP status 200 OK
 var testHandler200 = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
 
+func TestIsMutationRequest(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		method   string
+		path     string
+		expected bool
+	}{
+		{name: "get", method: http.MethodGet, path: "/endpoints/1/docker/containers/json", expected: false},
+		{name: "container update", method: http.MethodPost, path: "/endpoints/1/docker/containers/abc/restart", expected: true},
+		{name: "self subject access review", method: http.MethodPost, path: "/endpoints/1/kubernetes/apis/authorization.k8s.io/v1/selfsubjectaccessreviews", expected: false},
+		{name: "activity query", method: http.MethodPost, path: "/useractivity/query", expected: false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			request := httptest.NewRequest(test.method, test.path, nil)
+			assert.Equal(t, test.expected, isMutationRequest(request))
+		})
+	}
+}
+
 func tokenLookupSucceed(dataStore dataservices.DataStore, jwtService portainer.JWTService) tokenLookup {
 	return func(r *http.Request) (*portainer.TokenData, error) {
 		uid := portainer.UserID(1)

@@ -7,9 +7,8 @@ angular.module('portainer.docker').controller('ContainerLogsController', [
   '$transition$',
   'ContainerService',
   'Notifications',
-  'HttpRequestHelper',
   'endpoint',
-  function ($scope, $transition$, ContainerService, Notifications, HttpRequestHelper, endpoint) {
+  function ($scope, $transition$, ContainerService, Notifications, endpoint) {
     let logStream;
     let collectionEnabled = true;
     let settingsWatchReady = false;
@@ -77,8 +76,8 @@ angular.module('portainer.docker').controller('ContainerLogsController', [
     }
 
     function initView() {
-      HttpRequestHelper.setPortainerAgentTargetHeader($transition$.params().nodeName);
-      ContainerService.container(endpoint.Id, $transition$.params().id)
+      const { id, nodeName } = $transition$.params();
+      ContainerService.container(endpoint.Id, id, { nodeName })
         .then(function success(container) {
           $scope.container = container;
           $scope.logsEnabled = container.HostConfig?.LogConfig?.Type && container.HostConfig.LogConfig.Type !== 'none';

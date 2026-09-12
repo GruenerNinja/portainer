@@ -268,6 +268,16 @@ func (cache *Cache) DeletePrefix(prefix string) {
 	}
 }
 
+// Clear invalidates every cached overview response. It is used after API
+// mutations because those mutations can replace runtime resources and make a
+// cached collection point at identifiers that no longer exist.
+func (cache *Cache) Clear() {
+	cache.mu.Lock()
+	defer cache.mu.Unlock()
+
+	cache.entries = map[string]*entry{}
+}
+
 // NewRequestFetcher snapshots a GET request so it can safely be replayed by a
 // background refresh after the original request has completed.
 func NewRequestFetcher(request *http.Request, roundTrip func(*http.Request) (*http.Response, error)) Fetcher {

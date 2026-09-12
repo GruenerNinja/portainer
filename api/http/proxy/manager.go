@@ -102,6 +102,15 @@ func (manager *Manager) DeleteEndpointProxy(endpointID portainer.EndpointID) {
 	}
 }
 
+// InvalidateOverviewCache drops cached runtime collections after a mutation.
+// This prevents a newly invalidated frontend query from receiving a stale
+// container, pod, or service identifier from the server-side cache.
+func (manager *Manager) InvalidateOverviewCache() {
+	if manager.overviewCache != nil {
+		manager.overviewCache.Clear()
+	}
+}
+
 // CreateGitlabProxy creates a new HTTP reverse proxy that can be used to send requests to the Gitlab API
 func (manager *Manager) CreateGitlabProxy(url string) (http.Handler, error) {
 	if manager.proxyFactory == nil {

@@ -26,6 +26,9 @@ The shared cache is implemented in `api/http/proxy/cache/`. Docker and Podman us
 - At most 512 responses and 128 MiB per response are cached.
 - Background refresh concurrency is limited to four requests.
 - Failed and non-2xx refreshes do not replace the last successful response.
+- Authenticated API mutations clear the overview cache before realtime query
+  invalidation is published, so a refetch cannot receive identifiers for
+  resources that the mutation replaced or removed.
 - Concurrent cold or refresh requests for the same key are collapsed with singleflight.
 - Cached responses are replayed as independent header/body copies so later filtering cannot mutate the stored value.
 - Deleting or replacing an environment proxy invalidates that environment's Docker and Kubernetes entries.

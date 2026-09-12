@@ -84,7 +84,10 @@ export function ContainerStatusSection({
               partOfSwarmService={isPartOfSwarmService(container)}
             />
           )}
-          <ActionLinksRow containerId={container.Id || ''} />
+          <ActionLinksRow
+            containerId={container.Id || ''}
+            nodeName={nodeName}
+          />
         </DetailsTable>
       </WidgetBody>
     </Widget>

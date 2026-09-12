@@ -10,6 +10,12 @@ Docker's raw TTY stream and eight-byte multiplexed stdout/stderr frames are deco
 
 The WebSocket carries only log bytes already authorized for the current user. It does not put credentials in the URL or expose a separate unauthenticated runtime connection.
 
+### Container 404 protection
+
+Release `2.39.3.2.25` fixes intermittent container detail and log initialization 404s on multi-node agent environments. Modern requests carry their target node explicitly, and the Axios compatibility interceptor no longer replaces that value with an older node left in the legacy FIFO queue. Container action links preserve `nodeName`, and the remaining AngularJS log controller passes it directly to the typed container query.
+
+Authenticated mutations now clear server-side overview responses before the realtime invalidation event tells active browser queries to refetch. This prevents a successful recreate or deletion from immediately returning a cached collection containing the old container ID. Read-only Kubernetes `SelfSubjectAccessReview` requests are excluded from mutation publication so permission checks cannot create invalidation/refetch loops.
+
 ## Kubernetes node chart cache
 
 Node stats retain up to 600 validated chart samples in `sessionStorage`, partitioned by environment and encoded node name. Returning through forward/back navigation renders that history immediately while the normal metrics query resumes. The latest matching timestamp is not appended twice.

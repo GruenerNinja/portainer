@@ -221,3 +221,15 @@ func TestDeletePrefixInvalidatesOnlyMatchingEnvironment(t *testing.T) {
 	assert.Contains(t, cache.entries, Key("docker", "2", "/containers/json"))
 	assert.Contains(t, cache.entries, Key("kubernetes", "1", "/api/v1/pods"))
 }
+
+func TestClearInvalidatesAllEntries(t *testing.T) {
+	t.Parallel()
+
+	cache := newCache(time.Hour, 2*time.Hour)
+	cache.entries[Key("docker", "1", "/containers/json")] = &entry{}
+	cache.entries[Key("kubernetes", "2", "/api/v1/pods")] = &entry{}
+
+	cache.Clear()
+
+	assert.Empty(t, cache.entries)
+}

@@ -12,7 +12,7 @@ The WebSocket carries only log bytes already authorized for the current user. It
 
 ### Container 404 protection
 
-Release `2.39.3.2.25` fixes intermittent container detail and log initialization 404s on multi-node agent environments. Modern requests carry their target node explicitly, and the Axios compatibility interceptor no longer replaces that value with an older node left in the legacy FIFO queue. Container action links preserve `nodeName`, and the remaining AngularJS log controller passes it directly to the typed container query.
+Release `2.39.3.2.26` fixes intermittent container detail and log initialization 404s on multi-node agent environments. Modern requests carry their target node explicitly, and the Axios compatibility interceptor no longer replaces that value with an older node left in the legacy FIFO queue. The interceptor normalizes both native Axios headers and the plain header objects supplied by AngularJS adapters. Container action links preserve `nodeName`, and the remaining AngularJS log controller passes it directly to the typed container query.
 
 Authenticated mutations now clear server-side overview responses before the realtime invalidation event tells active browser queries to refetch. This prevents a successful recreate or deletion from immediately returning a cached collection containing the old container ID. Read-only Kubernetes `SelfSubjectAccessReview` requests are excluded from mutation publication so permission checks cannot create invalidation/refetch loops.
 

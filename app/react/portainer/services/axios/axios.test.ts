@@ -24,6 +24,18 @@ test('agentInterceptor preserves an explicit agent target', () => {
   expect(result.headers.get(agentTargetHeader)).toBe('current-worker');
 });
 
+test('agentInterceptor accepts plain headers from AngularJS adapters', () => {
+  setPortainerAgentTargetHeader('stale-worker');
+  const config = {
+    url: '/endpoints/15/docker/containers/example/json',
+    headers: { [agentTargetHeader]: 'current-worker' },
+  } as unknown as InternalAxiosRequestConfig;
+
+  const result = agentInterceptor(config);
+
+  expect(result.headers[agentTargetHeader]).toBe('current-worker');
+});
+
 test('agentInterceptor uses the legacy queued target when none is explicit', () => {
   setPortainerAgentTargetHeader('legacy-worker');
   const config = dockerRequest();

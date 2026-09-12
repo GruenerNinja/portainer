@@ -1,4 +1,8 @@
-import Axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+import Axios, {
+  AxiosHeaders,
+  AxiosInstance,
+  InternalAxiosRequestConfig,
+} from 'axios';
 import {
   AxiosCacheInstance,
   buildMemoryStorage,
@@ -110,7 +114,11 @@ export function agentInterceptor(config: InternalAxiosRequestConfig) {
   }
 
   const newConfig = { ...config };
-  const explicitTarget = newConfig.headers.get(agentTargetHeader);
+  // AngularJS adapters can still supply a plain header object at runtime even
+  // though Axios types this as AxiosHeaders. Normalize before reading it.
+  const explicitTarget = AxiosHeaders.from(newConfig.headers).get(
+    agentTargetHeader
+  );
   const target = explicitTarget || portainerAgentTargetHeader();
   if (target && !explicitTarget) {
     newConfig.headers[agentTargetHeader] = target;
